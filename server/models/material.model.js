@@ -76,7 +76,22 @@ const materialSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
       }
-    }]
+    }],
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
+    deleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    deletedAt: Date,
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
   },
   {
     timestamps: true,
@@ -84,8 +99,8 @@ const materialSchema = new mongoose.Schema(
 );
 
 // Indexes
-materialSchema.index({ classroom: 1, type: 1 });
-materialSchema.index({ uploadedBy: 1, isPublic: 1 });
+materialSchema.index({ classroom: 1, type: 1, isActive: 1 });
+materialSchema.index({ uploadedBy: 1, createdAt: -1 });
 materialSchema.index({ tags: 1 });
 
 const Material = mongoose.model('Material', materialSchema);

@@ -41,25 +41,15 @@ const assignmentSchema = new mongoose.Schema(
         ref: 'User',
         index: true
       },
+      submittedAt: Date,
       content: String,
-      files: [{
-        name: String,
-        url: String,
-        fileType: String,
-        fileSize: Number
-      }],
+      attachments: [String],
       grade: Number,
       feedback: String,
-      submittedAt: Date,
-      gradedAt: Date,
-      gradedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-      },
       status: {
         type: String,
-        enum: ['submitted', 'graded', 'returned'],
-        default: 'submitted'
+        enum: ['pending', 'submitted', 'graded', 'late'],
+        default: 'pending'
       }
     }],
     totalPoints: {
@@ -83,6 +73,16 @@ const assignmentSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    deleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    deletedAt: Date,
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
     tags: [{
       type: String,
       trim: true
@@ -100,8 +100,8 @@ const assignmentSchema = new mongoose.Schema(
 );
 
 // Indexes
-assignmentSchema.index({ classroom: 1, dueDate: 1 });
-assignmentSchema.index({ createdBy: 1, isActive: 1 });
+assignmentSchema.index({ classroom: 1, dueDate: 1, isActive: 1 });
+assignmentSchema.index({ createdBy: 1, createdAt: -1 });
 assignmentSchema.index({ 'submissions.student': 1, 'submissions.status': 1 });
 
 const Assignment = mongoose.model('Assignment', assignmentSchema);

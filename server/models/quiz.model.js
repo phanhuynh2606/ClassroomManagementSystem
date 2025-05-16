@@ -27,7 +27,8 @@ const quizSchema = new mongoose.Schema(
     },
     questions: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Question'
+      ref: 'Question',
+      index: true
     }],
     duration: {
       type: Number, // in minutes
@@ -108,7 +109,17 @@ const quizSchema = new mongoose.Schema(
     tags: [{
       type: String,
       trim: true
-    }]
+    }],
+    deleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    deletedAt: Date,
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
   },
   {
     timestamps: true,

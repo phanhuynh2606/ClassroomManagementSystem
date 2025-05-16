@@ -4,6 +4,7 @@ const questionSchema = new mongoose.Schema({
   content: {
     type: String,
     required: true,
+    trim: true
   },
   image: {
     type: String,
@@ -20,6 +21,7 @@ const questionSchema = new mongoose.Schema({
     type: String,
     enum: ['easy', 'medium', 'hard'],
     default: 'medium',
+    index: true
   },
   points: {
     type: Number,
@@ -54,7 +56,8 @@ const questionSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
+    index: true
   },
   lastUpdatedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -91,7 +94,26 @@ const questionSchema = new mongoose.Schema({
   usedInClassrooms: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Classroom'
-  }]
+  }],
+  isActive: {
+    type: Boolean,
+    default: true,
+    index: true
+  },
+  isArchived: {
+    type: Boolean,
+    default: false
+  },
+  deleted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  deletedAt: Date,
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }
 }, {
   timestamps: true
 });
@@ -104,6 +126,9 @@ questionSchema.index({ createdBy: 1, status: 1 });
 questionSchema.index({ lastUsedAt: 1 });
 questionSchema.index({ usageCount: 1 });
 questionSchema.index({ 'usedInClassrooms': 1 });
+questionSchema.index({ type: 1, difficulty: 1, isActive: 1 });
+questionSchema.index({ createdBy: 1, createdAt: -1 });
+questionSchema.index({ tags: 1 });
 
 questionSchema.methods.canBeUsedInClassroom = function(classroomId) {
   if (this.usedInClassrooms.includes(classroomId)) {

@@ -25,8 +25,20 @@ const classroomSchema = new mongoose.Schema(
       index: true
     },
     students: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      student: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        index: true
+      },
+      joinedAt: {
+        type: Date,
+        default: Date.now
+      },
+      status: {
+        type: String,
+        enum: ['active', 'inactive', 'pending'],
+        default: 'pending'
+      }
     }],
     maxStudents: {
       type: Number,
@@ -60,6 +72,16 @@ const classroomSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    deleted: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    deletedAt: Date,
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
     settings: {
       allowStudentInvite: {
         type: Boolean,
@@ -82,6 +104,7 @@ const classroomSchema = new mongoose.Schema(
 
 // Indexes
 classroomSchema.index({ teacher: 1, isActive: 1 });
+classroomSchema.index({ 'students.student': 1, 'students.status': 1 });
 classroomSchema.index({ code: 1, isActive: 1 });
 classroomSchema.index({ category: 1, level: 1 });
 
