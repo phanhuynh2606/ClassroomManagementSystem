@@ -1,33 +1,17 @@
 import axiosClient from '../axiosClient';
 
-const authApi = {
-  login: (data) => {
-    return axiosClient.post('/auth/login', data);
-  },
-
-  register: (data) => {
-    return axiosClient.post('/auth/register', data);
-  },
-
-  logout: () => {
-    return axiosClient.post('/auth/logout');
-  },
-
-  getProfile: () => {
-    return axiosClient.get('/users/profile');
-  },
-
-  updateProfile: (data) => {
-    return axiosClient.put('/users/profile', data);
-  },
-
-  uploadProfileImage: (formData) => {
-    return axiosClient.post('/users/profile/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
+const authAPI = {
+  login: (email, password) => axiosClient.post('/auth/login', { email, password }),
+  logout: () => axiosClient.post('/auth/logout'),
+  checkAuth: () => axiosClient.get('/auth/me'),
+  getProfile: () => axiosClient.get('/auth/me'),
+  updateProfile: (data) => axiosClient.put('/auth/profile', data),
+  updatePassword: (data) => axiosClient.put('/auth/password', data),
+  uploadImage: (formData) => axiosClient.post('/auth/upload-image', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
 };
 
-export default authApi; 
+export default authAPI; 

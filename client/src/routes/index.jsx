@@ -1,61 +1,129 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import MainLayout from '../layouts/MainLayout';
-import Login from '../pages/Login';
-import Register from '../pages/Register';
-import Dashboard from '../pages/Dashboard';
 
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useSelector((state) => state.auth);
+// Layouts
+import AdminLayout from '../layouts/AdminLayout';
+import TeacherLayout from '../layouts/TeacherLayout';
+import StudentLayout from '../layouts/StudentLayout';
+
+// Auth Pages
+import Login from '../pages/auth/Login';
+
+
+// Admin Pages
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import UserManagement from '../pages/admin/components/UserManagement';
+import ClassroomManagement from '../pages/admin/components/ClassroomManagement';
+import QuizManagement from '../pages/admin/components/QuizManagement';
+import QuestionManagement from '../pages/admin/components/QuestionManagement';
+import NotificationManagement from '../pages/admin/components/NotificationManagement';
+import AdminProfile from '../pages/admin/AdminProfile';
+
+// Teacher Pages
+// import TeacherDashboard from '../pages/teacher/TeacherDashboard';
+// import MyClassrooms from '../pages/teacher/MyClassrooms';
+// import CreateQuiz from '../pages/teacher/CreateQuiz';
+// import GradeSubmissions from '../pages/teacher/GradeSubmissions';
+// import StudentProgress from '../pages/teacher/StudentProgress';
+
+// Student Pages
+// import StudentDashboard from '../pages/student/StudentDashboard';
+// import MyCourses from '../pages/student/MyCourses';
+// import TakeQuiz from '../pages/student/TakeQuiz';
+// import MyGrades from '../pages/student/MyGrades';
+// import MyProgress from '../pages/student/MyProgress';
+
+// Protected Route Component
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const { user, isAuthenticated } = useSelector((state) => state.auth);
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-  return children;
-};
 
-const PublicRoute = ({ children }) => {
-  const { isAuthenticated } = useSelector((state) => state.auth);
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+    return <Navigate to="/" />;
   }
+
   return children;
 };
 
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <MainLayout />,
-    children: [
-      {
-        index: true,
-        element: <Navigate to="/dashboard" />,
-      },
-      {
-        path: 'login',
-        element: (
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        ),
-      },
-      {
-        path: 'register',
-        element: (
-          <PublicRoute>
-            <Register />
-          </PublicRoute>
-        ),
-      },
-      {
-        path: 'dashboard',
-        element: (
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        ),
-      },
-    ],
-  },
-]);
+const AppRouter = () => {
+  const { user } = useSelector((state) => state.auth);
 
-export default router; 
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Admin Routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="profile" element={<AdminProfile />} />
+        <Route path="users" element={<UserManagement />} />
+        <Route path="classrooms" element={<ClassroomManagement />} />
+        <Route path="quizzes" element={<QuizManagement />} />
+        <Route path="questions" element={<QuestionManagement />} />
+        <Route path="notifications" element={<NotificationManagement />} />
+      </Route>
+
+      {/* Teacher Routes */}
+      {/* <Route
+        path="/teacher"
+        element={
+          <ProtectedRoute allowedRoles={['teacher']}>
+            <TeacherLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<TeacherDashboard />} />
+        <Route path="classrooms" element={<MyClassrooms />} />
+        <Route path="create-quiz" element={<CreateQuiz />} />
+        <Route path="grade-submissions" element={<GradeSubmissions />} />
+        <Route path="student-progress" element={<StudentProgress />} />
+      </Route> */}
+
+      {/* Student Routes */}
+      {/* <Route
+        path="/student"
+        element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <StudentLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<StudentDashboard />} />
+        <Route path="courses" element={<MyCourses />} />
+        <Route path="take-quiz/:quizId" element={<TakeQuiz />} />
+        <Route path="grades" element={<MyGrades />} />
+        <Route path="progress" element={<MyProgress />} />
+      </Route> */}
+
+      {/* Default Route - Redirect based on user role */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            {user?.role === 'admin' ? (
+              <Navigate to="/admin" />
+            ) : user?.role === 'teacher' ? (
+              <Navigate to="/teacher" />
+            ) : (
+              <Navigate to="/student" />
+            )}
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+};
+
+export default AppRouter; 

@@ -1,14 +1,28 @@
+import React from 'react';
+import { BrowserRouter } from 'react-router-dom';
+import { ConfigProvider, App as AntApp } from 'antd';
 import { Provider } from 'react-redux';
-import { RouterProvider } from 'react-router-dom';
 import { PersistGate } from 'redux-persist/integration/react';
-import { store, persistor } from './redux/store';
-import router from './routes';
+import { store, persistor } from './store';
+import AppRouter from './routes';
 
 function App() {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        <RouterProvider router={router} />
+        <ConfigProvider
+          theme={{
+            token: {
+              colorPrimary: '#1890ff',
+            },
+          }}
+        >
+          <AntApp>
+            <BrowserRouter>
+              <AppRouter />
+            </BrowserRouter>
+          </AntApp>
+        </ConfigProvider>
       </PersistGate>
     </Provider>
   );
