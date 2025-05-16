@@ -1,14 +1,6 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-
+const bcrypt = require("bcryptjs")
 const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    index: true
-  },
   email: {
     type: String,
     required: true,
@@ -107,31 +99,64 @@ userSchema.methods.matchPassword = async function(enteredPassword) {
 };
 
 // Method to add refresh token
-userSchema.methods.addRefreshToken = function(tokenData) {
+userSchema.methods.addRefreshToken = async function(tokenData) {
+  // Giới hạn số lượng token tối đa là 3
+  const MAX_TOKENS = 3;
+  
+  // Xóa các token đã hết hạn hoặc đã revoke
+  this.refreshTokens = this.refreshTokens.filter(token => 
+    token.expiresAt > Date.now() && !token.isRevoked
+  );
+
+  // Nếu đã đạt giới hạn, xóa token cũ nhất
+  if (this.refreshTokens.length >= MAX_TOKENS) {
+    this.refreshTokens.sort((a, b) => a.createdAt - b.createdAt);
+    this.refreshTokens.shift();
+  }
+
+  // Thêm token mới
   this.refreshTokens.push(tokenData);
   return this.save();
 };
 
 // Method to revoke refresh token
-userSchema.methods.revokeRefreshToken = function(token) {
+userSchema.methods.revokeRefreshToken = async function(token) {
   const tokenIndex = this.refreshTokens.findIndex(t => t.token === token);
   if (tokenIndex > -1) {
-    this.refreshTokens[tokenIndex].isRevoked = true;
-    this.refreshTokens[tokenIndex].revokedAt = Date.now();
+    // Thay vì đánh dấu là revoked, xóa luôn token
+    this.refreshTokens.splice(tokenIndex, 1);
     return this.save();
   }
   return null;
 };
 
 // Method to revoke all refresh tokens
-userSchema.methods.revokeAllRefreshTokens = function() {
-  this.refreshTokens.forEach(token => {
-    token.isRevoked = true;
-    token.revokedAt = Date.now();
-  });
+userSchema.methods.revokeAllRefreshTokens = async function() {
+  // Xóa tất cả token thay vì đánh dấu là revoked
+  this.refreshTokens = [];
   return this.save();
 };
 
+// Method to clean expired tokens
+userSchema.methods.cleanExpiredTokens = async function() {
+  this.refreshTokens = this.refreshTokens.filter(token => 
+    token.expiresAt > Date.now()
+  );
+  return this.save();
+};
+
+// Tự động dọn dẹp token hết hạn mỗi ngày
+setInterval(async () => {
+  try {
+    const users = await User.find({});
+    for (const user of users) {
+      await user.cleanExpiredTokens();
+    }
+  } catch (error) {
+    console.error('Error cleaning expired tokens:', error);
+  }
+}, 24 * 60 * 60 * 1000);
+
 const User = mongoose.model('User', userSchema);
 
-module.exports = User; 
+module.exports = User;  
