@@ -1,48 +1,127 @@
-# Classroom Model
+# Model Classroom (Lớp Học)
 
-## Mô tả
-Model Classroom quản lý thông tin lớp học, bao gồm thông tin cơ bản, danh sách học viên, và các cài đặt của lớp.
+## Mục đích
+Model Classroom quản lý thông tin về các lớp học trong hệ thống, bao gồm thông tin cơ bản, thành viên, lịch học và cài đặt.
 
-## Schema
+## Các trường dữ liệu
 
 ### Thông tin cơ bản
-- `name`: Tên lớp học (required)
-- `code`: Mã lớp học (unique, required)
-- `description`: Mô tả lớp học
-- `teacher`: Giáo viên phụ trách (ref: User)
-- `students`: Danh sách học viên (ref: User)
+- `name` (String)
+  - Tên lớp học
+  - Bắt buộc
+  - Được đánh index
+  - Dùng để hiển thị và tìm kiếm
 
-### Cấu hình lớp
-- `maxStudents`: Số học viên tối đa (default: 50)
-- `category`: Loại lớp ('academic', 'professional', 'other')
-- `level`: Cấp độ ('beginner', 'intermediate', 'advanced')
+- `code` (String)
+  - Mã lớp học
+  - Bắt buộc, duy nhất
+  - Được đánh index
+  - Dùng để tham gia lớp
+
+- `description` (String)
+  - Mô tả lớp học
+  - Không bắt buộc
+  - Cung cấp thông tin chi tiết
+
+### Thành viên
+- `teacher` (ObjectId)
+  - Giảng viên phụ trách
+  - Reference đến User
+  - Bắt buộc
+  - Được đánh index
+
+- `students` (Array)
+  - Danh sách học viên
+  - Mỗi học viên chứa:
+    - `student`: Reference đến User
+    - `joinedAt`: Thời gian tham gia
+    - `status`: Trạng thái (active, inactive, pending)
+  - Tự động cập nhật khi học viên tham gia/rời lớp
+
+- `maxStudents` (Number)
+  - Số lượng học viên tối đa
+  - Mặc định: 50
+  - Giới hạn số lượng học viên
+
+### Phân loại
+- `category` (String)
+  - Loại lớp học
+  - Enum: ['academic', 'professional', 'other']
+  - Mặc định: 'academic'
+  - Phân loại mục đích
+
+- `level` (String)
+  - Cấp độ lớp học
+  - Enum: ['beginner', 'intermediate', 'advanced']
+  - Mặc định: 'beginner'
+  - Xác định độ khó
 
 ### Lịch học
-- `schedule`:
+- `schedule` (Object)
+  - Thông tin lịch học
   - `startDate`: Ngày bắt đầu
   - `endDate`: Ngày kết thúc
   - `meetingDays`: Các ngày học trong tuần
-  - `meetingTime`: Giờ học
+  - `meetingTime`: Thời gian học
+
+### Trạng thái
+- `isActive` (Boolean)
+  - Trạng thái hoạt động
+  - Mặc định: true
+  - Được đánh index
+  - Kiểm soát hiển thị
+
+- `isArchived` (Boolean)
+  - Trạng thái lưu trữ
+  - Mặc định: false
+  - Lớp học đã kết thúc
+
+### Xóa mềm
+- `deleted` (Boolean)
+  - Đánh dấu xóa mềm
+  - Mặc định: false
+  - Được đánh index
+
+- `deletedAt` (Date)
+  - Thời gian xóa
+  - Được set khi xóa
+
+- `deletedBy` (ObjectId)
+  - Người thực hiện xóa
+  - Reference đến User
 
 ### Cài đặt
-- `settings`:
+- `settings` (Object)
+  - Cài đặt lớp học
   - `allowStudentInvite`: Cho phép học viên mời
   - `allowStudentPost`: Cho phép học viên đăng bài
   - `allowStudentComment`: Cho phép học viên bình luận
 
-### Trạng thái
-- `isActive`: Trạng thái hoạt động
-- `isArchived`: Trạng thái lưu trữ
+## Các mối quan hệ
+- Thuộc về một giảng viên (User)
+- Có nhiều học viên (User)
+- Chứa nhiều bài tập (Assignment)
+- Chứa nhiều tài liệu (Material)
+- Chứa nhiều bài kiểm tra (Quiz)
+- Có nhiều thông báo (Notification)
 
-## Indexes
-- `name`: Tìm kiếm theo tên lớp
-- `code`: Tìm kiếm theo mã lớp
-- `teacher`: Tìm kiếm theo giáo viên
-- `isActive`: Tìm kiếm theo trạng thái
-- `teacher, isActive`: Tìm kiếm kết hợp
-- `code, isActive`: Tìm kiếm kết hợp
-- `category, level`: Tìm kiếm kết hợp
+## Các quy tắc nghiệp vụ
+1. Mã lớp học phải là duy nhất
+2. Số lượng học viên không được vượt quá maxStudents
+3. Chỉ giảng viên mới có quyền tạo và quản lý lớp
+4. Học viên phải được chấp nhận mới có thể tham gia
+5. Lớp học bị xóa mềm không hiển thị trong danh sách
+6. Lớp học đã lưu trữ không cho phép thêm học viên mới
+7. Lớp học phải có ngày bắt đầu và kết thúc hợp lệ
+8. Các ngày học phải được chọn từ danh sách cho phép
+9. Thời gian học phải được định dạng hợp lệ
+10. Cài đặt lớp học có thể được thay đổi bởi giảng viên
 
-## Relationships
-- `teacher`: Liên kết với User model (role: teacher)
-- `students`: Liên kết với User model (role: student) 
+## Các index
+- `{ teacher: 1, isActive: 1 }`: Tìm kiếm lớp học theo giảng viên
+- `{ code: 1, isActive: 1 }`: Tìm kiếm lớp học theo mã
+- `{ category: 1, level: 1 }`: Tìm kiếm lớp học theo phân loại
+
+## Timestamps
+- `createdAt`: Thời gian tạo
+- `updatedAt`: Thời gian cập nhật cuối 
