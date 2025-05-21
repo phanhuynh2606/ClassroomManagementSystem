@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   Button,
@@ -10,59 +10,70 @@ import {
   message,
   Popconfirm,
   Tag,
+  DatePicker,
+  Row,
+  Col,
+  Card,
 } from 'antd';
 import {
   UserAddOutlined,
   SearchOutlined,
   EditOutlined,
   DeleteOutlined,
+  FilterOutlined,
 } from '@ant-design/icons';
+import { useSelector } from 'react-redux';
+import adminAPI from '../../../services/api/admin.api';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 const UserManagement = () => {
   const [form] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [searchText, setSearchText] = useState('');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    role: undefined,
+    status: undefined,
+    gender: undefined,
+    dateRange: undefined,
+  });
 
-  // Mock data - replace with actual API calls
-  const [users, setUsers] = useState([
-    {
-      key: '1',
-      username: 'john_doe',
-      email: 'john@example.com',
-      fullName: 'John Doe',
-      role: 'student',
-      status: 'active',
-    },
-    {
-      key: '2',
-      username: 'jane_smith',
-      email: 'jane@example.com',
-      fullName: 'Jane Smith',
-      role: 'teacher',
-      status: 'active',
-    },
-    // Add more mock data as needed
-  ]);
+  const currentRole = useSelector((state) => state.users.currentRole);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await adminAPI.getUsers(currentRole);
+        setUsers(response.data);
+      } catch (error) {
+        message.error('Failed to fetch users');
+        console.error('Error fetching users:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [currentRole]);
 
   const columns = [
-    {
-      title: 'Username',
-      dataIndex: 'username',
-      key: 'username',
-      sorter: (a, b) => a.username.localeCompare(b.username),
-    },
     {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
+      sorter: (a, b) => a.email.localeCompare(b.email),
     },
     {
       title: 'Full Name',
       dataIndex: 'fullName',
       key: 'fullName',
+      sorter: (a, b) => a.fullName.localeCompare(b.fullName),
     },
     {
       title: 'Role',
@@ -76,18 +87,51 @@ const UserManagement = () => {
         };
         return <Tag color={colors[role]}>{role.toUpperCase()}</Tag>;
       },
+      filters: [
+        { text: 'Admin', value: 'admin' },
+        { text: 'Teacher', value: 'teacher' },
+        { text: 'Student', value: 'student' },
+      ],
+      onFilter: (value, record) => record.role === value,
     },
     {
       title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        const colors = {
-          active: 'green',
-          inactive: 'red',
-        };
-        return <Tag color={colors[status]}>{status.toUpperCase()}</Tag>;
-      },
+      dataIndex: 'isActive',
+      key: 'isActive',
+      render: (isActive) => (
+        <Tag color={isActive ? 'green' : 'red'}>
+          {isActive ? 'Active' : 'Inactive'}
+        </Tag>
+      ),
+      filters: [
+        { text: 'Active', value: true },
+        { text: 'Inactive', value: false },
+      ],
+      onFilter: (value, record) => record.isActive === value,
+    },
+    {
+      title: 'Gender',
+      dataIndex: 'gender',
+      key: 'gender',
+      render: (gender) => gender?.charAt(0).toUpperCase() + gender?.slice(1),
+      filters: [
+        { text: 'Male', value: 'male' },
+        { text: 'Female', value: 'female' },
+        { text: 'Other', value: 'other' },
+      ],
+      onFilter: (value, record) => record.gender === value,
+    },
+    {
+      title: 'Phone',
+      dataIndex: 'phone',
+      key: 'phone',
+    },
+    {
+      title: 'Last Login',
+      dataIndex: 'lastLogin',
+      key: 'lastLogin',
+      render: (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : 'Never',
+      sorter: (a, b) => new Date(a.lastLogin) - new Date(b.lastLogin),
     },
     {
       title: 'Actions',
@@ -119,24 +163,35 @@ const UserManagement = () => {
   const handleAdd = () => {
     setEditingUser(null);
     form.resetFields();
+    form.setFieldsValue({ role: currentRole });
     setIsModalVisible(true);
   };
 
   const handleEdit = (user) => {
     setEditingUser(user);
-    form.setFieldsValue(user);
+    form.setFieldsValue({
+      ...user,
+      dateOfBirth: user.dateOfBirth ? dayjs(user.dateOfBirth) : null,
+    });
     setIsModalVisible(true);
   };
 
-  const handleDelete = (key) => {
-    setUsers(users.filter((user) => user.key !== key));
-    message.success('User deleted successfully');
+  const handleDelete = async (key) => {
+    try {
+      await adminAPI.deleteUser(key);
+      setUsers(users.filter((user) => user.key !== key));
+      message.success('User deleted successfully');
+    } catch (error) {
+      message.error('Failed to delete user');
+      console.error('Error deleting user:', error);
+    }
   };
 
-  const handleModalOk = () => {
-    form.validateFields().then((values) => {
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields();
       if (editingUser) {
-        // Update existing user
+        await adminAPI.updateUser(editingUser.key, values);
         setUsers(
           users.map((user) =>
             user.key === editingUser.key ? { ...user, ...values } : user
@@ -144,35 +199,97 @@ const UserManagement = () => {
         );
         message.success('User updated successfully');
       } else {
-        // Add new user
-        const newUser = {
-          key: Date.now().toString(),
-          ...values,
-        };
+        const newUser = await adminAPI.createUser(values);
         setUsers([...users, newUser]);
         message.success('User added successfully');
       }
       setIsModalVisible(false);
-    });
+    } catch (error) {
+      message.error('Failed to save user');
+      console.error('Error saving user:', error);
+    }
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.username.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchText.toLowerCase()) ||
-      user.fullName.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const filteredUsers = users?.filter((user) => {
+    const matchesSearch = 
+      user.email?.toLowerCase().includes(searchText.toLowerCase()) ||
+      user.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      user.phone?.toLowerCase().includes(searchText.toLowerCase());
+
+    const matchesRole = !filters.role || user.role === filters.role;
+    const matchesStatus = filters.status === undefined || user.isActive === filters.status;
+    const matchesGender = !filters.gender || user.gender === filters.gender;
+    
+    const matchesDateRange = !filters.dateRange || (
+      user.lastLogin && 
+      dayjs(user.lastLogin).isAfter(filters.dateRange[0]) && 
+      dayjs(user.lastLogin).isBefore(filters.dateRange[1])
+    );
+
+    return matchesSearch && matchesRole && matchesStatus && matchesGender && matchesDateRange;
+  });
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Input
-          placeholder="Search users..."
-          prefix={<SearchOutlined />}
-          style={{ width: 300 }}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-        />
+      <Card style={{ marginBottom: 16 }}>
+        <Row gutter={[16, 16]}>
+          <Col span={6}>
+            <Input
+              placeholder="Search users..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
+          </Col>
+          <Col span={4}>
+            <Select
+              placeholder="Filter by Role"
+              style={{ width: '100%' }}
+              allowClear
+              onChange={(value) => handleFilterChange('role', value)}
+            >
+              <Option value="admin">Admin</Option>
+              <Option value="teacher">Teacher</Option>
+              <Option value="student">Student</Option>
+            </Select>
+          </Col>
+          <Col span={4}>
+            <Select
+              placeholder="Filter by Status"
+              style={{ width: '100%' }}
+              allowClear
+              onChange={(value) => handleFilterChange('status', value)}
+            >
+              <Option value={true}>Active</Option>
+              <Option value={false}>Inactive</Option>
+            </Select>
+          </Col>
+          <Col span={4}>
+            <Select
+              placeholder="Filter by Gender"
+              style={{ width: '100%' }}
+              allowClear
+              onChange={(value) => handleFilterChange('gender', value)}
+            >
+              <Option value="male">Male</Option>
+              <Option value="female">Female</Option>
+              <Option value="other">Other</Option>
+            </Select>
+          </Col>
+          <Col span={6}>
+            <RangePicker
+              style={{ width: '100%' }}
+              onChange={(dates) => handleFilterChange('dateRange', dates)}
+            />
+          </Col>
+        </Row>
+      </Card>
+
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
         <Button
           type="primary"
           icon={<UserAddOutlined />}
@@ -182,58 +299,100 @@ const UserManagement = () => {
         </Button>
       </div>
 
-      <Table columns={columns} dataSource={filteredUsers} />
+      <Table 
+        columns={columns} 
+        dataSource={filteredUsers} 
+        loading={loading}
+        rowKey="key"
+        scroll={{ x: 1200 }}
+      />
 
       <Modal
         title={editingUser ? 'Edit User' : 'Add User'}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={() => setIsModalVisible(false)}
+        width={800}
       >
         <Form form={form} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="email"
+                label="Email"
+                rules={[
+                  { required: true, message: 'Please input email!' },
+                  { type: 'email', message: 'Please enter a valid email!' },
+                ]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="fullName"
+                label="Full Name"
+                rules={[{ required: true, message: 'Please input full name!' }]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="phone"
+                label="Phone"
+                rules={[{ required: true, message: 'Please input phone number!' }]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="gender"
+                label="Gender"
+                rules={[{ required: true, message: 'Please select gender!' }]}
+              >
+                <Select>
+                  <Option value="male">Male</Option>
+                  <Option value="female">Female</Option>
+                  <Option value="other">Other</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="dateOfBirth"
+                label="Date of Birth"
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="role"
+                label="Role"
+                rules={[{ required: true, message: 'Please select role!' }]}
+              >
+                <Select>
+                  <Option value="admin">Admin</Option>
+                  <Option value="teacher">Teacher</Option>
+                  <Option value="student">Student</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item
-            name="username"
-            label="Username"
-            rules={[{ required: true, message: 'Please input username!' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[
-              { required: true, message: 'Please input email!' },
-              { type: 'email', message: 'Please enter a valid email!' },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="fullName"
-            label="Full Name"
-            rules={[{ required: true, message: 'Please input full name!' }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="role"
-            label="Role"
-            rules={[{ required: true, message: 'Please select role!' }]}
-          >
-            <Select>
-              <Option value="admin">Admin</Option>
-              <Option value="teacher">Teacher</Option>
-              <Option value="student">Student</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="status"
+            name="isActive"
             label="Status"
             rules={[{ required: true, message: 'Please select status!' }]}
           >
             <Select>
-              <Option value="active">Active</Option>
-              <Option value="inactive">Inactive</Option>
+              <Option value={true}>Active</Option>
+              <Option value={false}>Inactive</Option>
             </Select>
           </Form.Item>
         </Form>

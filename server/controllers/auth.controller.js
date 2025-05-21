@@ -4,7 +4,7 @@ import User from '../models/user.model.js';
 // Generate access token
 const generateAccessToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '1m', // Access token expires in 15 minutes
+    expiresIn: '15m', // Access token expires in 15 minutes
   });
 };
 
@@ -40,7 +40,7 @@ const setRefreshTokenCookie = (res, token) => {
 // @access  Public
 const registerUser = async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { fullName, email, password, role } = req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -50,12 +50,18 @@ const registerUser = async (req, res) => {
 
     // Create user
     const user = await User.create({
-      username,
+      fullName,
       email,
       password,
-      role: role || 'student'
+      role: role || 'student',
+      isActive: role === 'student' ? true : false
     });
-
+    if(user.role === 'teacher'){
+      return res.status(400).json({ 
+        success: false,
+        message: 'Contact admin to confirm teacher',
+       });
+    }
     if (user) {
       // Generate tokens
       const accessToken = generateAccessToken(user._id);
@@ -82,7 +88,7 @@ const registerUser = async (req, res) => {
         message: 'Registration successful',
         user: {
           _id: user._id,
-          username: user.username,
+          fullName: user.fullName,
           email: user.email,
           role: user.role,
         },
@@ -112,6 +118,12 @@ const loginUser = async (req, res) => {
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
+    }
+    if(user.role === 'teacher' && !user.verified){
+      return res.status(400).json({ 
+        success: false,
+        message: 'Contact admin to confirm teacher',
+       });
     }
 
     // Generate tokens
@@ -271,7 +283,6 @@ const getProfile = async (req, res) => {
 const refreshAccessToken = async (req, res) => {
   try {
     const refreshToken = req.cookies?.refreshToken;
-
     if (!refreshToken) {
       return res.status(401).json({
         message: "No refresh token provided",

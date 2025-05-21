@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, message, Select } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { login, clearError } from '../../store/slices/authSlice';
+import { register, clearError } from '../../store/slices/authSlice';
 
-const Login = () => {
+const { Option } = Select;
+
+const Register = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error, user } = useSelector((state) => state.auth);
@@ -37,10 +39,10 @@ const Login = () => {
 
   const onFinish = async (values) => {
     try {
-      await dispatch(login(values)).unwrap();
-      message.success('Login successful!');
+      await dispatch(register(values)).unwrap();
+      message.success('Registration successful!');
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Registration error:', error);
     }
   };
 
@@ -53,19 +55,33 @@ const Login = () => {
       background: '#f0f2f5'
     }}>
       <Card style={{ width: 400, boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Learning Management System</h2>
+        <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Create Account</h2>
         <Form
-          name="login"
+          name="register"
           onFinish={onFinish}
           autoComplete="off"
           layout="vertical"
         >
           <Form.Item
-            name="email"
-            rules={[{ required: true, message: 'Please input your email!' }]}
+            name="fullName"
+            rules={[{ required: true, message: 'Please input your username!' }]}
           >
             <Input 
               prefix={<UserOutlined />} 
+              placeholder="Full Name" 
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="email"
+            rules={[
+              { required: true, message: 'Please input your email!' },
+              { type: 'email', message: 'Please enter a valid email!' }
+            ]}
+          >
+            <Input 
+              prefix={<MailOutlined />} 
               placeholder="Email" 
               size="large"
             />
@@ -73,7 +89,10 @@ const Login = () => {
 
           <Form.Item
             name="password"
-            rules={[{ required: true, message: 'Please input your password!' }]}
+            rules={[
+              { required: true, message: 'Please input your password!' },
+              { min: 6, message: 'Password must be at least 6 characters!' }
+            ]}
           >
             <Input.Password
               prefix={<LockOutlined />}
@@ -82,21 +101,31 @@ const Login = () => {
             />
           </Form.Item>
 
+          <Form.Item
+            name="role"
+            rules={[{ required: true, message: 'Please select your role!' }]}
+            initialValue={'student'}
+          >
+            <Select placeholder="Select your role" size="large">
+              <Option value="student">Student</Option>
+              <Option value="teacher">Teacher</Option>
+            </Select>
+          </Form.Item>
+
           <Form.Item>
             <Button 
-              // type="primary" 
+              type="primary" 
               htmlType="submit" 
               block 
               size="large"
-              className='bg-blue-500'
               loading={loading}
             >
-              Log in
+              Register
             </Button>
           </Form.Item>
 
           <div style={{ textAlign: 'center' }}>
-            Don't have an account? <Link to="/register" className='text-blue-500'>Register here</Link>
+            Already have an account? <Link to="/login" className='text-blue-500'>Login here</Link>
           </div>
         </Form>
       </Card>
@@ -104,4 +133,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Register; 

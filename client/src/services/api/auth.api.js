@@ -2,6 +2,7 @@ import axiosClient from '../axiosClient';
 
 const authAPI = {
   login: (email, password) => axiosClient.post('/auth/login', { email, password }),
+  register: (userData) => axiosClient.post('/auth/register', userData),
   logout: () => axiosClient.post('/auth/logout'),
   checkAuth: () => axiosClient.get('/auth/me'),
   getProfile: () => axiosClient.get('/auth/me'),

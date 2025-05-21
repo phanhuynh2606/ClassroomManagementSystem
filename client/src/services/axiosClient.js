@@ -17,7 +17,7 @@ axiosClient.interceptors.request.use((config) => {
 
 // Handle token refresh
 axiosClient.interceptors.response.use(
-  (response) => response,
+  (response) => response.data,
   async (error) => {
     console.log("Axios error:", error.response?.data);
     const originalRequest = error.config;
@@ -30,7 +30,7 @@ axiosClient.interceptors.response.use(
       try {
         // Call refresh token endpoint
         const response = await axiosClient.post('/auth/refresh-token');
-        const newToken = response.data.accessToken;
+        const newToken = response.accessToken;
 
         if (newToken) {
           // Update token in localStorage
@@ -49,9 +49,9 @@ axiosClient.interceptors.response.use(
         console.log("Refresh error:", refreshError.response?.data);
         
         // If refresh fails, redirect to login
-        localStorage.removeItem('token');
-        localStorage.removeItem('persist:root');
-        window.location.href = '/login';
+        // localStorage.removeItem('token');
+        // localStorage.removeItem('persist:root');
+        // window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }

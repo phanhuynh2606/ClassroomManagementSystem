@@ -69,7 +69,7 @@ const userSchema = new mongoose.Schema({
   }],
   resetPasswordToken: String,
   resetPasswordExpire: Date,
-  emailVerified: {
+  verified: {
     type: Boolean,
     default: false
   },
@@ -81,7 +81,6 @@ const userSchema = new mongoose.Schema({
 
 // Indexes
 userSchema.index({ email: 1, role: 1 });
-userSchema.index({ username: 1, isActive: 1 });
 userSchema.index({ 'refreshTokens.token': 1 });
 
 // Hash password before saving

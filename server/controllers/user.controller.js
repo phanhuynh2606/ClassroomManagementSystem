@@ -75,6 +75,7 @@ const uploadProfileImage = async (req, res) => {
   }
 };
 
+
 module.exports = {
   getUserProfile,
   updateUserProfile,

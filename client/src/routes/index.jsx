@@ -9,7 +9,7 @@ import StudentLayout from '../layouts/StudentLayout';
 
 // Auth Pages
 import Login from '../pages/auth/Login';
-
+import Register from '../pages/auth/Register';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -37,7 +37,7 @@ import AdminProfile from '../pages/admin/AdminProfile';
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-
+  console.log(user,isAuthenticated)
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
@@ -56,6 +56,7 @@ const AppRouter = () => {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
       {/* Admin Routes */}
       <Route
