@@ -9,6 +9,7 @@ import {
   CheckSquareOutlined,
   LineChartOutlined,
   LogoutOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -96,7 +97,7 @@ const TeacherLayout = () => {
             }}
           />
           <div style={{ marginRight: 16 }}>
-            <span style={{ marginRight: 16 }}>{user?.fullName}</span>
+            <span style={{ marginRight: 16 }} onClick={() => navigate('/teacher/profile')}>{user?.fullName}</span>
             <Button
               type="text"
               icon={<LogoutOutlined />}

@@ -33,7 +33,6 @@ const AdminLayout = () => {
     try {
       console.log('Attempting to logout...');
       const result = await dispatch(logout()).unwrap();
-      console.log('Logout successful:', result);
       localStorage.removeItem('token');
       navigate('/login');
     } catch (error) {

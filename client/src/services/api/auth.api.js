@@ -5,7 +5,10 @@ const authAPI = {
   register: (userData) => axiosClient.post('/auth/register', userData),
   logout: () => axiosClient.post('/auth/logout'),
   checkAuth: () => axiosClient.get('/auth/me'),
-  getProfile: () => axiosClient.get('/auth/me'),
+  getProfile: async () => {
+    const response = await axiosClient.get(`/auth/me`);
+    return response;
+  },
   updateProfile: (data) => axiosClient.put('/auth/profile', data),
   updatePassword: (data) => axiosClient.put('/auth/password', data),
   uploadImage: (formData) => axiosClient.post('/auth/upload-image', formData, {
@@ -13,6 +16,19 @@ const authAPI = {
       'Content-Type': 'multipart/form-data',
     },
   }),
+  logoutDevice: async (token) => {
+    const response = await axiosClient.post(`/auth/logout-device`, { token });
+    return response;
+  },
+  logoutAllDevices: async () => {
+    const response = await axiosClient.post(`/auth/logout-all`);
+    return response;
+  },
+  getUserDevices: async () => {
+    const response = await axiosClient.get(`/auth/devices`);
+    return response;
+  }
+
 };
 
 export default authAPI; 

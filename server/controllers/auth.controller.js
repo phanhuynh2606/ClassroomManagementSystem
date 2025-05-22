@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
+import { extractDeviceInfo } from '../utils/Helper.js';
 
 // Generate access token
 const generateAccessToken = (id) => {
@@ -136,19 +137,15 @@ const loginUser = async (req, res) => {
 
     // Generate tokens
     const accessToken = generateAccessToken(user._id);
-    const deviceInfo = {
-      device: req.headers['user-agent'],
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    };
+    const deviceInfo = extractDeviceInfo(req);
     const refreshToken = generateRefreshToken(user._id, deviceInfo);
 
     // Add refresh token to user
     await user.addRefreshToken({
       token: refreshToken,
-      device: deviceInfo.device,
+      device: deviceInfo.deviceName,
       ipAddress: deviceInfo.ipAddress,
-      userAgent: deviceInfo.userAgent,
+      userAgent: deviceInfo.browser,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
     });
 
@@ -259,7 +256,7 @@ const logoutAllDevices = async (req, res) => {
 // @access  Private
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id).select('-password -refreshTokens');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -267,17 +264,7 @@ const getProfile = async (req, res) => {
 
     res.status(200).json({
       message: 'Profile fetched successfully',  
-      user: {
-        _id: user._id,
-        email: user.email,
-        role: user.role,
-        fullName: user.fullName,
-        image: user.image,
-        gender: user.gender,
-        dateOfBirth: user.dateOfBirth,
-        phone: user.phone,
-        fullName: user.fullName,
-      }
+      data: user
     }); 
   } catch (error) {
     console.error(error);
@@ -360,11 +347,91 @@ const refreshAccessToken = async (req, res) => {
   }
 };
 
+// @desc    Logout specific device
+// @route   POST /api/auth/logout-device
+// @access  Private
+const logoutDevice = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ message: 'Token is required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Find and revoke the specific token
+    const tokenIndex = user.refreshTokens.findIndex(t => t.token === token);
+    if (tokenIndex === -1) {
+      return res.status(404).json({ message: 'Device not found' });
+    }
+
+    // If this is the current device, clear the cookie and return special response
+    const currentToken = req.cookies.refreshToken;
+    const isCurrentDevice = currentToken === token;
+
+    // Revoke the token
+    user.refreshTokens[tokenIndex].isRevoked = true;
+    await user.save();
+
+    if (isCurrentDevice) {
+      return res.status(200).json({ 
+        message: 'Current device logged out successfully',
+        isCurrentDevice: true
+      });
+    }
+
+    res.status(200).json({ 
+      message: 'Device logged out successfully',
+      isCurrentDevice: false
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Get user's devices
+// @route   GET /api/auth/devices
+// @access  Private
+const getUserDevices = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const currentToken = req.cookies.refreshToken;
+    const devices = user.refreshTokens.map(token => ({
+      token: token.token,
+      device: token.device,
+      ipAddress: token.ipAddress,
+      userAgent: token.userAgent,
+      createdAt: token.createdAt,
+      expiresAt: token.expiresAt,
+      isRevoked: token.isRevoked,
+      isCurrentDevice: token.token === currentToken
+    }));
+
+    res.status(200).json({
+      message: 'Devices fetched successfully',
+      data: devices
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export {
   registerUser,
   loginUser,
   logoutUser,
   logoutAllDevices,
   getProfile,
-  refreshAccessToken
+  refreshAccessToken,
+  getUserDevices,
+  logoutDevice
 }; 

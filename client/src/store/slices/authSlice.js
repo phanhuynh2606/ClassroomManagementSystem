@@ -27,6 +27,7 @@ export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValu
   }
 });
 
+
 export const checkAuth = createAsyncThunk(
   'auth/check',
   async (_, { rejectWithValue }) => {

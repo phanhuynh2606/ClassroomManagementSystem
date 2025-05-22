@@ -19,6 +19,8 @@ import QuizManagement from '../pages/admin/components/QuizManagement';
 import QuestionManagement from '../pages/admin/components/QuestionManagement';
 import NotificationManagement from '../pages/admin/components/NotificationManagement';
 import AdminProfile from '../pages/admin/AdminProfile';
+import TeacherProfile from '../pages/teacher/TeacherProfile';
+import StudentProfile from '../pages/student/StudentProfile';
 
 // Teacher Pages
 // import TeacherDashboard from '../pages/teacher/TeacherDashboard';
@@ -29,7 +31,7 @@ import AdminProfile from '../pages/admin/AdminProfile';
 
 // Student Pages
 // import StudentDashboard from '../pages/student/StudentDashboard';
-// import MyCourses from '../pages/student/MyCourses';
+// import MyClassess from '../pages/student/MyCourses';
 // import TakeQuiz from '../pages/student/TakeQuiz';
 // import MyGrades from '../pages/student/MyGrades';
 // import MyProgress from '../pages/student/MyProgress';
@@ -85,6 +87,7 @@ const AppRouter = () => {
           </ProtectedRoute>
         }
       >
+        <Route path="profile" element={<TeacherProfile />} />
         {/* <Route index element={<TeacherDashboard />} />
         <Route path="classrooms" element={<MyClassrooms />} />
         <Route path="create-quiz" element={<CreateQuiz />} />
@@ -101,11 +104,13 @@ const AppRouter = () => {
           </ProtectedRoute>
         }
       >
+        <Route path="profile" element={<StudentProfile />} />
         {/* <Route index element={<StudentDashboard />} />
-        <Route path="courses" element={<MyCourses />} />
+        <Route path="classrooms" element={<MyClassess />} />
         <Route path="take-quiz/:quizId" element={<TakeQuiz />} />
         <Route path="grades" element={<MyGrades />} />
-        <Route path="progress" element={<MyProgress />} /> */}
+        <Route path="progress" element={<MyProgress />} /> 
+        */}
       </Route>
 
       {/* Default Route - Redirect based on user role */}

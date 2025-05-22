@@ -5,7 +5,9 @@ const {
   logoutUser,
   logoutAllDevices,
   getProfile,
-  refreshAccessToken
+  refreshAccessToken,
+  logoutDevice,
+  getUserDevices
 } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
 
@@ -17,4 +19,7 @@ router.post('/logout', logoutUser);
 router.post('/logout-all', protect, logoutAllDevices);
 router.get('/me', protect, getProfile);
 router.post('/refresh-token', refreshAccessToken);
+router.post('/logout-device', protect, logoutDevice);
+router.get('/devices', protect, getUserDevices);
+
 module.exports = router; 

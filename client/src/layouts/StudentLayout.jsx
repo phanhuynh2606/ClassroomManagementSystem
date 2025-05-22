@@ -96,7 +96,17 @@ const StudentLayout = () => {
             }}
           />
           <div style={{ marginRight: 16 }}>
-            <span style={{ marginRight: 16 }}>{user?.fullName}</span>
+            <span 
+              style={{ 
+                marginRight: 16,
+                cursor: 'pointer',
+                color: '#1890ff',
+                fontWeight: '500'
+              }} 
+              onClick={() => navigate('/student/profile')}
+            >
+              {user?.fullName}
+            </span>
             <Button
               type="text"
               icon={<LogoutOutlined />}
