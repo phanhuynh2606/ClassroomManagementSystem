@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
+import { Form, Input, Button, Card, message } from 'antd';
+import { LockOutlined, MailOutlined } from '@ant-design/icons';
 import { login, clearError } from '../../store/slices/authSlice';
 
 const Login = () => {
@@ -47,59 +47,126 @@ const Login = () => {
   return (
     <div style={{ 
       height: '100vh', 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center',
-      background: '#f0f2f5'
+      display: 'flex',
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
     }}>
-      <Card style={{ width: 400, boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Learning Management System</h2>
-        <Form
-          name="login"
-          onFinish={onFinish}
-          autoComplete="off"
-          layout="vertical"
+      {/* Left side - Image */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '2rem',
+        background: 'rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(10px)'
+      }}>
+        <div style={{ textAlign: 'center', color: '#1a365d' }}>
+          <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold' }}>
+            Welcome Back!
+          </h1>
+          <p style={{ fontSize: '1.2rem', opacity: 0.8 }}>
+            Sign in to continue your learning journey
+          </p>
+        </div>
+      </div>
+
+      {/* Right side - Login Form */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '2rem'
+      }}>
+        <Card 
+          style={{ 
+            width: 400,
+            borderRadius: '15px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+            background: 'rgba(255, 255, 255, 0.95)'
+          }}
         >
-          <Form.Item
-            name="email"
-            rules={[{ required: true, message: 'Please input your email!' }]}
-          >
-            <Input 
-              prefix={<UserOutlined />} 
-              placeholder="Email" 
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: 'Please input your password!' }]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Password"
-              size="large"
-            />
-          </Form.Item>
-
-          <Form.Item>
-            <Button 
-              // type="primary" 
-              htmlType="submit" 
-              block 
-              size="large"
-              className='bg-blue-500'
-              loading={loading}
-            >
-              Log in
-            </Button>
-          </Form.Item>
-
-          <div style={{ textAlign: 'center' }}>
-            Don't have an account? <Link to="/register" className='text-blue-500'>Register here</Link>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h2 style={{ 
+              fontSize: '2rem', 
+              color: '#1a365d',
+              marginBottom: '0.5rem'
+            }}>
+              Learning Management System
+            </h2>
+            <p style={{ color: '#718096', fontSize: '1rem' }}>
+              Sign in to your account
+            </p>
           </div>
-        </Form>
-      </Card>
+
+          <Form
+            name="login"
+            onFinish={onFinish}
+            autoComplete="off"
+            layout="vertical"
+            size="large"
+          >
+            <Form.Item
+              name="email"
+              rules={[{ required: true, message: 'Please input your email!' }]}
+            >
+              <Input 
+                prefix={<MailOutlined style={{ color: '#718096' }} />} 
+                placeholder="Email"
+                style={{ borderRadius: '8px' }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: 'Please input your password!' }]}
+            >
+              <Input.Password
+                prefix={<LockOutlined style={{ color: '#718096' }} />}
+                placeholder="Password"
+                style={{ borderRadius: '8px' }}
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                block 
+                loading={loading}
+                style={{
+                  height: '45px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #4299e1 0%, #2b6cb0 100%)',
+                  border: 'none',
+                  fontSize: '1rem',
+                  fontWeight: '500'
+                }}
+              >
+                Sign In
+              </Button>
+            </Form.Item>
+
+            <div style={{ 
+              textAlign: 'center',
+              marginTop: '1rem',
+              color: '#4a5568'
+            }}>
+              Don't have an account?{' '}
+              <Link 
+                to="/register" 
+                style={{ 
+                  color: '#4299e1',
+                  fontWeight: '500',
+                  textDecoration: 'none'
+                }}
+              >
+                Register here
+              </Link>
+            </div>
+          </Form>
+        </Card>
+      </div>
     </div>
   );
 };

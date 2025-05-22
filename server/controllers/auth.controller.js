@@ -54,12 +54,13 @@ const registerUser = async (req, res) => {
       email,
       password,
       role: role || 'student',
-      isActive: role === 'student' ? true : false
+      verified: role === 'teacher' ? false : true
     });
     if(user.role === 'teacher'){
-      return res.status(400).json({ 
-        success: false,
+      return res.status(200).json({ 
+        success: true,
         message: 'Contact admin to confirm teacher',
+        verified: false
        });
     }
     if (user) {
@@ -83,7 +84,8 @@ const registerUser = async (req, res) => {
 
       // Set refresh token in cookie
       setRefreshTokenCookie(res, refreshToken);
-
+      user.lastLogin = new Date();
+      await user.save();
       res.status(201).json({
         message: 'Registration successful',
         user: {
@@ -123,6 +125,12 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         message: 'Contact admin to confirm teacher',
+       });
+    }
+    if(user.isActive === false){
+      return res.status(400).json({ 
+        success: false,
+        message: 'Your account is not active please contact admin to activate your account',
        });
     }
 

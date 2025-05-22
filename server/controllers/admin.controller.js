@@ -10,7 +10,28 @@ const getUsersByRole = async (req, res) => {
   });
 };
 
+const verifyTeacher = async (req, res) => {
+  const { userId } = req.params;
+  const {verified } = req.body;
+  const user = await User.findByIdAndUpdate(userId, { verified: verified }, { new: true });
+  res.status(200).json({
+    success: true,
+    data: user,
+  });
+};
 
+const updateUser = async (req, res) => {
+  const { userId } = req.params;
+  const { userData } = req.body;
+  console.log(userData)
+  const user = await User.findByIdAndUpdate(userId, userData, { new: true });
+  res.status(200).json({
+    success: true,
+    data: user,
+  });
+};
 module.exports = {
   getUsersByRole,
+  verifyTeacher,
+  updateUser,
 };

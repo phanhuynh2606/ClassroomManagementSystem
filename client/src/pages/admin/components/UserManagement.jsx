@@ -21,6 +21,8 @@ import {
   EditOutlined,
   DeleteOutlined,
   FilterOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
 import adminAPI from '../../../services/api/admin.api';
@@ -37,10 +39,10 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
-    role: undefined,
     status: undefined,
     gender: undefined,
     dateRange: undefined,
+    verificationStatus: undefined,
   });
 
   const currentRole = useSelector((state) => state.users.currentRole);
@@ -61,6 +63,20 @@ const UserManagement = () => {
 
     fetchUsers();
   }, [currentRole]);
+
+  const handleVerifyTeacher = async (userId, verify) => {
+    try {
+      console.log(userId, verify)
+      await adminAPI.verifyTeacher(userId, verify );
+      setUsers(users.map(user => 
+        user._id === userId ? { ...user, verified: verify } : user
+      ));
+      message.success(`Teacher ${verify ? 'verified' : 'unverified'} successfully`);
+    } catch (error) {
+      message.error(`Failed to ${verify ? 'verify' : 'unverify'} teacher`);
+      console.error('Error updating teacher verification:', error);
+    }
+  };
 
   const columns = [
     {
@@ -145,9 +161,30 @@ const UserManagement = () => {
           >
             Edit
           </Button>
+          {record.role === 'teacher' && (
+            <>
+              {!record.verified ? (
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => handleVerifyTeacher(record._id, true)}
+                >
+                  Verify
+                </Button>
+              ) : (
+                <Button
+                  danger
+                  icon={<CloseCircleOutlined />}
+                  onClick={() => handleVerifyTeacher(record._id, false)}
+                >
+                  Unverify
+                </Button>
+              )}
+            </>
+          )}
           <Popconfirm
             title="Are you sure you want to delete this user?"
-            onConfirm={() => handleDelete(record.key)}
+            onConfirm={() => handleDelete(record._id)}
             okText="Yes"
             cancelText="No"
           >
@@ -179,7 +216,7 @@ const UserManagement = () => {
   const handleDelete = async (key) => {
     try {
       await adminAPI.deleteUser(key);
-      setUsers(users.filter((user) => user.key !== key));
+      setUsers(users.filter((user) => user._id !== key));
       message.success('User deleted successfully');
     } catch (error) {
       message.error('Failed to delete user');
@@ -191,10 +228,10 @@ const UserManagement = () => {
     try {
       const values = await form.validateFields();
       if (editingUser) {
-        await adminAPI.updateUser(editingUser.key, values);
+        await adminAPI.updateUser(editingUser._id, values);
         setUsers(
           users.map((user) =>
-            user.key === editingUser.key ? { ...user, ...values } : user
+            user._id === editingUser._id ? { ...user, ...values } : user
           )
         );
         message.success('User updated successfully');
@@ -220,9 +257,9 @@ const UserManagement = () => {
       user.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
       user.phone?.toLowerCase().includes(searchText.toLowerCase());
 
-    const matchesRole = !filters.role || user.role === filters.role;
     const matchesStatus = filters.status === undefined || user.isActive === filters.status;
     const matchesGender = !filters.gender || user.gender === filters.gender;
+    const matchesVerification = filters.verificationStatus === undefined || user.verified === filters.verificationStatus;
     
     const matchesDateRange = !filters.dateRange || (
       user.lastLogin && 
@@ -230,7 +267,7 @@ const UserManagement = () => {
       dayjs(user.lastLogin).isBefore(filters.dateRange[1])
     );
 
-    return matchesSearch && matchesRole && matchesStatus && matchesGender && matchesDateRange;
+    return matchesSearch && matchesStatus && matchesGender && matchesDateRange && matchesVerification;
   });
 
   return (
@@ -244,18 +281,6 @@ const UserManagement = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-          </Col>
-          <Col span={4}>
-            <Select
-              placeholder="Filter by Role"
-              style={{ width: '100%' }}
-              allowClear
-              onChange={(value) => handleFilterChange('role', value)}
-            >
-              <Option value="admin">Admin</Option>
-              <Option value="teacher">Teacher</Option>
-              <Option value="student">Student</Option>
-            </Select>
           </Col>
           <Col span={4}>
             <Select
@@ -287,6 +312,32 @@ const UserManagement = () => {
             />
           </Col>
         </Row>
+        {currentRole === 'teacher' && (
+          <Row style={{ marginTop: 16 }}>
+            <Col>
+              <Space>
+                <Button 
+                  type={filters.verificationStatus === undefined ? 'primary' : 'default'}
+                  onClick={() => handleFilterChange('verificationStatus', undefined)}
+                >
+                  All Teachers
+                </Button>
+                <Button 
+                  type={filters.verificationStatus === true ? 'primary' : 'default'}
+                  onClick={() => handleFilterChange('verificationStatus', true)}
+                >
+                  Verified Teachers
+                </Button>
+                <Button 
+                  type={filters.verificationStatus === false ? 'primary' : 'default'}
+                  onClick={() => handleFilterChange('verificationStatus', false)}
+                >
+                  Unverified Teachers
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        )}
       </Card>
 
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
@@ -303,7 +354,7 @@ const UserManagement = () => {
         columns={columns} 
         dataSource={filteredUsers} 
         loading={loading}
-        rowKey="key"
+        rowKey="_id"
         scroll={{ x: 1200 }}
       />
 

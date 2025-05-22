@@ -77,7 +77,7 @@ const AppRouter = () => {
       </Route>
 
       {/* Teacher Routes */}
-      {/* <Route
+      <Route
         path="/teacher"
         element={
           <ProtectedRoute allowedRoles={['teacher']}>
@@ -85,15 +85,15 @@ const AppRouter = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<TeacherDashboard />} />
+        {/* <Route index element={<TeacherDashboard />} />
         <Route path="classrooms" element={<MyClassrooms />} />
         <Route path="create-quiz" element={<CreateQuiz />} />
         <Route path="grade-submissions" element={<GradeSubmissions />} />
-        <Route path="student-progress" element={<StudentProgress />} />
-      </Route> */}
+        <Route path="student-progress" element={<StudentProgress />} /> */}
+      </Route>
 
       {/* Student Routes */}
-      {/* <Route
+      <Route
         path="/student"
         element={
           <ProtectedRoute allowedRoles={['student']}>
@@ -101,12 +101,12 @@ const AppRouter = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<StudentDashboard />} />
+        {/* <Route index element={<StudentDashboard />} />
         <Route path="courses" element={<MyCourses />} />
         <Route path="take-quiz/:quizId" element={<TakeQuiz />} />
         <Route path="grades" element={<MyGrades />} />
-        <Route path="progress" element={<MyProgress />} />
-      </Route> */}
+        <Route path="progress" element={<MyProgress />} /> */}
+      </Route>
 
       {/* Default Route - Redirect based on user role */}
       <Route
