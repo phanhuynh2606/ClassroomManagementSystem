@@ -5,7 +5,7 @@ const Quiz = require('../models/quiz.model');
 
 const getQuestions = async (req, res) => {
     try {
-        const { page = 1, limit = 10, search = '', subjectCode, difficulty, category, status } = req.query;
+        const { page = 1, limit = 10, search = '', difficulty, category, status } = req.query;
 
         const query = {};
 
@@ -14,10 +14,6 @@ const getQuestions = async (req, res) => {
                 { content: { $regex: search, $options: 'i' } },
                 { subjectCode: { $regex: search, $options: 'i' } }
             ];
-        }
-
-        if (subjectCode) {
-            query.subjectCode = subjectCode;
         }
 
         if (difficulty) {

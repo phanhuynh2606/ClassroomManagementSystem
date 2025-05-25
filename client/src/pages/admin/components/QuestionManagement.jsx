@@ -28,11 +28,23 @@ import { questionAPI } from '../../../services/api';
 const { Option } = Select;
 const { TextArea } = Input;
 
+const categoryOptions = [
+  { value: 'PT1', label: 'PT1' },
+  { value: 'PT2', label: 'PT2' },
+  { value: 'QUIZ1', label: 'QUIZ1' },
+  { value: 'QUIZ2', label: 'QUIZ2' },
+  { value: 'FE', label: 'FE' },
+  { value: 'ASSIGNMENT', label: 'ASSIGNMENT' },
+];
+
 const QuestionManagement = () => {
   const [form] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [searchText, setSearchText] = useState('');
+  const [ difficultyFilter, setDifficultyFilter] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -42,10 +54,10 @@ const QuestionManagement = () => {
   });
 
   // Fetch questions from API
-  const fetchQuestions = async (page = 1, limit = 10, search = '') => {
+  const fetchQuestions = async (page = 1, limit = 10, search = searchText) => {
     try {
       setLoading(true);
-      const response = await questionAPI.getAll(page, limit, search);      
+      const response = await questionAPI.getAll(page, limit, search, difficultyFilter, categoryFilter, statusFilter);      
 
       if (response.success) {
         const formattedQuestions = response.data.map((question) => ({
@@ -76,7 +88,6 @@ const QuestionManagement = () => {
         });
       }
     } catch (error) {
-      message.error('Failed to fetch questions');
       console.error('Error fetching questions:', error);
     } finally {
       setLoading(false);
@@ -131,7 +142,7 @@ const QuestionManagement = () => {
 
   useEffect(() => {
     fetchQuestions();
-  }, []);
+  }, [searchText, pagination.current, pagination.pageSize, difficultyFilter, categoryFilter, statusFilter]);
 
   const columns = [
     {
@@ -292,13 +303,53 @@ const QuestionManagement = () => {
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Input.Search
+       <div>
+         <Input.Search
           placeholder="Search questions..."
           prefix={<SearchOutlined />}
           style={{ width: 300 }}
-          onSearch={handleSearch}
+          onChange={handleSearch}
           enterButton
         />
+        <Select
+          style={{ width: 150, marginLeft: 8 }}
+          onChange={(value) => {
+            setDifficultyFilter(value);
+          }}
+          defaultValue={null}
+        >
+          <Option value={null}>All</Option>
+          <Option value="easy">Easy</Option>
+          <Option value="medium">Medium</Option>
+          <Option value="hard">Hard</Option>
+        </Select>
+        <Select
+          style={{ width: 150, marginLeft: 8 }}
+          onChange={(value) => {
+            setCategoryFilter (value);
+          }}
+          defaultValue={null}
+        >
+          <Option value={null}>All</Option>
+          {categoryOptions.map((option) => (
+            <Option key={option.value} value={option.value}>
+              {option.label}
+            </Option>
+          ))}
+        </Select>
+        <Select
+          style={{ width: 150, marginLeft: 8 }}
+          onChange={(value) => {
+            setStatusFilter(value);
+          }}
+          defaultValue={null}
+        >
+          <Option value={null}>All</Option>
+          <Option value="draft">Draft</Option>
+          <Option value="published">Published</Option>
+          <Option value="archived">Archived</Option>
+        </Select>
+       </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}

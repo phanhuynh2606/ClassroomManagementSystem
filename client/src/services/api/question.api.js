@@ -1,11 +1,14 @@
 import axiosClient from '../axiosClient';
 
 const questionAPI = {
-  getAll: (page, limit, search) => axiosClient.get('/admin/questions', {
+  getAll: (page, limit, search, difficulty, category, status) => axiosClient.get('/admin/questions', {
     params: {
       page,
       limit,
       search,
+      difficulty,
+      category,
+      status
     }
   }),
   getById: (id) => axiosClient.get(`/questions/${id}`),
