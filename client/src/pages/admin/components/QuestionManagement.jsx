@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   Button,
@@ -12,6 +12,8 @@ import {
   Tag,
   InputNumber,
   Upload,
+  Spin,
+  Checkbox,
 } from 'antd';
 import {
   PlusOutlined,
@@ -20,6 +22,8 @@ import {
   DeleteOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
+import axios from 'axios';
+import { questionAPI } from '../../../services/api';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -29,48 +33,117 @@ const QuestionManagement = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [searchText, setSearchText] = useState('');
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
-  // Mock data - replace with actual API calls
-  const [questions, setQuestions] = useState([
-    {
-      key: '1',
-      content: 'What is React?',
-      options: [
-        { content: 'A JavaScript library for building user interfaces', isCorrect: true },
-        { content: 'A programming language', isCorrect: false },
-        { content: 'A database management system', isCorrect: false },
-        { content: 'A web server', isCorrect: false },
-      ],
-      difficulty: 'easy',
-      category: 'QUIZ1',
-      subjectCode: 'WDP301',
-      points: 1,
-      status: 'published',
-    },
-    {
-      key: '2',
-      content: 'Explain the concept of state in React.',
-      options: [
-        { content: 'State is a built-in object that stores property values', isCorrect: true },
-        { content: 'State is a function that returns JSX', isCorrect: false },
-        { content: 'State is a CSS property', isCorrect: false },
-        { content: 'State is a database query', isCorrect: false },
-      ],
-      difficulty: 'medium',
-      category: 'PT1',
-      subjectCode: 'WDP301',
-      points: 2,
-      status: 'draft',
-    },
-  ]);
+  // Fetch questions from API
+  const fetchQuestions = async (page = 1, limit = 10, search = '') => {
+    try {
+      setLoading(true);
+      const response = await questionAPI.getAll(page, limit, search);      
+
+      if (response.success) {
+        const formattedQuestions = response.data.map((question) => ({
+          key: question._id,
+          _id: question._id,
+          content: question.content,
+          image: question.image,
+          options: question.options,
+          explanation: question.explanation,
+          explanationImage: question.explanationImage,
+          difficulty: question.difficulty,
+          points: question.points,
+          isAI: question.isAI,
+          category: question.category,
+          subjectCode: question.subjectCode,
+          status: question.status,
+          statistics: question.statistics,
+          createdBy: question.createdBy,
+          createdAt: question.createdAt,
+          updatedAt: question.updatedAt,
+        }));
+
+        setQuestions(formattedQuestions);
+        setPagination({
+          current: response.data.pagination.page,
+          pageSize: response.data.pagination.limit,
+          total: response.data.pagination.total,
+        });
+      }
+    } catch (error) {
+      message.error('Failed to fetch questions');
+      console.error('Error fetching questions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create or update question
+  const saveQuestion = async (questionData) => {
+    try {
+      setLoading(true);
+      let response;
+
+      if (editingQuestion) {
+        // Update existing question
+        response = await questionAPI.update(editingQuestion._id, questionData);
+      } else {
+        // Create new question
+        response = await questionAPI.create(questionData);  
+      }
+
+      if (response.data.success) {
+        message.success(editingQuestion ? 'Question updated successfully' : 'Question created successfully');
+        fetchQuestions(pagination.current, pagination.pageSize, searchText);
+        setIsModalVisible(false);
+        form.resetFields();
+      }
+    } catch (error) {
+      message.error('Failed to save question');
+      console.error('Error saving question:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete question
+  const deleteQuestion = async (questionId) => {
+    try {
+      setLoading(true);
+      const response = await questionAPI.delete(questionId);
+      
+      if (response.data.success) {
+        message.success('Question deleted successfully');
+        fetchQuestions(pagination.current, pagination.pageSize, searchText);
+      }
+    } catch (error) {
+      message.error('Failed to delete question');
+      console.error('Error deleting question:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuestions();
+  }, []);
 
   const columns = [
     {
       title: 'Question',
       dataIndex: 'content',
       key: 'content',
-      width: '30%',
-      render: (text) => <div style={{ whiteSpace: 'pre-wrap' }}>{text}</div>,
+      width: '25%',
+      render: (text) => (
+        <div style={{ whiteSpace: 'pre-wrap', maxWidth: '300px' }}>
+          {text.length > 100 ? `${text.substring(0, 100)}...` : text}
+        </div>
+      ),
     },
     {
       title: 'Difficulty',
@@ -114,6 +187,26 @@ const QuestionManagement = () => {
       },
     },
     {
+      title: 'Statistics',
+      key: 'statistics',
+      render: (_, record) => (
+        <div>
+          <div>Total: {record.statistics?.totalAttempts || 0}</div>
+          <div>Correct: {record.statistics?.correctAttempts || 0}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'AI Generated',
+      dataIndex: 'isAI',
+      key: 'isAI',
+      render: (isAI) => (
+        <Tag color={isAI ? 'blue' : 'default'}>
+          {isAI ? 'AI' : 'Manual'}
+        </Tag>
+      ),
+    },
+    {
       title: 'Actions',
       key: 'actions',
       render: (_, record) => (
@@ -121,17 +214,18 @@ const QuestionManagement = () => {
           <Button
             type="primary"
             icon={<EditOutlined />}
+            size="small"
             onClick={() => handleEdit(record)}
           >
             Edit
           </Button>
           <Popconfirm
             title="Are you sure you want to delete this question?"
-            onConfirm={() => handleDelete(record.key)}
+            onConfirm={() => deleteQuestion(record._id)}
             okText="Yes"
             cancelText="No"
           >
-            <Button danger icon={<DeleteOutlined />}>
+            <Button danger icon={<DeleteOutlined />} size="small">
               Delete
             </Button>
           </Popconfirm>
@@ -143,61 +237,67 @@ const QuestionManagement = () => {
   const handleAdd = () => {
     setEditingQuestion(null);
     form.resetFields();
+    // Set default values for new question
+    form.setFieldsValue({
+      options: [
+        { content: '', isCorrect: false },
+        { content: '', isCorrect: false },
+        { content: '', isCorrect: false },
+        { content: '', isCorrect: false },
+      ],
+      status: 'draft',
+      isAI: false,
+      points: 1,
+    });
     setIsModalVisible(true);
   };
 
   const handleEdit = (question) => {
     setEditingQuestion(question);
-    form.setFieldsValue(question);
+    form.setFieldsValue({
+      content: question.content,
+      options: question.options,
+      explanation: question.explanation,
+      difficulty: question.difficulty,
+      points: question.points,
+      isAI: question.isAI,
+      category: question.category,
+      subjectCode: question.subjectCode,
+      status: question.status,
+    });
     setIsModalVisible(true);
-  };
-
-  const handleDelete = (key) => {
-    setQuestions(questions.filter((question) => question.key !== key));
-    message.success('Question deleted successfully');
   };
 
   const handleModalOk = () => {
     form.validateFields().then((values) => {
-      if (editingQuestion) {
-        // Update existing question
-        setQuestions(
-          questions.map((question) =>
-            question.key === editingQuestion.key
-              ? { ...question, ...values }
-              : question
-          )
-        );
-        message.success('Question updated successfully');
-      } else {
-        // Add new question
-        const newQuestion = {
-          key: Date.now().toString(),
-          ...values,
-        };
-        setQuestions([...questions, newQuestion]);
-        message.success('Question added successfully');
+      // Validate that at least one option is correct
+      const hasCorrectOption = values.options.some(option => option.isCorrect);
+      if (!hasCorrectOption) {
+        message.error('At least one option must be marked as correct');
+        return;
       }
-      setIsModalVisible(false);
+      saveQuestion(values);
     });
   };
 
-  const filteredQuestions = questions.filter(
-    (question) =>
-      question.content.toLowerCase().includes(searchText.toLowerCase()) ||
-      question.category.toLowerCase().includes(searchText.toLowerCase()) ||
-      question.subjectCode.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const handleSearch = (value) => {
+    setSearchText(value.target.value);
+    fetchQuestions(1, pagination.pageSize, value);
+  };
+
+  const handleTableChange = (paginationConfig) => {
+    fetchQuestions(paginationConfig.current, paginationConfig.pageSize, searchText);
+  };
 
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <Input
+        <Input.Search
           placeholder="Search questions..."
           prefix={<SearchOutlined />}
           style={{ width: 300 }}
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
+          onSearch={handleSearch}
+          enterButton
         />
         <Button
           type="primary"
@@ -208,14 +308,27 @@ const QuestionManagement = () => {
         </Button>
       </div>
 
-      <Table columns={columns} dataSource={filteredQuestions} />
+      <Table 
+        columns={columns} 
+        dataSource={questions}
+        loading={loading}
+        pagination={{
+          ...pagination,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} items`,
+        }}
+        onChange={handleTableChange}
+        scroll={{ x: 1200 }}
+      />
 
       <Modal
         title={editingQuestion ? 'Edit Question' : 'Add Question'}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={() => setIsModalVisible(false)}
-        width={800}
+        width={900}
+        confirmLoading={loading}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -226,15 +339,27 @@ const QuestionManagement = () => {
             <TextArea rows={4} />
           </Form.Item>
 
-          <Form.List name="options">
-            {(fields, { add, remove }) => (
+          <Form.List 
+            name="options"
+            rules={[
+              {
+                validator: async (_, options) => {
+                  if (!options || options.length < 2) {
+                    return Promise.reject(new Error('At least 2 options required'));
+                  }
+                },
+              },
+            ]}
+          >
+            {(fields, { add, remove }, { errors }) => (
               <>
                 {fields.map(({ key, name, ...restField }) => (
-                  <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                  <Space key={key} style={{ display: 'flex', marginBottom: 8, width: '100%' }} align="baseline">
                     <Form.Item
                       {...restField}
                       name={[name, 'content']}
                       rules={[{ required: true, message: 'Missing option content' }]}
+                      style={{ flex: 1 }}
                     >
                       <Input placeholder="Option content" />
                     </Form.Item>
@@ -243,79 +368,105 @@ const QuestionManagement = () => {
                       name={[name, 'isCorrect']}
                       valuePropName="checked"
                     >
-                      <Select style={{ width: 100 }}>
-                        <Option value={true}>Correct</Option>
-                        <Option value={false}>Incorrect</Option>
-                      </Select>
+                      <Checkbox>Correct</Checkbox>
                     </Form.Item>
-                    <Button type="link" onClick={() => remove(name)}>
-                      Delete
-                    </Button>
+                    {fields.length > 2 && (
+                      <Button type="link" onClick={() => remove(name)} danger>
+                        Delete
+                      </Button>
+                    )}
                   </Space>
                 ))}
                 <Form.Item>
                   <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
                     Add Option
                   </Button>
+                  <Form.ErrorList errors={errors} />
                 </Form.Item>
               </>
             )}
           </Form.List>
 
           <Form.Item
-            name="difficulty"
-            label="Difficulty"
-            rules={[{ required: true, message: 'Please select difficulty!' }]}
+            name="explanation"
+            label="Explanation"
           >
-            <Select>
-              <Option value="easy">Easy</Option>
-              <Option value="medium">Medium</Option>
-              <Option value="hard">Hard</Option>
-            </Select>
+            <TextArea rows={3} placeholder="Explanation for the correct answer" />
           </Form.Item>
 
-          <Form.Item
-            name="category"
-            label="Category"
-            rules={[{ required: true, message: 'Please select category!' }]}
-          >
-            <Select>
-              <Option value="PT1">PT1</Option>
-              <Option value="PT2">PT2</Option>
-              <Option value="QUIZ1">QUIZ1</Option>
-              <Option value="QUIZ2">QUIZ2</Option>
-              <Option value="FE">FE</Option>
-              <Option value="ASSIGNMENT">ASSIGNMENT</Option>
-            </Select>
-          </Form.Item>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Form.Item
+              name="difficulty"
+              label="Difficulty"
+              rules={[{ required: true, message: 'Please select difficulty!' }]}
+              style={{ flex: 1 }}
+            >
+              <Select>
+                <Option value="easy">Easy</Option>
+                <Option value="medium">Medium</Option>
+                <Option value="hard">Hard</Option>
+              </Select>
+            </Form.Item>
 
-          <Form.Item
-            name="subjectCode"
-            label="Subject Code"
-            rules={[{ required: true, message: 'Please input subject code!' }]}
-          >
-            <Input />
-          </Form.Item>
+            <Form.Item
+              name="points"
+              label="Points"
+              rules={[{ required: true, message: 'Please input points!' }]}
+              style={{ flex: 1 }}
+            >
+              <InputNumber min={1} style={{ width: '100%' }} />
+            </Form.Item>
+          </div>
 
-          <Form.Item
-            name="points"
-            label="Points"
-            rules={[{ required: true, message: 'Please input points!' }]}
-          >
-            <InputNumber min={1} style={{ width: '100%' }} />
-          </Form.Item>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Form.Item
+              name="category"
+              label="Category"
+              rules={[{ required: true, message: 'Please select category!' }]}
+              style={{ flex: 1 }}
+            >
+              <Select>
+                <Option value="PT1">PT1</Option>
+                <Option value="PT2">PT2</Option>
+                <Option value="QUIZ1">QUIZ1</Option>
+                <Option value="QUIZ2">QUIZ2</Option>
+                <Option value="FE">FE</Option>
+                <Option value="ASSIGNMENT">ASSIGNMENT</Option>
+              </Select>
+            </Form.Item>
 
-          <Form.Item
-            name="status"
-            label="Status"
-            rules={[{ required: true, message: 'Please select status!' }]}
-          >
-            <Select>
-              <Option value="draft">Draft</Option>
-              <Option value="published">Published</Option>
-              <Option value="archived">Archived</Option>
-            </Select>
-          </Form.Item>
+            <Form.Item
+              name="subjectCode"
+              label="Subject Code"
+              rules={[{ required: true, message: 'Please input subject code!' }]}
+              style={{ flex: 1 }}
+            >
+              <Input placeholder="e.g., SCI101, GEO101" />
+            </Form.Item>
+          </div>
+
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Form.Item
+              name="status"
+              label="Status"
+              rules={[{ required: true, message: 'Please select status!' }]}
+              style={{ flex: 1 }}
+            >
+              <Select>
+                <Option value="draft">Draft</Option>
+                <Option value="published">Published</Option>
+                <Option value="archived">Archived</Option>
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              name="isAI"
+              valuePropName="checked"
+              style={{ flex: 1, display: 'flex', alignItems: 'center', marginTop: 30 }}
+            >
+              <Checkbox>AI Generated Question</Checkbox>
+            </Form.Item>
+          </div>
 
           <Form.Item label="Question Image">
             <Upload>
@@ -328,4 +479,4 @@ const QuestionManagement = () => {
   );
 };
 
-export default QuestionManagement; 
+export default QuestionManagement;
