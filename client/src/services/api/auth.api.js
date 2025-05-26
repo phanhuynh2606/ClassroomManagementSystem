@@ -28,8 +28,22 @@ const authAPI = {
   getUserDevices: async () => {
     const response = await axiosClient.get(`/auth/devices`);
     return response;
-  }
+  },
 
+  // Forgot password
+  forgotPassword: (email) => {
+    return axiosClient.post('/auth/forgot-password', { email });
+  },
+
+  // Reset password
+  resetPassword: (token, password) => {
+    return axiosClient.post(`/auth/reset-password/${token}`, { password });
+  },
+
+  // Verify reset token
+  verifyResetToken: (token) => {
+    return axiosClient.get(`/auth/verify-reset-token/${token}`);
+  }
 };
 
 export default authAPI;

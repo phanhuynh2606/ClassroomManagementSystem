@@ -1,8 +1,8 @@
-import jwt from "jsonwebtoken";
-import User from "../models/user.model.js";
+const jwt = require("jsonwebtoken");
+const User = require("../models/user.model.js");
 
 // Protect routes
-export const protect = async (req, res, next) => {
+const protect = async (req, res, next) => {
   try {
     let accessToken;
 
@@ -59,7 +59,7 @@ export const protect = async (req, res, next) => {
 };
 
 // Grant access to specific roles
-export const authorize = (...roles) => {
+const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
@@ -68,4 +68,9 @@ export const authorize = (...roles) => {
     }
     next();
   };
+};
+
+module.exports = {
+  protect,
+  authorize
 };

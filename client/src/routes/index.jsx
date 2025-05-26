@@ -10,6 +10,8 @@ import StudentLayout from '../layouts/StudentLayout';
 // Auth Pages
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+import ForgotPassword from '../pages/auth/ForgotPassword';
+import ResetPassword from '../pages/auth/ResetPassword';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -67,6 +69,8 @@ const AppRouter = () => {
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       {/* Admin Routes */}
       <Route

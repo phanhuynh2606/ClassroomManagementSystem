@@ -2,9 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db.config');
-const { default: initRoutes } = require('./routes/index.route');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
+const initRoutes = require('./routes/index.route');
 // Load env vars
 dotenv.config();
 

@@ -154,6 +154,40 @@ userSchema.methods.cleanExpiredTokens = async function() {
   return this.save();
 };
 
+// Method to generate reset password token
+userSchema.methods.getResetPasswordToken = function() {
+  const crypto = require('crypto');
+  
+  // Generate token
+  const resetToken = crypto.randomBytes(20).toString('hex');
+  
+  // Hash token and set to resetPasswordToken field
+  this.resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(resetToken)
+    .digest('hex');
+  
+  // Set expire time (1 hour)
+  this.resetPasswordExpire = Date.now() + 60 * 60 * 1000;
+  
+  return resetToken;
+};
+
+// Method to verify reset password token
+userSchema.methods.verifyResetPasswordToken = function(token) {
+  const crypto = require('crypto');
+  
+  // Hash the provided token
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+  
+  // Check if token matches and hasn't expired
+  return this.resetPasswordToken === hashedToken && 
+         this.resetPasswordExpire > Date.now();
+};
+
 // Tự động dọn dẹp token hết hạn mỗi ngày
 setInterval(async () => {
   try {

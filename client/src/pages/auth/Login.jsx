@@ -184,6 +184,18 @@ const Login = () => {
               marginTop: '1rem',
               color: '#4a5568'
             }}>
+              <Link 
+                to="/forgot-password" 
+                style={{ 
+                  color: '#4299e1',
+                  fontWeight: '500',
+                  textDecoration: 'none',
+                  display: 'block',
+                  marginBottom: '0.5rem'
+                }}
+              >
+                Forgot your password?
+              </Link>
               Don't have an account?{' '}
               <Link 
                 to="/register" 
