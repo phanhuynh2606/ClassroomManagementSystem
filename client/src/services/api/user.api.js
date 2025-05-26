@@ -1,5 +1,7 @@
 
 
+import axiosClient from '../axiosClient';
+
 const userAPI = {
 
   // Get user by ID
@@ -12,6 +14,10 @@ const userAPI = {
     return axiosClient.post('/users', userData);
   },
 
+  // Update profile
+  updateProfile: ( userData) => {
+    return axiosClient.put(`/users/profile`, userData);
+  },
   // Update user
   updateUser: (id, userData) => {
     return axiosClient.put(`/users/${id}`, userData);

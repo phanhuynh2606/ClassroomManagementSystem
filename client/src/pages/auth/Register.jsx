@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { Form, Input, Button, Card, Select, message } from 'antd';
+import { Form, Input, Button, Card, Select, message, Divider } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
-import { register, clearError } from '../../store/slices/authSlice';
+import { GoogleLogin } from '@react-oauth/google';
+import { register, googleLogin, clearError } from '../../store/slices/authSlice';
 
 const { Option } = Select;
 
@@ -40,15 +41,29 @@ const Register = () => {
   const onFinish = async (values) => {
     try {
       const res = await dispatch(register(values)).unwrap();
-      if(res.verified === false){
+      if (res.verified === false) {
         message.warning('Register successfully, please contact admin to verify your account');
         navigate('/login');
-      }else{
+      } else {
         message.success('Registration successful!');
       }
     } catch (error) {
       console.error('Registration error:', error);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      await dispatch(googleLogin(credentialResponse.credential)).unwrap();
+      message.success('Google registration successful!');
+    } catch (error) {
+      console.error('Google registration error:', error);
+      message.error('Google registration failed. Please try again.');
+    }
+  };
+
+  const handleGoogleError = () => {
+    message.error('Google registration failed. Please try again.');
   };
 
   return (
@@ -105,6 +120,23 @@ const Register = () => {
               Fill in your details to get started
             </p>
           </div>
+
+          {/* Google Login Button */}
+          <div style={{ marginBottom: '1rem' }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              size="large"
+              text="signup_with"
+              shape="rectangular"
+              logo_alignment="left"
+              width="100%"
+            />
+          </div>
+
+          <Divider style={{ margin: '1.5rem 0' }}>
+            <span style={{ color: '#718096', fontSize: '0.9rem' }}>or register with email</span>
+          </Divider>
 
           <Form
             name="register"
@@ -209,4 +241,4 @@ const Register = () => {
   );
 };
 
-export default Register; 
+export default Register;

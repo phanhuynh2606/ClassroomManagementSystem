@@ -3,6 +3,7 @@ import axiosClient from '../axiosClient';
 const authAPI = {
   login: (email, password) => axiosClient.post('/auth/login', { email, password }),
   register: (userData) => axiosClient.post('/auth/register', userData),
+  googleLogin: (credential) => axiosClient.post('/auth/google', { credential }),
   logout: () => axiosClient.post('/auth/logout'),
   checkAuth: () => axiosClient.get('/auth/me'),
   getProfile: async () => {
@@ -31,4 +32,4 @@ const authAPI = {
 
 };
 
-export default authAPI; 
+export default authAPI;

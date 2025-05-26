@@ -1,6 +1,10 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
 import { extractDeviceInfo } from '../utils/Helper.js';
+import { OAuth2Client } from 'google-auth-library';
+
+// Google OAuth2 client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Generate access token
 const generateAccessToken = (id) => {
@@ -171,8 +175,7 @@ const loginUser = async (req, res) => {
       message: 'Login successful',
       user: userResponse,
       accessToken
-    });
-  } catch (error) {
+    });  } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
@@ -418,20 +421,135 @@ const getUserDevices = async (req, res) => {
     res.status(200).json({
       message: 'Devices fetched successfully',
       data: devices
-    });
-  } catch (error) {
+    });  } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Google OAuth login
+// @route   POST /api/auth/google
+// @access  Public
+const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ message: 'Google credential is required' });
+    }
+
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email not provided by Google' });
+    }
+
+    // Check if user exists
+    let user = await User.findOne({ 
+      $or: [
+        { email: email },
+        { googleId: googleId }
+      ]
+    });
+
+    if (user) {
+      // Update user's Google ID if not set
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    } else {
+      // Create new user
+      user = await User.create({
+        fullName: name,
+        email: email,
+        googleId: googleId,
+        image: picture,
+        role: 'student', // Default role for Google sign-up
+        verified: true,
+        isActive: true,
+        password: undefined // No password for Google users
+      });
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Your account is not active. Please contact admin to activate your account.',
+      }); 
+    }
+    
+    // Check if teacher is verified
+    if (user.role === 'teacher' && !user.verified) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Contact admin to confirm teacher status',
+      });
+    }
+
+    // Generate tokens
+    const accessToken = generateAccessToken(user._id);
+    const deviceInfo = extractDeviceInfo(req);
+    const refreshToken = generateRefreshToken(user._id, deviceInfo);
+
+    // Add refresh token to user
+    await user.addRefreshToken({
+      token: refreshToken,
+      device: deviceInfo.deviceName,
+      ipAddress: deviceInfo.ipAddress,
+      userAgent: deviceInfo.browser,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+    });
+
+    // Set refresh token in cookie
+    setRefreshTokenCookie(res, refreshToken);
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Get user without sensitive data
+    const userResponse = {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      fullName: user.fullName,
+      image: user.image,
+      isActive: user.isActive,
+      googleId: user.googleId
+    };
+
+    res.status(200).json({
+      message: 'Google login successful',
+      user: userResponse,
+      accessToken
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    if (error.message.includes('Token used too early')) {
+      return res.status(400).json({ message: 'Invalid Google token timing' });
+    }
+    res.status(500).json({ message: 'Google authentication failed' });
   }
 };
 
 export {
   registerUser,
   loginUser,
+  googleLogin,
   logoutUser,
   logoutAllDevices,
   getProfile,
   refreshAccessToken,
   getUserDevices,
   logoutDevice
-}; 
+};

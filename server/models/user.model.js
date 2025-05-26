@@ -8,10 +8,16 @@ const userSchema = new mongoose.Schema({
     trim: true,
     lowercase: true,
     index: true
-  },
-  password: {
+  },  password: {
     type: String,
-    required: true
+    required: function() {
+      return !this.googleId; // Password not required for Google users
+    }
+  },
+  googleId: {
+    type: String,
+    sparse: true, // Allow multiple null values but unique non-null values
+    index: true
   },
   role: {
     type: String,
@@ -85,15 +91,19 @@ userSchema.index({ 'refreshTokens.token': 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    next();
+  if (!this.isModified('password') || !this.password) {
+    return next();
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  next();
 });
 
 // Method to compare password
 userSchema.methods.matchPassword = async function(enteredPassword) {
+  if (!this.password) {
+    return false; // Google users don't have passwords
+  }
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
@@ -158,4 +168,4 @@ setInterval(async () => {
 
 const User = mongoose.model('User', userSchema);
 
-module.exports = User;  
+module.exports = User;
