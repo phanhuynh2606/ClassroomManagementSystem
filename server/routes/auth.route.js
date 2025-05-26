@@ -3,6 +3,7 @@ const {
   registerUser,
   loginUser,
   googleLogin,
+  facebookLogin,
   logoutUser,
   logoutAllDevices,
   getProfile,
@@ -20,6 +21,7 @@ const router = express.Router();
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/google', googleLogin);
+router.post('/facebook', facebookLogin);
 router.post('/logout', logoutUser);
 router.post('/logout-all', protect, logoutAllDevices);
 router.get('/me', protect, getProfile);

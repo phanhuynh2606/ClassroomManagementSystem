@@ -101,6 +101,20 @@ export const googleLogin = createAsyncThunk(
   }
 );
 
+export const facebookLogin = createAsyncThunk(
+  'auth/facebookLogin',
+  async (accessToken, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.facebookLogin(accessToken);
+      return response;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Facebook login failed'
+      );
+    }
+  }
+);
+
 
 // Update password
 export const updatePassword = createAsyncThunk(
@@ -216,6 +230,22 @@ const authSlice = createSlice({
         localStorage.setItem('token', action.payload.accessToken);
       })
       .addCase(googleLogin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Facebook Login
+      .addCase(facebookLogin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(facebookLogin.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.accessToken;
+        localStorage.setItem('token', action.payload.accessToken);
+      })
+      .addCase(facebookLogin.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })

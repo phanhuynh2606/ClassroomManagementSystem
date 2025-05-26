@@ -4,6 +4,7 @@ const authAPI = {
   login: (email, password) => axiosClient.post('/auth/login', { email, password }),
   register: (userData) => axiosClient.post('/auth/register', userData),
   googleLogin: (credential) => axiosClient.post('/auth/google', { credential }),
+  facebookLogin: (accessToken) => axiosClient.post('/auth/facebook', { accessToken }),
   logout: () => axiosClient.post('/auth/logout'),
   checkAuth: () => axiosClient.get('/auth/me'),
   getProfile: async () => {

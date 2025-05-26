@@ -4,6 +4,7 @@ const { extractDeviceInfo } = require('../utils/Helper.js');
 const { OAuth2Client } = require('google-auth-library');
 const { sendEmail, emailTemplates } = require('../config/email.config.js');
 const crypto = require('crypto');
+const axios = require('axios');
 
 // Google OAuth2 client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -571,10 +572,11 @@ const forgotPassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found with this email' });
     }
 
-    // Check if user has Google account (no password)
-    if (user.googleId && !user.password) {
+    // Check if user has social login account (no password)
+    if ((user.googleId || user.facebookId) && !user.password) {
+      const provider = user.googleId ? 'Google' : 'Facebook';
       return res.status(400).json({ 
-        message: 'This account uses Google login. Please sign in with Google.' 
+        message: `This account uses ${provider} login. Please sign in with ${provider}.` 
       });
     }
 
@@ -706,10 +708,129 @@ const verifyResetToken = async (req, res) => {
   }
 };
 
+// @desc    Facebook OAuth login
+// @route   POST /api/auth/facebook
+// @access  Public
+const facebookLogin = async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+
+    if (!accessToken) {
+      return res.status(400).json({ message: 'Facebook access token is required' });
+    }
+
+    try {
+      // Verify Facebook access token and get user info
+      const response = await axios.get(`https://graph.facebook.com/me?fields=id,name,email,picture,first_name,last_name,gender,birthday&access_token=${accessToken}`);
+      const { id: facebookId, name, email, picture, first_name, last_name, gender, birthday } = response.data;
+      if (!email) {
+        return res.status(400).json({ 
+          message: 'Email not provided by Facebook. Please ensure your Facebook account has a verified email.' 
+        });
+      }
+
+      // Check if user exists
+      let user = await User.findOne({ 
+        $or: [
+          { email: email },
+          { facebookId: facebookId }
+        ]
+      });
+
+      if (user) {
+        // Update user's Facebook ID if not set
+        if (!user.facebookId) {
+          user.facebookId = facebookId;
+          await user.save();
+        }
+      } else {
+        // Create new user
+        user = await User.create({
+          fullName: name || `${first_name || ''} ${last_name || ''}`.trim(),
+          email: email,
+          facebookId: facebookId,
+          image: picture?.data?.url || '',
+          gender: gender === 'male' ? 'male' : gender === 'female' ? 'female' : 'other',
+          dateOfBirth: birthday ? new Date(birthday) : undefined,
+          role: 'student', // Default role for Facebook sign-up
+          verified: true,
+          isActive: true,
+          password: undefined // No password for Facebook users
+        });
+      }
+
+      // Check if user is active
+      if (!user.isActive) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Your account is not active. Please contact admin to activate your account.',
+        }); 
+      }
+      
+      // Check if teacher is verified
+      if (user.role === 'teacher' && !user.verified) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'Contact admin to confirm teacher status',
+        });
+      }
+
+      // Generate tokens
+      const accessTokenJWT = generateAccessToken(user._id);
+      const deviceInfo = extractDeviceInfo(req);
+      const refreshToken = generateRefreshToken(user._id, deviceInfo);
+
+      // Add refresh token to user
+      await user.addRefreshToken({
+        token: refreshToken,
+        device: deviceInfo.deviceName,
+        ipAddress: deviceInfo.ipAddress,
+        userAgent: deviceInfo.browser,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      });
+
+      // Set refresh token in cookie
+      setRefreshTokenCookie(res, refreshToken);
+
+      // Update last login
+      user.lastLogin = new Date();
+      await user.save();
+
+      // Get user without sensitive data
+      const userResponse = {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        fullName: user.fullName,
+        image: user.image,
+        isActive: user.isActive,
+        facebookId: user.facebookId
+      };
+
+      res.status(200).json({
+        message: 'Facebook login successful',
+        user: userResponse,
+        accessToken: accessTokenJWT
+      });
+    } catch (error) {
+      console.error('Facebook API error:', error);
+      if (error.response?.status === 400) {
+        return res.status(400).json({ message: 'Invalid Facebook access token' });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('Facebook login error:', error);
+    res.status(500).json({ message: 'Facebook authentication failed' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   googleLogin,
+  facebookLogin,
   logoutUser,
   logoutAllDevices,
   getProfile,

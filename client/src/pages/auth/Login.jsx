@@ -1,15 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { Form, Input, Button, Card, message, Divider } from 'antd';
 import { LockOutlined, MailOutlined, GoogleOutlined } from '@ant-design/icons';
 import { GoogleLogin } from '@react-oauth/google';
-import { login, googleLogin, clearError } from '../../store/slices/authSlice';
+import { login, googleLogin, facebookLogin, clearError } from '../../store/slices/authSlice';
+import FacebookLoginButton from '../../components/FacebookLogin';
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error, user } = useSelector((state) => state.auth);
+  const [facebookLoading, setFacebookLoading] = useState(false);
 
   useEffect(() => {
     if (error && message) {
@@ -57,6 +59,25 @@ const Login = () => {
 
   const handleGoogleError = () => {
     message.error('Google login failed. Please try again.');
+  };
+
+  const handleFacebookSuccess = async (accessToken) => {
+    setFacebookLoading(true);
+    try {
+      await dispatch(facebookLogin(accessToken)).unwrap();
+      message.success('Facebook login successful!');
+    } catch (error) {
+      console.error('Facebook login error:', error);
+      message.error('Facebook login failed. Please try again.');
+    } finally {
+      setFacebookLoading(false);
+    }
+  };
+
+  const handleFacebookFailure = (error) => {
+    console.error('Facebook login error:', error);
+    message.error('Facebook login failed. Please try again.');
+    setFacebookLoading(false);
   };
 
   return (
@@ -114,7 +135,7 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Google Login Button */}
+          {/* Social Login Buttons */}
           <div style={{ marginBottom: '1rem' }}>
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
@@ -124,6 +145,14 @@ const Login = () => {
               shape="rectangular"
               logo_alignment="left"
               width="100%"
+            />
+          </div>
+
+          <div style={{ marginBottom: '1rem' }} className='facebook-login-container'>
+            <FacebookLoginButton
+              onSuccess={handleFacebookSuccess}
+              onFailure={handleFacebookFailure}
+              loading={facebookLoading}
             />
           </div>
 
