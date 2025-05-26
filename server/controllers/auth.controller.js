@@ -9,7 +9,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Generate access token
 const generateAccessToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '15m', // Access token expires in 15 minutes
+    expiresIn: '1m', // Access token expires in 15 minutes
   });
 };
 
@@ -304,7 +304,6 @@ const refreshAccessToken = async (req, res) => {
       const user = await User.findOne({
         _id: decoded.id,
         "refreshTokens.token": refreshToken,
-        "refreshTokens.isRevoked": false,
         "refreshTokens.expiresAt": { $gt: new Date() }
       });
 
@@ -365,7 +364,7 @@ const logoutDevice = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Find and revoke the specific token
+    // Find the specific token
     const tokenIndex = user.refreshTokens.findIndex(t => t.token === token);
     if (tokenIndex === -1) {
       return res.status(404).json({ message: 'Device not found' });
@@ -375,11 +374,18 @@ const logoutDevice = async (req, res) => {
     const currentToken = req.cookies.refreshToken;
     const isCurrentDevice = currentToken === token;
 
-    // Revoke the token
-    user.refreshTokens[tokenIndex].isRevoked = true;
+    // Remove the token completely from database
+    user.refreshTokens.splice(tokenIndex, 1);
     await user.save();
 
+    // Clear cookie if it's current device
     if (isCurrentDevice) {
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+      
       return res.status(200).json({ 
         message: 'Current device logged out successfully',
         isCurrentDevice: true
@@ -407,21 +413,26 @@ const getUserDevices = async (req, res) => {
     }
 
     const currentToken = req.cookies.refreshToken;
-    const devices = user.refreshTokens.map(token => ({
+    // Chỉ lấy các token chưa hết hạn (vì đã xóa hoàn toàn các token logout)
+    const activeTokens = user.refreshTokens.filter(token => 
+      token.expiresAt > new Date()
+    );
+
+    const devices = activeTokens.map(token => ({
       token: token.token,
       device: token.device,
       ipAddress: token.ipAddress,
       userAgent: token.userAgent,
       createdAt: token.createdAt,
       expiresAt: token.expiresAt,
-      isRevoked: token.isRevoked,
       isCurrentDevice: token.token === currentToken
     }));
 
     res.status(200).json({
       message: 'Devices fetched successfully',
       data: devices
-    });  } catch (error) {
+    });
+  } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }

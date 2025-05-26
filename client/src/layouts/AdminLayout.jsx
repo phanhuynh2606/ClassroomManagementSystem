@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Layout, Menu, Button, theme, Space, Avatar } from 'antd';
 import {
   MenuFoldOutlined,
@@ -15,11 +15,13 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import { setCurrentRole } from '../store/slices/userSlice';
-
+import './AdminLayout.css'; 
 const { Header, Sider, Content } = Layout;
 
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [openKeys, setOpenKeys] = useState(['2']);
+  const prevOpenKeys = useRef(openKeys);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -28,6 +30,19 @@ const AdminLayout = () => {
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
+
+  React.useEffect(() => {
+    if (collapsed) {
+      prevOpenKeys.current = openKeys;
+      setOpenKeys([]);
+    } else {
+      setOpenKeys(prevOpenKeys.current);
+    }
+  }, [collapsed]);
+
+  const handleOpenChange = (keys) => {
+    setOpenKeys(keys);
+  };
 
   const handleLogout = async () => {
     try {
@@ -47,52 +62,46 @@ const AdminLayout = () => {
     navigate('/admin/users');
   };
 
+  const handleMenuClick = ({ key }) => {
+    if (key === '1') navigate('/admin/dashboard');
+    else if (key === '2-1') handleRoleChange('admin');
+    else if (key === '2-2') handleRoleChange('teacher');
+    else if (key === '2-3') handleRoleChange('student');
+    else if (key === '3') navigate('/admin/classrooms');
+    else if (key === '4') navigate('/admin/quizzes');
+    else if (key === '5') navigate('/admin/notifications');
+  };
+
   const menuItems = [
     {
       key: '1',
       icon: <DashboardOutlined />,
       label: 'Dashboard',
-      onClick: () => navigate('/admin/dashboard'),
     },
     {
       key: '2',
       icon: <TeamOutlined />,
       label: 'User Management',
       children: [
-        {
-          key: '2-1',
-          label: 'Admin Management',
-          onClick: () => handleRoleChange('admin'),
-        },
-        {
-          key: '2-2',
-          label: 'Teacher Management',
-          onClick: () => handleRoleChange('teacher'),
-        },
-        {
-          key: '2-3',
-          label: 'Student Management',
-          onClick: () => handleRoleChange('student'),
-        },
+        { key: '2-1', label: 'Admin Management' },
+        { key: '2-2', label: 'Teacher Management' },
+        { key: '2-3', label: 'Student Management' },
       ],
     },
     {
       key: '3',
       icon: <BookOutlined />,
       label: 'Classroom Management',
-      onClick: () => navigate('/admin/classrooms'),
     },
     {
       key: '4',
       icon: <QuestionCircleOutlined />,
       label: 'Quiz Management',
-      onClick: () => navigate('/admin/quizzes'),
     },
     {
       key: '5',
       icon: <BellOutlined />,
       label: 'Notifications',
-      onClick: () => navigate('/admin/notifications'),
     },
   ];
 
@@ -126,8 +135,10 @@ const AdminLayout = () => {
           theme="dark"
           mode="inline"
           selectedKeys={getSelectedKeys()}
-          defaultOpenKeys={['2']}
+          openKeys={openKeys}
+          onOpenChange={handleOpenChange}
           items={menuItems}
+          onClick={handleMenuClick}
         />
       </Sider>
       <Layout>

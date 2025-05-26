@@ -47,11 +47,13 @@ axiosClient.interceptors.response.use(
         }
       } catch (refreshError) {
         console.log("Refresh error:", refreshError.response?.data);
-        
+        if(refreshError.response?.data?.code === "REFRESH_TOKEN_EXPIRED" || refreshError.response?.data?.code === "NO_REFRESH_TOKEN"){
+        localStorage.removeItem('token');
+        localStorage.removeItem('persist:root');
+        window.location.href = '/login';
+        }
         // If refresh fails, redirect to login
-        // localStorage.removeItem('token');
-        // localStorage.removeItem('persist:root');
-        // window.location.href = '/login';
+
         return Promise.reject(refreshError);
       }
     }

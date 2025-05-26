@@ -18,6 +18,13 @@ const userAPI = {
   updateProfile: ( userData) => {
     return axiosClient.put(`/users/profile`, userData);
   },
+  updateProfileImage: (userData) => {
+    return axiosClient.post(`/users/profile/image`, userData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
   // Update user
   updateUser: (id, userData) => {
     return axiosClient.put(`/users/${id}`, userData);

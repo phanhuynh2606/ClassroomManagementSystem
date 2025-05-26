@@ -38,7 +38,7 @@ import StudentProfile from '../pages/student/StudentProfile';
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  console.log(user,isAuthenticated)
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
