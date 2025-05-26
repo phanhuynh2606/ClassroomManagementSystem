@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { Form, Input, Button, Card, message } from 'antd';
-import { LockOutlined, MailOutlined } from '@ant-design/icons';
-import { login, clearError } from '../../store/slices/authSlice';
+import { Form, Input, Button, Card, message, Divider } from 'antd';
+import { LockOutlined, MailOutlined, GoogleOutlined } from '@ant-design/icons';
+import { GoogleLogin } from '@react-oauth/google';
+import { login, googleLogin, clearError } from '../../store/slices/authSlice';
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -42,6 +43,20 @@ const Login = () => {
     } catch (error) {
       console.error('Login error:', error);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      await dispatch(googleLogin(credentialResponse.credential)).unwrap();
+      message.success('Google login successful!');
+    } catch (error) {
+      console.error('Google login error:', error);
+      message.error('Google login failed. Please try again.');
+    }
+  };
+
+  const handleGoogleError = () => {
+    message.error('Google login failed. Please try again.');
   };
 
   return (
@@ -98,6 +113,23 @@ const Login = () => {
               Sign in to your account
             </p>
           </div>
+
+          {/* Google Login Button */}
+          <div style={{ marginBottom: '1rem' }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              size="large"
+              text="signin_with"
+              shape="rectangular"
+              logo_alignment="left"
+              width="100%"
+            />
+          </div>
+
+          <Divider style={{ margin: '1.5rem 0' }}>
+            <span style={{ color: '#718096', fontSize: '0.9rem' }}>or continue with email</span>
+          </Divider>
 
           <Form
             name="login"
@@ -171,4 +203,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;

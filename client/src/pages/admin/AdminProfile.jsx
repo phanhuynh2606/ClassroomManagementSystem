@@ -1,8 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Form, Input, Button, Upload, message, Row, Col, Typography, DatePicker, Select, Avatar } from 'antd';
-import { UserOutlined, UploadOutlined, LockOutlined } from '@ant-design/icons';
+import { 
+  Card, 
+  Form, 
+  Input, 
+  Button, 
+  Upload, 
+  message, 
+  Row, 
+  Col, 
+  Typography, 
+  DatePicker, 
+  Select, 
+  Avatar,
+  Statistic,
+  Space,
+  Divider,
+  Badge,
+  Timeline,
+  Progress
+} from 'antd';
+import { 
+  UserOutlined, 
+  UploadOutlined, 
+  LockOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  TeamOutlined,
+  SettingOutlined,
+  CrownOutlined,
+  SafetyOutlined,
+  CalendarOutlined,
+  DashboardOutlined
+} from '@ant-design/icons';
 import { useSelector, useDispatch } from 'react-redux';
-import { updateProfile, updatePassword, fetchProfile } from '../../store/slices/authSlice';
+import { updatePassword, fetchProfile } from '../../store/slices/authSlice';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -57,14 +88,14 @@ const AdminProfile = () => {
         const formData = new FormData();
         formData.append('image', file);
         // Giả sử bạn có API uploadImage
-        const res = await dispatch(uploadImage(formData)).unwrap();
-        imageUrl = res.url;
+        // const res = await dispatch(uploadImage(formData)).unwrap();
+        // imageUrl = res.url;
       }
-      await dispatch(updateProfile({
-        ...values,
-        image: imageUrl,
-        dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : undefined,
-      })).unwrap();
+      // await dispatch(updateProfile({
+      //   ...values,
+      //   image: imageUrl,
+      //   dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : undefined,
+      // })).unwrap();
       message.success('Profile updated successfully');
     } catch (error) {
       message.error(error.message || 'Failed to update profile');
