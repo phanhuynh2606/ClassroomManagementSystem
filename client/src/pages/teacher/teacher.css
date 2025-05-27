@@ -3,7 +3,7 @@
 /* Teacher dashboard content scrollable */
 .teacher-dashboard-content {
   height: auto;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 80px);
   overflow-y: visible;
 }
 

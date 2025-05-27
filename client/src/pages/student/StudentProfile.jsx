@@ -290,6 +290,7 @@ const StudentProfile = () => {
                   size={120}
                   src={previewImage || user?.image || imageUrl}
                   icon={<UserOutlined style={{ fontSize: 48 }} />}
+                  
                   style={{
                     border: '5px solid #e6f7ff',
                     boxShadow: '0 2px 8px rgba(24,144,255,0.15)',

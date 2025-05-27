@@ -12,7 +12,8 @@ const {
   getUserDevices,
   forgotPassword,
   resetPassword,
-  verifyResetToken
+  verifyResetToken,
+  updatePassword
 } = require('../controllers/auth.controller.js');
 const { protect } = require('../middleware/auth.middleware.js');
 
@@ -29,7 +30,8 @@ router.post('/refresh-token', refreshAccessToken);
 router.post('/logout-device', protect, logoutDevice);
 router.get('/devices', protect, getUserDevices);
 
-// Password reset routes
+// Password management routes
+router.put('/password', protect, updatePassword);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 router.get('/verify-reset-token/:token', verifyResetToken);

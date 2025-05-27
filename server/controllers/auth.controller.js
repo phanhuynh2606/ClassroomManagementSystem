@@ -826,6 +826,59 @@ const facebookLogin = async (req, res) => {
   }
 };
 
+// @desc    Update password
+// @route   PUT /api/auth/password
+// @access  Private
+const updatePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        message: 'Current password and new password are required' 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        message: 'New password must be at least 6 characters long' 
+      });
+    }
+
+    // Get user with password
+    const user = await User.findById(req.user._id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user has a password (not social login only)
+    if (!user.password) {
+      return res.status(400).json({ 
+        message: 'This account uses social login. Password cannot be changed.' 
+      });
+    }
+
+    // Verify current password
+    const isMatch = await user.matchPassword(currentPassword);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+  } catch (error) {
+    console.error('Update password error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
@@ -839,5 +892,6 @@ module.exports = {
   logoutDevice,
   forgotPassword,
   resetPassword,
-  verifyResetToken
+  verifyResetToken,
+  updatePassword
 };
