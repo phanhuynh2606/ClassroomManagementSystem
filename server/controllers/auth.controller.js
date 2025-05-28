@@ -10,11 +10,11 @@ const axios = require('axios');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Generate access token
-const generateAccessToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: '1m', // Access token expires in 15 minutes
-  });
-};
+  const generateAccessToken = (id) => {
+    return jwt.sign({ id }, process.env.JWT_SECRET, {
+      expiresIn: '15m', // Access token expires in 15 minutes
+    });
+  };
 
 // Generate refresh token
 const generateRefreshToken = (id, deviceInfo) => {
