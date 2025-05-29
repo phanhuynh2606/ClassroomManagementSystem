@@ -27,12 +27,10 @@ const updateUserProfile = async (req, res) => {
 
     if (user) {
       user.username = req.body.username || user.username;
-      user.email = req.body.email || user.email;
-      
-      if (req.body.password) {
-        user.password = req.body.password;
-      }
-
+      user.fullName = req.body.fullName || user.fullName;
+      user.phone = req.body.phone || user.phone;
+      user.dateOfBirth = req.body.dateOfBirth || user.dateOfBirth;
+      user.gender = req.body.gender || user.gender;
       const updatedUser = await user.save();
 
       res.json({
@@ -40,7 +38,6 @@ const updateUserProfile = async (req, res) => {
         username: updatedUser.username,
         email: updatedUser.email,
         role: updatedUser.role,
-        token: generateToken(updatedUser._id),
       });
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -54,23 +51,31 @@ const updateUserProfile = async (req, res) => {
 // @desc    Upload profile image
 // @route   POST /api/users/profile/image
 // @access  Private
-const uploadProfileImage = async (req, res) => {
+const uploadProfileImage = async (req, res, next) => {
   try {
+    const userId = req.user?._id;
     if (!req.file) {
-      return res.status(400).json({ message: 'Please upload a file' });
+      return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: 'profile_images',
+    console.log(req.file)
+    
+    const userUpload = await User.findById(userId);
+    if (!userUpload) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    const imageUrl = req.file?.path;
+    userUpload.image = imageUrl;
+    await userUpload.save();
+    
+    res.json({ 
+      success: true, 
+      imageUrl,
+      message: 'Profile image updated successfully'
     });
-
-    const user = await User.findById(req.user._id);
-    user.profileImage = result.secure_url;
-    await user.save();
-
-    res.json({ profileImage: result.secure_url });
   } catch (error) {
-    console.error(error);
+    console.log(error);
     res.status(500).json({ message: 'Server error' });
   }
 };

@@ -87,20 +87,34 @@ export const register = createAsyncThunk(
   }
 );
 
-// Update profile
-export const updateProfile = createAsyncThunk(
-  'auth/updateProfile',
-  async (profileData, { rejectWithValue }) => {
+export const googleLogin = createAsyncThunk(
+  'auth/googleLogin',
+  async (credential, { rejectWithValue }) => {
     try {
-      const response = await authAPI.updateProfile(profileData);
-      return response.data;
+      const response = await authAPI.googleLogin(credential);
+      return response;
     } catch (error) {
       return rejectWithValue(
-        error.response?.data?.message || error.message || 'Failed to update profile'
+        error.response?.data?.message || error.message || 'Google login failed'
       );
     }
   }
 );
+
+export const facebookLogin = createAsyncThunk(
+  'auth/facebookLogin',
+  async (accessToken, { rejectWithValue }) => {
+    try {
+      const response = await authAPI.facebookLogin(accessToken);
+      return response;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Facebook login failed'
+      );
+    }
+  }
+);
+
 
 // Update password
 export const updatePassword = createAsyncThunk(
@@ -116,6 +130,8 @@ export const updatePassword = createAsyncThunk(
     }
   }
 );
+
+
 
 const initialState = {
   user: null,
@@ -201,16 +217,35 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Update Profile
-      .addCase(updateProfile.pending, (state) => {
+      // Google Login
+      .addCase(googleLogin.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(updateProfile.fulfilled, (state, action) => {
+      .addCase(googleLogin.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = { ...state.user, ...action.payload };
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.accessToken;
+        localStorage.setItem('token', action.payload.accessToken);
       })
-      .addCase(updateProfile.rejected, (state, action) => {
+      .addCase(googleLogin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Facebook Login
+      .addCase(facebookLogin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(facebookLogin.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.accessToken;
+        localStorage.setItem('token', action.payload.accessToken);
+      })
+      .addCase(facebookLogin.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
@@ -233,4 +268,4 @@ const authSlice = createSlice({
 });
 
 export const { clearError } = authSlice.actions;
-export default authSlice.reducer; 
+export default authSlice.reducer;

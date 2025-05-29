@@ -10,6 +10,8 @@ import StudentLayout from '../layouts/StudentLayout';
 // Auth Pages
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+import ForgotPassword from '../pages/auth/ForgotPassword';
+import ResetPassword from '../pages/auth/ResetPassword';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -19,17 +21,16 @@ import QuizManagement from '../pages/admin/components/QuizManagement';
 import QuestionManagement from '../pages/admin/components/question/QuestionManagement';
 import NotificationManagement from '../pages/admin/components/NotificationManagement';
 import AdminProfile from '../pages/admin/AdminProfile';
-import TeacherProfile from '../pages/teacher/TeacherProfile';
-import StudentProfile from '../pages/student/StudentProfile';
 
 // Teacher Pages
-// import TeacherDashboard from '../pages/teacher/TeacherDashboard';
-// import MyClassrooms from '../pages/teacher/MyClassrooms';
-// import CreateQuiz from '../pages/teacher/CreateQuiz';
-// import GradeSubmissions from '../pages/teacher/GradeSubmissions';
-// import StudentProgress from '../pages/teacher/StudentProgress';
+import TeacherDashboard from '../pages/teacher/TeacherDashboard';
+import TeacherClassroomManagement from '../pages/teacher/ClassroomManagement';
+import TeacherClassroomDetail from '../pages/teacher/ClassroomDetail';
+import EditClassForm from '../pages/teacher/EditClassForm';
+import TeacherProfile from '../pages/teacher/TeacherProfile';
 
 // Student Pages
+import StudentProfile from '../pages/student/StudentProfile';
 // import StudentDashboard from '../pages/student/StudentDashboard';
 // import MyClassess from '../pages/student/MyCourses';
 // import TakeQuiz from '../pages/student/TakeQuiz';
@@ -39,7 +40,7 @@ import StudentProfile from '../pages/student/StudentProfile';
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  console.log(user,isAuthenticated)
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
@@ -51,6 +52,15 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   return children;
 };
 
+// Placeholder components for upcoming features
+const ComingSoon = ({ title }) => (
+  <div className="flex flex-col items-center justify-center h-96 text-center">
+    <div className="text-6xl text-gray-300 mb-4">🚧</div>
+    <h2 className="text-2xl font-bold text-gray-600 mb-2">{title}</h2>
+    <p className="text-gray-500">Tính năng này đang được phát triển</p>
+  </div>
+);
+
 const AppRouter = () => {
   const { user } = useSelector((state) => state.auth);
 
@@ -59,6 +69,8 @@ const AppRouter = () => {
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       {/* Admin Routes */}
       <Route
@@ -87,12 +99,26 @@ const AppRouter = () => {
           </ProtectedRoute>
         }
       >
+        {/* Dashboard */}
+        <Route index element={<TeacherDashboard />} />
+        <Route path="dashboard" element={<TeacherDashboard />} />
+
+        {/* Classroom Management */}
+        <Route path="classroom" element={<TeacherClassroomManagement />} />
+        <Route path="classroom/:classId" element={<TeacherClassroomDetail />} />
+        <Route path="classroom/edit/:classId" element={<EditClassForm />} />
+
+        {/* Profile */}
         <Route path="profile" element={<TeacherProfile />} />
-        {/* <Route index element={<TeacherDashboard />} />
-        <Route path="classrooms" element={<MyClassrooms />} />
-        <Route path="create-quiz" element={<CreateQuiz />} />
-        <Route path="grade-submissions" element={<GradeSubmissions />} />
-        <Route path="student-progress" element={<StudentProgress />} /> */}
+
+        {/* Upcoming Features */}
+        <Route path="quizzes" element={<ComingSoon title="Quản lý Bài kiểm tra" />} />
+        <Route path="assignments" element={<ComingSoon title="Quản lý Bài tập" />} />
+        <Route path="grades" element={<ComingSoon title="Chấm điểm" />} />
+        <Route path="reports" element={<ComingSoon title="Báo cáo & Thống kê" />} />
+        <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
+        <Route path="students" element={<ComingSoon title="Quản lý Học sinh" />} />
+        <Route path="notifications" element={<ComingSoon title="Thông báo" />} />
       </Route>
 
       {/* Student Routes */}
@@ -105,12 +131,12 @@ const AppRouter = () => {
         }
       >
         <Route path="profile" element={<StudentProfile />} />
-        {/* <Route index element={<StudentDashboard />} />
-        <Route path="classrooms" element={<MyClassess />} />
-        <Route path="take-quiz/:quizId" element={<TakeQuiz />} />
-        <Route path="grades" element={<MyGrades />} />
-        <Route path="progress" element={<MyProgress />} /> 
-        */}
+        {/* Upcoming Student Features */}
+        <Route index element={<ComingSoon title="Dashboard Học sinh" />} />
+        <Route path="classrooms" element={<ComingSoon title="Lớp học của tôi" />} />
+        <Route path="assignments" element={<ComingSoon title="Bài tập" />} />
+        <Route path="grades" element={<ComingSoon title="Điểm số" />} />
+        <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
       </Route>
 
       {/* Default Route - Redirect based on user role */}
@@ -127,6 +153,24 @@ const AppRouter = () => {
             )}
           </ProtectedRoute>
         }
+      />
+
+      {/* 404 Route */}
+      <Route 
+        path="*" 
+        element={
+          <div className="flex flex-col items-center justify-center h-screen text-center">
+            <div className="text-9xl text-gray-300 mb-4">404</div>
+            <h1 className="text-4xl font-bold text-gray-600 mb-2">Trang không tìm thấy</h1>
+            <p className="text-gray-500 mb-6">Trang bạn đang tìm kiếm không tồn tại</p>
+            <button 
+              onClick={() => window.history.back()}
+              className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Quay lại
+            </button>
+          </div>
+        } 
       />
     </Routes>
   );

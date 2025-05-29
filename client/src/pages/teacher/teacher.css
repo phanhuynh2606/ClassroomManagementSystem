@@ -1,0 +1,164 @@
+/* Teacher-specific CSS styles */
+
+/* Teacher dashboard content scrollable */
+.teacher-dashboard-content {
+  height: auto;
+  min-height: calc(100vh - 80px);
+  overflow-y: visible;
+}
+
+/* Tabs styling for classroom management */
+.classroom-management-tabs .ant-tabs-nav {
+  margin-bottom: 24px;
+}
+
+.classroom-management-tabs .ant-tabs-tab {
+  padding: 8px 16px;
+  font-weight: 500;
+}
+
+/* Tabs styling for classroom detail */
+.classroom-detail-tabs .ant-tabs-nav {
+  margin-bottom: 24px;
+}
+
+.classroom-detail-tabs .ant-tabs-tab {
+  padding: 8px 16px;
+  font-weight: 500;
+}
+
+/* Teacher card hover effects */
+.teacher-card {
+  transition: all 0.3s ease;
+}
+
+.teacher-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Teacher button styles */
+.teacher-action-btn {
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.teacher-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Teacher stats cards */
+.teacher-stat-card {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.teacher-stat-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Progress bars in teacher dashboard */
+.teacher-progress {
+  margin-bottom: 16px;
+}
+
+.teacher-progress .ant-progress-text {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Teacher activity list */
+.teacher-activity-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.teacher-activity-item:last-child {
+  border-bottom: none;
+}
+
+/* Teacher upcoming events */
+.teacher-event-card {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-left: 4px solid #1976d2;
+}
+
+/* Teacher form styling */
+.teacher-form-container {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+/* Teacher class code display */
+.teacher-class-code {
+  background: #f5f5f5;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1976d2;
+  letter-spacing: 1px;
+}
+
+/* Teacher table customization */
+.teacher-table .ant-table-thead > tr > th {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.teacher-table .ant-table-tbody > tr:hover > td {
+  background: #f0f8ff;
+}
+
+/* Teacher modal customization */
+.teacher-modal .ant-modal-header {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+.teacher-modal .ant-modal-title {
+  color: white;
+  font-weight: 600;
+}
+
+/* Teacher badge styles */
+.teacher-status-badge {
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+/* Teacher responsive adjustments */
+@media (max-width: 768px) {
+  .teacher-dashboard-content {
+    padding: 16px;
+  }
+  
+  .teacher-form-container {
+    padding: 16px;
+    margin: 16px;
+  }
+  
+  .classroom-management-tabs .ant-tabs-tab {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+} 

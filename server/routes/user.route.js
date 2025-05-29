@@ -7,11 +7,14 @@ const {
   uploadProfileImage,
 } = require('../controllers/user.controller');
 const multer = require('multer');
+const { uploadErrorHandler } = require('../middleware/errorr');
+const { profileUpload } = require('../middleware/upload.middleware');
 const upload = multer({ dest: 'uploads/' });
 
 
 router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);
-router.post('/profile/image', protect, upload.single('image'), uploadProfileImage);
+router.post('/profile/image', protect,uploadErrorHandler, profileUpload.single('image'), uploadProfileImage);
+
 
 module.exports = router; 

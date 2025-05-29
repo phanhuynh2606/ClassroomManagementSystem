@@ -1,0 +1,12 @@
+ant-menu ant-menu-sub ant-menu-inline{
+  height: auto;
+}
+.ant-menu.ant-menu-sub.ant-menu-inline{
+  height: auto!important;
+  background: #37393ad4!important;
+}
+
+.ant-menu-item-selected a{
+  background-color: #1487f3b0!important;
+  
+}

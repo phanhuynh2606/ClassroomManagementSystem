@@ -1,14 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { Form, Input, Button, Card, message } from 'antd';
-import { LockOutlined, MailOutlined } from '@ant-design/icons';
-import { login, clearError } from '../../store/slices/authSlice';
+import { Form, Input, Button, Card, message, Divider } from 'antd';
+import { LockOutlined, MailOutlined, GoogleOutlined } from '@ant-design/icons';
+import { GoogleLogin } from '@react-oauth/google';
+import { login, googleLogin, facebookLogin, clearError } from '../../store/slices/authSlice';
+import FacebookLoginButton from '../../components/FacebookLogin';
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error, user } = useSelector((state) => state.auth);
+  const [facebookLoading, setFacebookLoading] = useState(false);
 
   useEffect(() => {
     if (error && message) {
@@ -42,6 +45,39 @@ const Login = () => {
     } catch (error) {
       console.error('Login error:', error);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      await dispatch(googleLogin(credentialResponse.credential)).unwrap();
+      message.success('Google login successful!');
+    } catch (error) {
+      console.error('Google login error:', error);
+      message.error('Google login failed. Please try again.');
+    }
+  };
+
+  const handleGoogleError = () => {
+    message.error('Google login failed. Please try again.');
+  };
+
+  const handleFacebookSuccess = async (accessToken) => {
+    setFacebookLoading(true);
+    try {
+      await dispatch(facebookLogin(accessToken)).unwrap();
+      message.success('Facebook login successful!');
+    } catch (error) {
+      console.error('Facebook login error:', error);
+      message.error('Facebook login failed. Please try again.');
+    } finally {
+      setFacebookLoading(false);
+    }
+  };
+
+  const handleFacebookFailure = (error) => {
+    console.error('Facebook login error:', error);
+    message.error('Facebook login failed. Please try again.');
+    setFacebookLoading(false);
   };
 
   return (
@@ -99,6 +135,31 @@ const Login = () => {
             </p>
           </div>
 
+          {/* Social Login Buttons */}
+          <div style={{ marginBottom: '1rem' }}>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              size="large"
+              text="signin_with"
+              shape="rectangular"
+              logo_alignment="left"
+              width="100%"
+            />
+          </div>
+
+          <div style={{ marginBottom: '1rem' }} className='facebook-login-container'>
+            <FacebookLoginButton
+              onSuccess={handleFacebookSuccess}
+              onFailure={handleFacebookFailure}
+              loading={facebookLoading}
+            />
+          </div>
+
+          <Divider style={{ margin: '1.5rem 0' }}>
+            <span style={{ color: '#718096', fontSize: '0.9rem' }}>or continue with email</span>
+          </Divider>
+
           <Form
             name="login"
             onFinish={onFinish}
@@ -152,6 +213,18 @@ const Login = () => {
               marginTop: '1rem',
               color: '#4a5568'
             }}>
+              <Link 
+                to="/forgot-password" 
+                style={{ 
+                  color: '#4299e1',
+                  fontWeight: '500',
+                  textDecoration: 'none',
+                  display: 'block',
+                  marginBottom: '0.5rem'
+                }}
+              >
+                Forgot your password?
+              </Link>
               Don't have an account?{' '}
               <Link 
                 to="/register" 
@@ -171,4 +244,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;

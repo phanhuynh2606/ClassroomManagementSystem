@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Layout, Menu, Button, theme, Space, Avatar } from 'antd';
+import React, { useState, useRef } from 'react';
+import { Layout, Menu, Button, theme, Space, Avatar, Tooltip } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -11,15 +11,19 @@ import {
   LogoutOutlined,
   TeamOutlined
 } from '@ant-design/icons';
+import { FaUserGroup,FaUsersGear } from "react-icons/fa6";
+import { GiTeacher } from "react-icons/gi";
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
-import { setCurrentRole } from '../store/slices/userSlice';
-
+import { setCurrentRole, } from '../store/slices/userSlice';
+import './AdminLayout.css'; 
 const { Header, Sider, Content } = Layout;
-
+import logo from '../images/logo.png';
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [openKeys, setOpenKeys] = useState(['2']);
+  const prevOpenKeys = useRef(openKeys);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -28,6 +32,19 @@ const AdminLayout = () => {
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
+
+  React.useEffect(() => {
+    if (collapsed) {
+      prevOpenKeys.current = openKeys;
+      setOpenKeys([]);
+    } else {
+      setOpenKeys(prevOpenKeys.current);
+    }
+  }, [collapsed]);
+
+  const handleOpenChange = (keys) => {
+    setOpenKeys(keys);
+  };
 
   const handleLogout = async () => {
     try {
@@ -47,46 +64,81 @@ const AdminLayout = () => {
     navigate('/admin/users');
   };
 
-  const menuItems = [
+  const handleMenuClick = ({ key }) => {
+    if (key === '1') navigate('/admin/dashboard');
+    else if (key === '2-1') handleRoleChange('admin');
+    else if (key === '2-2') handleRoleChange('teacher');
+    else if (key === '2-3') handleRoleChange('student');
+    else if (key === '3') navigate('/admin/classrooms');
+    else if (key === '4') navigate('/admin/quizzes');
+    else if (key === '5') navigate('/admin/notifications');
+  };
+
+  const menuItems = React.useMemo(() => [
     {
       key: '1',
       icon: <DashboardOutlined />,
-      label: 'Dashboard',
-      onClick: () => navigate('/admin/dashboard'),
+      label: collapsed ? (
+        <Tooltip title="Dashboard" placement="right">
+          <span>Dashboard</span>
+        </Tooltip>
+      ) : 'Dashboard',
     },
     {
       key: '2',
       icon: <TeamOutlined />,
-      label: 'User Management',
+      label: collapsed ? (
+        <Tooltip title="User Management" placement="right">
+          <span>User Management</span>
+        </Tooltip>
+      ) : 'User Management',
       children: [
-        {
-          key: '2-1',
-          label: 'Admin Management',
-          onClick: () => handleRoleChange('admin'),
+        { 
+          key: '2-1', 
+          label:  (
+            <Tooltip title="Admin Management" placement="right">
+              <span>Admin Management</span>
+            </Tooltip>
+          ) ,
+          icon: <FaUserGroup /> 
         },
-        {
-          key: '2-2',
-          label: 'Teacher Management',
-          onClick: () => handleRoleChange('teacher'),
+        { 
+          key: '2-2', 
+          label: (
+            <Tooltip title="Teacher Management" placement="right">
+              <span>Teacher Management</span>
+            </Tooltip>
+          ),
+          icon: <GiTeacher /> 
         },
-        {
-          key: '2-3',
-          label: 'Student Management',
-          onClick: () => handleRoleChange('student'),
+        { 
+          key: '2-3', 
+          label:  (
+            <Tooltip title="Student Management" placement="right">
+              <span>Student Management</span>
+            </Tooltip>
+          ) ,
+          icon: <FaUsersGear /> 
         },
       ],
     },
     {
       key: '3',
       icon: <BookOutlined />,
-      label: 'Classroom Management',
-      onClick: () => navigate('/admin/classrooms'),
+      label: collapsed ? (
+        <Tooltip title="Classroom Management" placement="right">
+          <span>Classroom Management</span>
+        </Tooltip>
+      ) : 'Classroom Management',
     },
     {
       key: '4',
       icon: <QuestionCircleOutlined />,
-      label: 'Quiz Management',
-      onClick: () => navigate('/admin/quizzes'),
+      label: collapsed ? (
+        <Tooltip title="Quiz Management" placement="right">
+          <span>Quiz Management</span>
+        </Tooltip>
+      ) : 'Quiz Management',
     },
      {
       key: '6',
@@ -97,10 +149,13 @@ const AdminLayout = () => {
     {
       key: '5',
       icon: <BellOutlined />,
-      label: 'Notifications',
-      onClick: () => navigate('/admin/notifications'),
-    },
-  ];
+      label: collapsed ? (
+        <Tooltip title="Notifications" placement="right">
+          <span>Notifications</span>
+        </Tooltip>
+      ) : 'Notifications',
+          },
+    ], [collapsed]);
 
   // Determine which menu item should be selected based on current path and role
   const getSelectedKeys = () => {
@@ -130,13 +185,17 @@ const AdminLayout = () => {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed}>
-        <div className="demo-logo-vertical" />
+        <div className="demo-logo-vertical" >
+          <img src={logo} alt="logo" style={{ width: '100%', height: 'auto' }} />
+        </div>
         <Menu
           theme="dark"
           mode="inline"
           selectedKeys={getSelectedKeys()}
-          defaultOpenKeys={['2']}
+          openKeys={openKeys}
+          onOpenChange={handleOpenChange}
           items={menuItems}
+          onClick={handleMenuClick}
         />
       </Sider>
       <Layout>

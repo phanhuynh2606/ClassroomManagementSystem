@@ -3,6 +3,8 @@ import axiosClient from '../axiosClient';
 const authAPI = {
   login: (email, password) => axiosClient.post('/auth/login', { email, password }),
   register: (userData) => axiosClient.post('/auth/register', userData),
+  googleLogin: (credential) => axiosClient.post('/auth/google', { credential }),
+  facebookLogin: (accessToken) => axiosClient.post('/auth/facebook', { accessToken }),
   logout: () => axiosClient.post('/auth/logout'),
   checkAuth: () => axiosClient.get('/auth/me'),
   getProfile: async () => {
@@ -27,8 +29,22 @@ const authAPI = {
   getUserDevices: async () => {
     const response = await axiosClient.get(`/auth/devices`);
     return response;
-  }
+  },
 
+  // Forgot password
+  forgotPassword: (email) => {
+    return axiosClient.post('/auth/forgot-password', { email });
+  },
+
+  // Reset password
+  resetPassword: (token, password) => {
+    return axiosClient.post(`/auth/reset-password/${token}`, { password });
+  },
+
+  // Verify reset token
+  verifyResetToken: (token) => {
+    return axiosClient.get(`/auth/verify-reset-token/${token}`);
+  }
 };
 
-export default authAPI; 
+export default authAPI;

@@ -1,6 +1,6 @@
-import crypto from "crypto";
+const crypto = require("crypto");
 
-export const extractDeviceInfo = (req) => {
+const extractDeviceInfo = (req) => {
   const userAgent = req.headers["user-agent"] || "Unknown Browser";
   const ip =
     req.ip ||
@@ -50,4 +50,8 @@ export const extractDeviceInfo = (req) => {
     ipAddress: ip,
     lastActive: new Date(),
   };
+};
+
+module.exports = {
+  extractDeviceInfo
 };

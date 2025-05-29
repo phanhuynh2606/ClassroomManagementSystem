@@ -13,7 +13,7 @@ import {
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
-
+import logo from '../images/logo.png';
 const { Header, Sider, Content } = Layout;
 
 const StudentLayout = () => {
@@ -67,7 +67,9 @@ const StudentLayout = () => {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed}>
-        <div className="demo-logo-vertical" />
+      <div className="demo-logo-vertical" >
+          <img src={logo} alt="logo" style={{ width: '100%', height: 'auto' }} />
+        </div>
         <Menu
           theme="dark"
           mode="inline"
