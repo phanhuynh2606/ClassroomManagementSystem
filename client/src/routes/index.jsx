@@ -16,7 +16,7 @@ import AdminDashboard from '../pages/admin/AdminDashboard';
 import UserManagement from '../pages/admin/components/UserManagement';
 import ClassroomManagement from '../pages/admin/components/ClassroomManagement';
 import QuizManagement from '../pages/admin/components/QuizManagement';
-import QuestionManagement from '../pages/admin/components/QuestionManagement';
+import QuestionManagement from '../pages/admin/components/question/QuestionManagement';
 import NotificationManagement from '../pages/admin/components/NotificationManagement';
 import AdminProfile from '../pages/admin/AdminProfile';
 import TeacherProfile from '../pages/teacher/TeacherProfile';
