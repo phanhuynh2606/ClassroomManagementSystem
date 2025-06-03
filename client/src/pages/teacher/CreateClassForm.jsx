@@ -7,43 +7,42 @@ import {
   message, 
   Alert,
   Card,
-  Typography
+  Typography,
+  Select,
+  InputNumber
 } from 'antd';
-import { InfoCircleOutlined, ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons';
+import { InfoCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import classroomAPI from '../../services/api/classroom.api';
 import './teacher.css';
 
 const { TextArea } = Input;
+const { Option } = Select;
 
 const CreateClassForm = ({ onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [classCode, setClassCode] = useState('');
-
-  const generateClassCode = () => {
-    // Generate a random class code
-    const prefix = 'WADA';
-    const number = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-    const newCode = `${prefix}${number}`;
-    setClassCode(newCode);
-    form.setFieldsValue({ code: newCode });
-  };
 
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('Form values:', values);
-      message.success('Tạo lớp học thành công! Lớp học đang chờ admin phê duyệt.');
+      const formData = {
+        name: values.name,
+        description: values.description || '',
+        category: values.category,
+        level: values.level,
+        maxStudents: values.maxStudents
+      };
+
+      await classroomAPI.createByTeacher(formData);
+      message.success('Classroom created successfully! It is pending admin approval.');
       form.resetFields();
-      setClassCode('');
       
       if (onSuccess) {
         onSuccess();
       }
     } catch (error) {
-      message.error('Có lỗi xảy ra khi tạo lớp học');
+      console.error('Error creating classroom:', error);
+      message.error(error.response?.data?.message || 'Failed to create classroom');
     } finally {
       setLoading(false);
     }
@@ -51,7 +50,6 @@ const CreateClassForm = ({ onSuccess }) => {
 
   const handleCancel = () => {
     form.resetFields();
-    setClassCode('');
     if (onSuccess) {
       onSuccess();
     }
@@ -64,14 +62,14 @@ const CreateClassForm = ({ onSuccess }) => {
         onClick={handleCancel}
         className="mb-4"
       >
-        Quay lại
+        Back to List
       </Button>
 
       <Card>
         <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Tạo lớp học mới</h2>
+          <h2 className="text-xl font-semibold mb-2">Create New Classroom</h2>
           <p className="text-gray-600">
-            Điền thông tin để tạo lớp học mới. Lớp học sẽ cần được admin phê duyệt.
+            Fill in the information to create a new classroom. The classroom will need admin approval.
           </p>
         </div>
 
@@ -82,69 +80,79 @@ const CreateClassForm = ({ onSuccess }) => {
           className="space-y-4"
         >
           <Form.Item
-            label="Tên lớp học"
+            label="Classroom Name"
             name="name"
             rules={[
-              { required: true, message: 'Vui lòng nhập tên lớp học' },
-              { min: 3, message: 'Tên lớp học phải có ít nhất 3 ký tự' }
+              { required: true, message: 'Please enter classroom name' },
+              { min: 3, message: 'Classroom name must be at least 3 characters' }
             ]}
           >
             <Input 
-              placeholder="Nhập tên lớp học"
+              placeholder="Enter classroom name"
               className="h-10"
             />
           </Form.Item>
 
           <Form.Item
-            label="Môn học"
-            name="subject"
-            rules={[
-              { required: true, message: 'Vui lòng nhập môn học' }
-            ]}
-          >
-            <Input 
-              placeholder="Nhập tên môn học"
-              className="h-10"
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Mô tả lớp học"
+            label="Description"
             name="description"
           >
             <TextArea
-              placeholder="Nhập mô tả về lớp học (không bắt buộc)"
+              placeholder="Enter classroom description (optional)"
               rows={4}
               showCount
               maxLength={500}
             />
           </Form.Item>
 
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item
+              label="Category"
+              name="category"
+              rules={[
+                { required: true, message: 'Please select category' }
+              ]}
+            >
+              <Select placeholder="Select category">
+                <Option value="academic">Academic</Option>
+                <Option value="professional">Professional</Option>
+                <Option value="other">Other</Option>
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              label="Level"
+              name="level"
+              rules={[
+                { required: true, message: 'Please select level' }
+              ]}
+            >
+              <Select placeholder="Select level">
+                <Option value="beginner">Beginner</Option>
+                <Option value="intermediate">Intermediate</Option>
+                <Option value="advanced">Advanced</Option>
+              </Select>
+            </Form.Item>
+          </div>
+
           <Form.Item
-            label="Mã lớp học"
-            name="code"
+            label="Maximum Students"
+            name="maxStudents"
+            rules={[
+              { required: true, message: 'Please enter maximum number of students' },
+              { type: 'number', min: 1, message: 'Must be at least 1 student' }
+            ]}
           >
-            <div className="flex gap-2">
-              <Input
-                value={classCode}
-                placeholder="Mã lớp học sẽ được tạo tự động"
-                readOnly
-                className="flex-1 h-10"
-              />
-              <Button 
-                onClick={generateClassCode}
-                className="h-10"
-              >
-                Tạo mới
-              </Button>
-            </div>
-            <div className="text-sm text-gray-500 mt-1">
-              Học sinh sẽ dùng mã này để tham gia lớp học
-            </div>
+            <InputNumber
+              placeholder="Enter max students"
+              className="w-full h-10"
+              min={1}
+              max={200}
+            />
           </Form.Item>
 
           <Alert
-            message="Lớp học mới sẽ cần được admin phê duyệt trước khi có hiệu lực."
+            message="The new classroom will need admin approval before it becomes active."
             type="info"
             icon={<InfoCircleOutlined />}
             className="mb-6"
@@ -156,18 +164,15 @@ const CreateClassForm = ({ onSuccess }) => {
                 onClick={handleCancel}
                 className="h-10 px-6"
               >
-                Hủy
+                Cancel
               </Button>
               <Button 
-                type="success" 
+                type="primary" 
                 htmlType="submit"
                 loading={loading}
-                className="h-10 px-7 bg-green-500 hover:bg-green-600"
-                style={{
-                    color: 'white'
-                }}
+                className="h-10 px-7"
               >
-                Tạo lớp học
+                Create Classroom
               </Button>
             </Space>
           </Form.Item>

@@ -37,7 +37,7 @@ const classroomSchema = new mongoose.Schema(
       status: {
         type: String,
         enum: ['active', 'inactive', 'pending'],
-        default: 'pending'
+        default: 'active'
       }
     }],
     maxStudents: {
@@ -54,18 +54,9 @@ const classroomSchema = new mongoose.Schema(
       enum: ['beginner', 'intermediate', 'advanced'],
       default: 'beginner'
     },
-    schedule: {
-      startDate: Date,
-      endDate: Date,
-      meetingDays: [{
-        type: String,
-        enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-      }],
-      meetingTime: String
-    },
     isActive: {
       type: Boolean,
-      default: true,
+      default: false, // Default false, will be activated after approval
       index: true
     },
     isArchived: {

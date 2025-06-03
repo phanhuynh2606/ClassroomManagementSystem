@@ -10,7 +10,8 @@ import {
   Badge,
   message,
   Tooltip,
-  Modal
+  Modal,
+  Spin
 } from 'antd';
 import { 
   EditOutlined, 
@@ -19,9 +20,11 @@ import {
   SearchOutlined,
   PlusOutlined,
   ArrowLeftOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
+import classroomAPI from '../../services/api/classroom.api';
 import './teacher.css';
 
 const { Title, Text } = Typography;
@@ -34,44 +37,58 @@ const ClassroomDetail = () => {
   const [searchText, setSearchText] = useState('');
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [studentsLoading, setStudentsLoading] = useState(false);
   
-  const [classData, setClassData] = useState({
-    id: 1,
-    name: 'Toán học 10A',
-    subject: 'Toán học',
-    code: 'MATH10A',
-    description: 'Lớp học toán dành cho học sinh lớp 10A',
-    status: 'approved',
-    createdAt: '2023-09-01'
-  });
+  const [classData, setClassData] = useState(null);
+  const [studentsData, setStudentsData] = useState([]);
 
-  const [students, setStudents] = useState([
-    {
-      id: 'HS001',
-      name: 'Nguyễn Văn A',
-      averageScore: 8.5,
-      submissionCount: 12,
-      joinDate: '5/9/2023'
-    },
-    {
-      id: 'HS002',
-      name: 'Trần Thị B',
-      averageScore: 9,
-      submissionCount: 15,
-      joinDate: '6/9/2023'
-    },
-    {
-      id: 'HS003',
-      name: 'Lê Văn C',
-      averageScore: 7.5,
-      submissionCount: 10,
-      joinDate: '7/9/2023'
+  useEffect(() => {
+    if (classId) {
+      fetchClassroomData();
+      fetchStudentsData();
     }
-  ]);
+  }, [classId]);
+
+  const fetchClassroomData = async () => {
+    setLoading(true);
+    try {
+      const response = await classroomAPI.getAllByTeacher();
+      const classroom = response.data.find(c => c._id === classId);
+      if (classroom) {
+        setClassData(classroom);
+      } else {
+        message.error('Classroom not found');
+        navigate('/teacher/classroom');
+      }
+    } catch (error) {
+      message.error('Failed to fetch classroom data');
+      navigate('/teacher/classroom');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStudentsData = async () => {
+    setStudentsLoading(true);
+    try {
+      const response = await classroomAPI.getStudentsByTeacher(classId);
+      if (response.data.success) {
+        setStudentsData(response.data.data.students || []);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      // Don't show error message as this might be expected for new classrooms
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
 
   const handleCopyClassCode = () => {
-    navigator.clipboard.writeText(classData.code);
-    message.success('Đã sao chép mã lớp học');
+    if (classData?.code) {
+      navigator.clipboard.writeText(classData.code);
+      message.success('Class code copied to clipboard');
+    }
   };
 
   const handleEditClass = () => {
@@ -85,14 +102,13 @@ const ClassroomDetail = () => {
   const confirmDeleteClass = async () => {
     setDeleting(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await classroomAPI.deleteByTeacher(classId);
       
-      message.success('Xóa lớp học thành công');
+      message.success('Deletion request sent to admin for approval');
       setDeleteModalVisible(false);
       navigate('/teacher/classroom');
     } catch (error) {
-      message.error('Có lỗi xảy ra khi xóa lớp học');
+      message.error(error.response?.data?.message || 'Failed to delete classroom');
     } finally {
       setDeleting(false);
     }
@@ -102,58 +118,73 @@ const ClassroomDetail = () => {
     setDeleteModalVisible(false);
   };
 
-  const handleAddStudent = () => {
-    // Handle add student logic
-    message.info('Chức năng thêm học sinh');
+  const getApprovalStatusBadge = (status) => {
+    const statusConfig = {
+      approved: { status: "success", text: "Approved" },
+      pending: { status: "processing", text: "Pending Approval" },
+      rejected: { status: "error", text: "Rejected" }
+    };
+    
+    const config = statusConfig[status] || statusConfig.pending;
+    return <Badge status={config.status} text={config.text}/>;
   };
 
   const studentColumns = [
     {
-      title: 'Mã học sinh',
-      dataIndex: 'id',
-      key: 'id',
+      title: 'Student ID',
+      dataIndex: ['student', '_id'],
+      key: 'studentId',
       width: 120,
+      render: (id) => id?.slice(-6)?.toUpperCase() || 'N/A',
     },
     {
-      title: 'Họ và tên',
-      dataIndex: 'name',
-      key: 'name',
+      title: 'Full Name',
+      dataIndex: ['student', 'fullName'],
+      key: 'fullName',
       filteredValue: searchText ? [searchText] : null,
       onFilter: (value, record) =>
-        record.name.toLowerCase().includes(value.toLowerCase()),
+        record.student?.fullName?.toLowerCase().includes(value.toLowerCase()) || false,
     },
     {
-      title: 'Điểm trung bình',
+      title: 'Email',
+      dataIndex: ['student', 'email'],
+      key: 'email',
+    },
+    {
+      title: 'Average Score',
       dataIndex: 'averageScore',
       key: 'averageScore',
       width: 140,
       render: (score) => (
         <Badge 
-          color={score >= 8 ? 'green' : score >= 6.5 ? 'orange' : 'red'}
-          text={score}
+          color={score >= 80 ? 'green' : score >= 65 ? 'orange' : 'red'}
+          text={`${score}/100`}
         />
       ),
     },
     {
-      title: 'Số lần nộp bài',
+      title: 'Submissions',
       dataIndex: 'submissionCount',
       key: 'submissionCount',
       width: 130,
     },
     {
-      title: 'Ngày tham gia',
-      dataIndex: 'joinDate',
-      key: 'joinDate',
+      title: 'Joined Date',
+      dataIndex: 'joinedAt',
+      key: 'joinedAt',
       width: 130,
+      render: (date) => new Date(date).toLocaleDateString(),
     },
     {
-      title: 'Thao tác',
-      key: 'action',
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
       width: 100,
-      render: (_, record) => (
-        <Button type="link" size="small" className="text-blue-600">
-          Xem chi tiết
-        </Button>
+      render: (status) => (
+        <Badge 
+          color={status === 'active' ? 'green' : 'red'}
+          text={status?.toUpperCase() || 'UNKNOWN'}
+        />
       ),
     },
   ];
@@ -162,33 +193,42 @@ const ClassroomDetail = () => {
     <div>
       <div className="flex justify-between items-center mb-4">
         <Search
-          placeholder="Tìm kiếm học sinh..."
+          placeholder="Search students..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           onSearch={setSearchText}
           style={{ width: 300 }}
           prefix={<SearchOutlined />}
         />
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={handleAddStudent}
-          className="bg-blue-600 border-blue-600"
-        >
-          Thêm học sinh
-        </Button>
+        <div className="flex items-center gap-4">
+          <Text type="secondary">
+            Total: {studentsData.length} students
+          </Text>
+          {classData?.code && (
+            <Button
+              icon={<CopyOutlined />}
+              onClick={handleCopyClassCode}
+            >
+              Copy Class Code: {classData.code}
+            </Button>
+          )}
+        </div>
       </div>
       
       <Table
         columns={studentColumns}
-        dataSource={students}
-        rowKey="id"
+        dataSource={studentsData}
+        rowKey={(record) => record.student?._id || record._id}
+        loading={studentsLoading}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) =>
-            `${range[0]}-${range[1]} của ${total} học sinh`,
+            `${range[0]}-${range[1]} of ${total} students`,
+        }}
+        locale={{
+          emptyText: studentsLoading ? 'Loading...' : 'No students enrolled yet'
         }}
       />
     </div>
@@ -197,7 +237,7 @@ const ClassroomDetail = () => {
   const AssignmentList = () => (
     <div className="text-center py-12">
       <Text type="secondary" className="text-lg">
-        Chức năng bài tập đang được phát triển
+        Assignment management feature is under development
       </Text>
     </div>
   );
@@ -205,15 +245,31 @@ const ClassroomDetail = () => {
   const tabItems = [
     {
       key: 'students',
-      label: 'Danh sách học sinh',
+      label: `Students (${studentsData.length})`,
       children: <StudentList />
     },
     {
       key: 'assignments',
-      label: 'Bài tập',
+      label: 'Assignments',
       children: <AssignmentList />
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (!classData) {
+    return (
+      <div className="p-6">
+        <Text type="secondary">Classroom not found</Text>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6" style={{ minHeight: 'calc(100vh - 64px)' }}>
@@ -223,7 +279,7 @@ const ClassroomDetail = () => {
         onClick={() => navigate('/teacher/classroom')}
         className="mb-4"
       >
-        Quay lại
+        Back to Classrooms
       </Button>
 
       {/* Header */}
@@ -236,59 +292,71 @@ const ClassroomDetail = () => {
             <Text type="secondary" className="text-lg">
               {classData.subject}
             </Text>
+            {classData.description && (
+              <div className="mt-2">
+                <Text className="text-gray-600">
+                  {classData.description}
+                </Text>
+              </div>
+            )}
           </div>
-          <Space>
-            <Badge status="success" text="Đã duyệt" />
-            <Button 
-              icon={<EditOutlined />}
-              onClick={handleEditClass}
-              className="flex items-center hover:text-white hover:bg-blue-600"
-            >
-              Chỉnh sửa
-            </Button>
-            <Button 
-              danger
-              icon={<DeleteOutlined />}
-              onClick={handleDeleteClass}
-              className="flex items-center hover:text-white hover:bg-red-600"
-            >
-              Xóa lớp
-            </Button>
+          <Space direction="vertical" align="end">
+            {getApprovalStatusBadge(classData.approvalStatus)}
+            <Space>
+              <Button 
+                icon={<EditOutlined />}
+                onClick={handleEditClass}
+                className="flex items-center hover:text-white hover:bg-blue-600"
+              >
+                Edit
+              </Button>
+              <Button 
+                danger
+                icon={<DeleteOutlined />}
+                onClick={handleDeleteClass}
+                className="flex items-center hover:text-white hover:bg-red-600"
+              >
+                Delete Class
+              </Button>
+            </Space>
           </Space>
         </div>
 
-        {/* Class Info Card */}
-        <Card className="mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Title level={4} className="mb-3">
-                Mô tả
-              </Title>
-              <Text>{classData.description}</Text>
+        {/* Class Info Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card size="small">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{classData.code}</div>
+              <div className="text-gray-500">Class Code</div>
             </div>
-            <div>
-              <Title level={4} className="mb-3">
-                Mã lớp học
-              </Title>
-              <div className="flex items-center gap-2">
-                <code className="bg-gray-100 px-3 py-1 rounded text-lg font-mono">
-                  {classData.code}
-                </code>
-                <Tooltip title="Sao chép mã lớp">
-                  <Button 
-                    type="text" 
-                    icon={<CopyOutlined />}
-                    onClick={handleCopyClassCode}
-                    className="flex items-center"
-                  />
-                </Tooltip>
-              </div>
-              <Text type="secondary" className="text-sm mt-1 block">
-                Học sinh có thể dùng mã này để tham gia lớp học
-              </Text>
+          </Card>
+          <Card size="small">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{studentsData.length}</div>
+              <div className="text-gray-500">Students</div>
             </div>
+          </Card>
+          <Card size="small">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{classData.category}</div>
+              <div className="text-gray-500">Category</div>
+            </div>
+          </Card>
+          <Card size="small">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{classData.level}</div>
+              <div className="text-gray-500">Level</div>
+            </div>
+          </Card>
+        </div>
+
+        {classData.approvalStatus === 'rejected' && classData.rejectionReason && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded">
+            <Text type="danger" strong>
+              Rejection Reason: {classData.rejectionReason}
+            </Text>
           </div>
-        </Card>
+        )}
       </div>
 
       {/* Tabs */}
@@ -301,52 +369,21 @@ const ClassroomDetail = () => {
 
       {/* Delete Confirmation Modal */}
       <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <ExclamationCircleOutlined className="text-red-500" />
-            <span>Xác nhận xóa lớp học</span>
-          </div>
-        }
+        title="Delete Classroom"
         open={deleteModalVisible}
+        onOk={confirmDeleteClass}
         onCancel={handleCancelDelete}
-        footer={[
-          <Button key="cancel" onClick={handleCancelDelete}>
-            Hủy
-          </Button>,
-          <Button 
-            key="delete" 
-            type="primary" 
-            danger 
-            loading={deleting}
-            onClick={confirmDeleteClass}
-            icon={<DeleteOutlined />}
-            style={{height: '32px'}}
-          >
-            Xóa lớp học
-          </Button>
-        ]}
-        width={500}
-        centered
+        confirmLoading={deleting}
+        okText="Request Deletion"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true }}
       >
         <div className="py-4">
-          <Text className="text-base">
-            Bạn có chắc chắn muốn xóa lớp học <Text strong>"{classData.name}"</Text> không?
+          <ExclamationCircleOutlined className="text-orange-500 mr-2" />
+          <Text>
+            Are you sure you want to delete "{classData.name}"? 
+            This action will require admin approval.
           </Text>
-          <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-400 rounded">
-            <Text type="danger" className="block font-medium mb-2">
-              ⚠️ Cảnh báo:
-            </Text>
-            <ul className="text-red-600 text-sm space-y-1">
-              <li>• Tất cả dữ liệu học sinh trong lớp sẽ bị xóa</li>
-              <li>• Các bài tập và điểm số sẽ bị mất vĩnh viễn</li>
-              <li>• Hành động này không thể hoàn tác</li>
-            </ul>
-          </div>
-          <div className="mt-4">
-            <Text type="secondary">
-              Nếu bạn chỉ muốn tạm thời ẩn lớp học, hãy chọn "Chỉnh sửa" và thay đổi trạng thái thay vì xóa.
-            </Text>
-          </div>
         </div>
       </Modal>
     </div>
