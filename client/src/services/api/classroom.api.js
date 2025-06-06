@@ -27,6 +27,8 @@ const classroomAPI = {
   // Shared APIs
   getStudents: (id) => axiosClient.get(`/classrooms/${id}/students`),
   getById: (id) => axiosClient.get(`/classrooms/${id}`),
+  getDetail: (id) => axiosClient.get(`/classrooms/${id}/detail`),
+  getMaterials: (id) => axiosClient.get(`/classrooms/${id}/materials`),
 };
 
 export default classroomAPI;

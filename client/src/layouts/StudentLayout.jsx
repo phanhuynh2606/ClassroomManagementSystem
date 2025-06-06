@@ -39,16 +39,16 @@ const StudentLayout = () => {
       onClick: () => navigate('/student'),
     },
     {
-      key: 'courses',
+      key: 'classrooms',
       icon: <BookOutlined />,
-      label: 'My Courses',
-      onClick: () => navigate('/student/courses'),
+      label: 'My Classrooms',
+      onClick: () => navigate('/student/classrooms'),
     },
     {
-      key: 'quizzes',
+      key: 'assignments',
       icon: <FileTextOutlined />,
-      label: 'Take Quiz',
-      onClick: () => navigate('/student/quizzes'),
+      label: 'Assignments',
+      onClick: () => navigate('/student/assignments'),
     },
     {
       key: 'grades',
@@ -57,10 +57,10 @@ const StudentLayout = () => {
       onClick: () => navigate('/student/grades'),
     },
     {
-      key: 'progress',
+      key: 'schedule',
       icon: <LineChartOutlined />,
-      label: 'My Progress',
-      onClick: () => navigate('/student/progress'),
+      label: 'Schedule',
+      onClick: () => navigate('/student/schedule'),
     },
   ];
 

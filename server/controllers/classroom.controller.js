@@ -567,7 +567,6 @@ const joinClassroom = async (req, res) => {
     const classroom = await Classroom.findOne({ 
       code: code.toUpperCase(), 
       deleted: false,
-      approvalStatus: 'approved',
       isActive: true 
     }).populate('teacher', 'fullName email');
 
@@ -763,6 +762,220 @@ const getClassroomStudents = async (req, res) => {
   }
 };
 
+// Get detailed classroom information for students
+const getClassroomDetail = async (req, res) => {
+  try {
+    const { classroomId } = req.params;
+    
+    const classroom = await Classroom.findById(classroomId)
+      .populate('teacher', 'fullName email')
+      .populate('students.student', 'fullName email');
+
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        message: 'Classroom not found',
+      });
+    }
+
+    // Check if classroom is deleted or inactive
+    if (classroom.deleted || !classroom.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: 'Classroom is not available',
+      });
+    }
+
+    // For students, check if they are enrolled in the classroom
+    if (req.user.role === 'student') {
+      const isEnrolled = classroom.students.some(
+        student => student.student._id.toString() === req.user._id.toString() && student.status === 'active'
+      );
+
+      if (!isEnrolled) {
+        return res.status(403).json({
+          success: false,
+          message: 'You are not enrolled in this classroom',
+        });
+      }
+    }
+
+    // For teachers, check if they own the classroom
+    if (req.user.role === 'teacher' && classroom.teacher._id.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to view this classroom',
+      });
+    }
+
+    // Prepare response data
+    const responseData = {
+      _id: classroom._id,
+      name: classroom.name,
+      code: classroom.code,
+      description: classroom.description,
+      subject: classroom.subject,
+      category: classroom.category,
+      level: classroom.level,
+      maxStudents: classroom.maxStudents,
+      teacher: classroom.teacher,
+      totalStudents: classroom.students.filter(s => s.status === 'active').length,
+      settings: classroom.settings,
+      createdAt: classroom.createdAt,
+      updatedAt: classroom.updatedAt
+    };
+
+    // Include student list for teacher and admin roles
+    if (req.user.role === 'teacher' || req.user.role === 'admin') {
+      responseData.students = classroom.students.filter(s => s.status === 'active');
+    }
+
+    // For students, add their enrollment info
+    if (req.user.role === 'student') {
+      const studentInfo = classroom.students.find(
+        s => s.student._id.toString() === req.user._id.toString()
+      );
+      responseData.myEnrollment = {
+        joinedAt: studentInfo.joinedAt,
+        status: studentInfo.status
+      };
+    }
+
+    // Mock recent activities (to be replaced with actual activity system)
+    responseData.recentActivities = [
+      {
+        id: 1,
+        type: 'announcement',
+        title: 'Welcome to the class!',
+        content: 'Please check the course materials regularly.',
+        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+        author: classroom.teacher.fullName
+      },
+      {
+        id: 2,
+        type: 'assignment',
+        title: 'Assignment 1 posted',
+        content: 'Please complete Assignment 1 by next week.',
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+        author: classroom.teacher.fullName
+      }
+    ];
+
+    // Mock upcoming events
+    responseData.upcomingEvents = [
+      {
+        id: 1,
+        type: 'quiz',
+        title: 'Chapter 1 Quiz',
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+        description: 'Quiz covering Chapter 1 materials'
+      },
+      {
+        id: 2,
+        type: 'assignment',
+        title: 'Project Proposal',
+        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks from now
+        description: 'Submit your project proposal'
+      }
+    ];
+
+    res.status(200).json({
+      success: true,
+      data: responseData
+    });
+  } catch (error) {
+    console.error('Error getting classroom detail:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching classroom details',
+    });
+  }
+};
+
+// Get classroom materials (files, links, etc.)
+const getClassroomMaterials = async (req, res) => {
+  try {
+    const { classroomId } = req.params;
+    
+    const classroom = await Classroom.findById(classroomId)
+      .populate('teacher', 'fullName email')
+      .populate('students.student', 'fullName email');
+
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        message: 'Classroom not found',
+      });
+    }
+
+    // Check if classroom is deleted or inactive
+    if (classroom.deleted || !classroom.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: 'Classroom is not available',
+      });
+    }
+
+    // Check authorization
+    const isStudent = req.user.role === 'student' && classroom.students.some(
+      s => s.student._id.toString() === req.user._id.toString() && s.status === 'active'
+    );
+    const isTeacher = req.user.role === 'teacher' && classroom.teacher._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isStudent && !isTeacher && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view classroom materials',
+      });
+    }
+
+    // Mock materials data (to be replaced with actual materials system)
+    const materials = [
+      {
+        id: 1,
+        title: 'Course Syllabus',
+        type: 'document',
+        fileUrl: '/files/syllabus.pdf',
+        fileSize: '2.3 MB',
+        uploadedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        uploadedBy: classroom.teacher
+      },
+      {
+        id: 2,
+        title: 'Lecture 1: Introduction',
+        type: 'presentation',
+        fileUrl: '/files/lecture1.pptx',
+        fileSize: '15.7 MB',
+        uploadedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+        uploadedBy: classroom.teacher
+      },
+      {
+        id: 3,
+        title: 'Reference Links',
+        type: 'link',
+        links: [
+          { title: 'Official Documentation', url: 'https://example.com/docs' },
+          { title: 'Tutorial Videos', url: 'https://example.com/videos' }
+        ],
+        uploadedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+        uploadedBy: classroom.teacher
+      }
+    ];
+
+    res.status(200).json({
+      success: true,
+      data: materials
+    });
+  } catch (error) {
+    console.error('Error getting classroom materials:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching classroom materials',
+    });
+  }
+};
+
 module.exports = { 
   getTeacherClassrooms, 
   getAllClassrooms, 
@@ -775,5 +988,7 @@ module.exports = {
   joinClassroom,
   leaveClassroom,
   getStudentClassrooms,
-  getClassroomStudents
+  getClassroomStudents,
+  getClassroomDetail,
+  getClassroomMaterials
 };

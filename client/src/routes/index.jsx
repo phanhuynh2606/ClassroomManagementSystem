@@ -32,7 +32,8 @@ import TeacherProfile from '../pages/teacher/TeacherProfile';
 // Student Pages
 import StudentProfile from '../pages/student/StudentProfile';
 import StudentClassroomManagement from '../pages/student/StudentClassroomManagement';
-// import StudentDashboard from '../pages/student/StudentDashboard';
+import StudentDashboard from '../pages/student/StudentDashboard';
+import StudentClassroomDetail from '../pages/student/StudentClassroomDetail';
 // import MyClassess from '../pages/student/MyCourses';
 // import TakeQuiz from '../pages/student/TakeQuiz';
 // import MyGrades from '../pages/student/MyGrades';
@@ -131,10 +132,12 @@ const AppRouter = () => {
           </ProtectedRoute>
         }
       >
+        <Route index element={<StudentDashboard />} />
+        <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="profile" element={<StudentProfile />} />
         <Route path="classrooms" element={<StudentClassroomManagement />} />
+        <Route path="classroom/:classroomId" element={<StudentClassroomDetail />} />
         {/* Upcoming Student Features */}
-        <Route index element={<ComingSoon title="Dashboard Học sinh" />} />
         <Route path="assignments" element={<ComingSoon title="Bài tập" />} />
         <Route path="grades" element={<ComingSoon title="Điểm số" />} />
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />

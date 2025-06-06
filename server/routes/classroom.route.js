@@ -27,6 +27,8 @@ router.post('/student/join', protect, authorize('student'), ctrls.joinClassroom)
 router.delete('/student/:classroomId/leave', protect, authorize('student'), ctrls.leaveClassroom);
 
 // Shared routes (with role-based access control in controller)
-router.get('/:classroomId/students', protect, authorize(['teacher', 'admin']), ctrls.getClassroomStudents);
+router.get('/:classroomId/students', protect, authorize('teacher', 'admin'), ctrls.getClassroomStudents);
+router.get('/:classroomId/detail', protect, authorize('student', 'teacher', 'admin'), ctrls.getClassroomDetail);
+router.get('/:classroomId/materials', protect, authorize('student', 'teacher', 'admin'), ctrls.getClassroomMaterials);
 
 module.exports = router;

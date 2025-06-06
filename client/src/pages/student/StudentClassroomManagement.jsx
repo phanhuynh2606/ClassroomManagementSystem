@@ -13,31 +13,47 @@ import {
   Modal,
   Space,
   Tag,
-  Popconfirm
+  Popconfirm,
+  Empty,
+  Badge,
+  Tooltip
 } from 'antd';
 import { 
   UserOutlined,
   CopyOutlined,
   PlusOutlined,
   LogoutOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  EyeOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  BookOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import classroomAPI from '../../services/api/classroom.api';
+import ClassroomCard from '../../components/student/ClassroomCard';
 
 const { Title, Text } = Typography;
+const { Search } = Input;
 
 const StudentClassroomManagement = () => {
   const [activeTab, setActiveTab] = useState('enrolled');
   const [classes, setClasses] = useState([]);
+  const [filteredClasses, setFilteredClasses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [joinModalVisible, setJoinModalVisible] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
   const [joinForm] = Form.useForm();
+  const navigate = useNavigate();
 
   const fetchEnrolledClassrooms = async () => {
     setLoading(true);
     try {
       const response = await classroomAPI.getAllByStudent();
-      setClasses(response.data.data || response.data || []);
+      const classroomData = response.data.data || response.data || [];
+      setClasses(classroomData);
+      setFilteredClasses(classroomData);
     } catch (error) {
       message.error('Failed to fetch enrolled classrooms');
       console.error('Error fetching classrooms:', error);
@@ -49,6 +65,19 @@ const StudentClassroomManagement = () => {
   useEffect(() => {
     fetchEnrolledClassrooms();
   }, []);
+
+  useEffect(() => {
+    if (searchValue) {
+      const filtered = classes.filter(classroom => 
+        classroom.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+        classroom.subject.toLowerCase().includes(searchValue.toLowerCase()) ||
+        classroom.teacher?.fullName?.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      setFilteredClasses(filtered);
+    } else {
+      setFilteredClasses(classes);
+    }
+  }, [searchValue, classes]);
 
   const handleJoinClass = async (values) => {
     try {
@@ -72,102 +101,81 @@ const StudentClassroomManagement = () => {
     }
   };
 
-  const ClassCard = ({ classItem }) => (
-    <Card
-      className="h-full hover:shadow-lg transition-shadow duration-200"
-      actions={[
-        <Popconfirm
-          title={`Are you sure you want to leave "${classItem.name}"?`}
-          description="You will need to rejoin using the class code if you want to access this classroom again."
-          onConfirm={() => handleLeaveClass(classItem._id, classItem.name)}
-          okText="Yes, Leave"
-          cancelText="Cancel"
-          icon={<ExclamationCircleOutlined style={{ color: 'red' }} />}
-        >
-          <Button 
-            danger
-            icon={<LogoutOutlined />}
-            style={{ width: '95%' }}
-          >
-            Leave Class
-          </Button>
-        </Popconfirm>
-      ]}
-    >
-      <div className="mb-4">
-        <div className="flex justify-between items-start mb-2">
-          <Title level={4} className="mb-0">
-            {classItem.name}
-          </Title>
-          <Tag color="green">Enrolled</Tag>
-        </div>
-        <Text type="secondary" className="block mb-3">
-          {classItem.subject}
-        </Text>
-        {classItem.description && (
-          <Text className="block mb-3 text-sm text-gray-600">
-            {classItem.description}
-          </Text>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <CopyOutlined className="text-gray-400" />
-          <Text className="text-sm">
-            Class Code: <Text strong>{classItem.code}</Text>
-          </Text>
-        </div>
-        <div className="flex items-center gap-2">
-          <UserOutlined className="text-gray-400" />
-          <Text className="text-sm">
-            Teacher: {classItem.teacher?.fullName || 'Unknown'}
-          </Text>
-        </div>
-        <div className="flex items-center gap-2">
-          <UserOutlined className="text-gray-400" />
-          <Text className="text-sm">
-            {classItem.students?.length || 0} students enrolled
-          </Text>
-        </div>
-        <div className="text-sm text-gray-500">
-          Category: {classItem.category} | Level: {classItem.level}
-        </div>
-      </div>
-    </Card>
-  );
+  const copyClassCode = (code) => {
+    navigator.clipboard.writeText(code);
+    message.success('Class code copied to clipboard!');
+  };
+
+
 
   const EnrolledClasses = () => (
-    <Spin spinning={loading}>
-      <div>
+    <div>
+      {/* Search and Filter */}
+      <div className="mb-6 flex justify-between items-center">
+        <Search
+          placeholder="Search classrooms, subjects, or teachers..."
+          allowClear
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          style={{ width: 300 }}
+          prefix={<SearchOutlined />}
+        />
+        <Button 
+          icon={<ReloadOutlined />}
+          onClick={fetchEnrolledClassrooms}
+          loading={loading}
+        >
+          Refresh
+        </Button>
+      </div>
+
+      <Spin spinning={loading}>
         <Row gutter={[24, 24]}>
-          {classes.map((classItem) => (
-            <Col xs={24} sm={12} lg={8} key={classItem._id}>
-              <ClassCard classItem={classItem} />
+          {filteredClasses.map((classItem) => (
+            <Col xs={24} sm={12} lg={8} xl={6} key={classItem._id}>
+              <ClassroomCard 
+                classroom={classItem}
+                onLeave={handleLeaveClass}
+                onCopyCode={copyClassCode}
+              />
             </Col>
           ))}
-          {classes.length === 0 && !loading && (
+          {filteredClasses.length === 0 && !loading && (
             <Col span={24}>
-              <div className="text-center py-12">
-                <Text type="secondary" className="text-lg">
-                  You haven't joined any classrooms yet. Use the "Join Class" tab to join a classroom.
-                </Text>
-              </div>
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  searchValue ? 
+                    `No classrooms found for "${searchValue}"` :
+                    "You haven't joined any classrooms yet"
+                }
+              >
+                {!searchValue && (
+                  <Button 
+                    type="primary" 
+                    icon={<PlusOutlined />}
+                    onClick={() => setActiveTab('join')}
+                  >
+                    Join Your First Classroom
+                  </Button>
+                )}
+              </Empty>
             </Col>
           )}
         </Row>
-      </div>
-    </Spin>
+      </Spin>
+    </div>
   );
 
   const JoinClassForm = () => (
     <div className="max-w-md mx-auto">
       <Card>
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Join a Classroom</h2>
-          <p className="text-gray-600">
+        <div className="mb-6 text-center">
+          <div className="text-4xl mb-4">🎓</div>
+          <Title level={3} className="mb-2">Join a Classroom</Title>
+          <Text type="secondary">
             Enter the class code provided by your teacher to join a classroom.
-          </p>
+          </Text>
         </div>
 
         <Form
@@ -204,6 +212,15 @@ const StudentClassroomManagement = () => {
             </Button>
           </Form.Item>
         </Form>
+
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <Title level={5} className="text-blue-600 mb-2">
+            💡 Tip
+          </Title>
+          <Text className="text-blue-600 text-sm">
+            Ask your teacher for the class code. It's usually a short combination of letters and numbers.
+          </Text>
+        </div>
       </Card>
     </div>
   );
@@ -211,12 +228,23 @@ const StudentClassroomManagement = () => {
   const tabItems = [
     {
       key: 'enrolled',
-      label: `My Classrooms (${classes.length})`,
+      label: (
+        <Space>
+          <BookOutlined />
+          My Classrooms
+          <Badge count={classes.length} showZero color="#1890ff" />
+        </Space>
+      ),
       children: <EnrolledClasses />
     },
     {
       key: 'join',
-      label: 'Join Class',
+      label: (
+        <Space>
+          <PlusOutlined />
+          Join Class
+        </Space>
+      ),
       children: <JoinClassForm />
     }
   ];
@@ -225,7 +253,7 @@ const StudentClassroomManagement = () => {
     <div className="p-6">
       <div className="mb-6">
         <Title level={2} className="mb-2">
-          My Classrooms
+          Classroom Management
         </Title>
         <Text type="secondary">
           Manage your enrolled classrooms and join new ones
@@ -237,6 +265,7 @@ const StudentClassroomManagement = () => {
         onChange={setActiveTab}
         items={tabItems}
         className="classroom-management-tabs"
+        size="large"
       />
     </div>
   );
