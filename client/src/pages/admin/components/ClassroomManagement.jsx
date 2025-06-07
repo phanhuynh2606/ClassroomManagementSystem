@@ -276,16 +276,7 @@ const ClassroomManagement = () => {
               Approve Deletion
             </Button>
           )}
-          <Button 
-            size="small"
-            icon={<EyeOutlined />} 
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/admin/classrooms/${record._id}`);
-            }}
-          >
-            View
-          </Button>
+          
           <Button 
             size="small"
             icon={<EditOutlined />} 
