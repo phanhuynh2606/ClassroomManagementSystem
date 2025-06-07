@@ -333,9 +333,6 @@ const ClassroomManagement = () => {
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             Add Classroom
           </Button>
-          <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
-            Click on any row to view classroom details
-          </div>
         </div>
       </div>
 
