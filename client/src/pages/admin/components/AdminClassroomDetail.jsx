@@ -277,7 +277,7 @@ const AdminClassroomDetail = () => {
       <Col xs={24} lg={8}>
         <Card title="Quick Actions" className="mb-6">
           <Space direction="vertical" style={{ width: '100%' }}>
-            {classroom.approvalStatus === 'pending' && (
+            {/* {classroom.approvalStatus === 'pending' && (
               <>
                 <Button
                   type="primary"
@@ -297,7 +297,7 @@ const AdminClassroomDetail = () => {
                   Reject Classroom
                 </Button>
               </>
-            )}
+            )} */}
             {classroom.deletionRequested && (
               <Button
                 type="primary"
@@ -330,7 +330,7 @@ const AdminClassroomDetail = () => {
         </Card>
         <Card title="Status">
           <Space direction="vertical">
-            <div>
+            {/* <div>
               <Text strong>Approval Status: </Text>
               <Tag color={
                 classroom.approvalStatus === 'approved' ? 'green' :
@@ -338,7 +338,7 @@ const AdminClassroomDetail = () => {
               }>
                 {classroom.approvalStatus?.toUpperCase()}
               </Tag>
-            </div>
+            </div> */}
             <div>
               <Text strong>Active Status: </Text>
               <Tag color={classroom.isActive ? 'green' : 'red'}>
@@ -437,14 +437,14 @@ const AdminClassroomDetail = () => {
               {classroom.subject || classroom.category || 'No subject specified'}
             </Text>
           </div>
-          <Space>
+          {/* <Space>
             <Tag color={
               classroom.approvalStatus === 'approved' ? 'green' :
               classroom.approvalStatus === 'pending' ? 'orange' : 'red'
             } className="text-base px-3 py-1">
               {classroom.approvalStatus?.toUpperCase()}
             </Tag>
-          </Space>
+          </Space> */}
         </div>
       </div>
 

@@ -206,20 +206,20 @@ const ClassroomManagement = () => {
         </Space>
       ),
     },
-    {
-      title: 'Approval Status',
-      dataIndex: 'approvalStatus',
-      key: 'approvalStatus',
-      render: (status) => {
-        const config = {
-          pending: { color: 'orange', text: 'PENDING' },
-          approved: { color: 'green', text: 'APPROVED' },
-          rejected: { color: 'red', text: 'REJECTED' },
-        };
-        const { color, text } = config[status] || config.pending;
-        return <Tag color={color}>{text}</Tag>;
-      },
-    },
+    // {
+    //   title: 'Approval Status',
+    //   dataIndex: 'approvalStatus',
+    //   key: 'approvalStatus',
+    //   render: (status) => {
+    //     const config = {
+    //       pending: { color: 'orange', text: 'PENDING' },
+    //       approved: { color: 'green', text: 'APPROVED' },
+    //       rejected: { color: 'red', text: 'REJECTED' },
+    //     };
+    //     const { color, text } = config[status] || config.pending;
+    //     return <Tag color={color}>{text}</Tag>;
+    //   },
+    // },
     {
       title: 'Active Status',
       dataIndex: 'isActive',
