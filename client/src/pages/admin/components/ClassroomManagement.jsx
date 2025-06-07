@@ -20,8 +20,10 @@ import {
   CheckOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import classroomAPI from '../../../services/api/classroom.api';
 
 const { Option } = Select;
@@ -36,7 +38,8 @@ const ClassroomManagement = () => {
   const [searchText, setSearchText] = useState('');
   const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  
+  const navigate = useNavigate();
   const currentRole = useSelector((state) => state.users.currentRole);
 
   const fetchClassrooms = async () => {
@@ -238,7 +241,10 @@ const ClassroomManagement = () => {
                 type="primary"
                 size="small"
                 icon={<CheckOutlined />}
-                onClick={() => handleApprove(record._id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleApprove(record._id);
+                }}
                 style={{ backgroundColor: '#52c41a' }}
               >
                 Approve
@@ -247,7 +253,10 @@ const ClassroomManagement = () => {
                 danger
                 size="small"
                 icon={<CloseOutlined />}
-                onClick={() => handleReject(record)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReject(record);
+                }}
               >
                 Reject
               </Button>
@@ -258,7 +267,10 @@ const ClassroomManagement = () => {
               type="primary"
               size="small"
               icon={<CheckOutlined />}
-              onClick={() => handleApproveDeletion(record._id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleApproveDeletion(record._id);
+              }}
               style={{ backgroundColor: '#722ed1' }}
             >
               Approve Deletion
@@ -266,18 +278,39 @@ const ClassroomManagement = () => {
           )}
           <Button 
             size="small"
+            icon={<EyeOutlined />} 
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/admin/classrooms/${record._id}`);
+            }}
+          >
+            View
+          </Button>
+          <Button 
+            size="small"
             icon={<EditOutlined />} 
-            onClick={() => handleEdit(record)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(record);
+            }}
           >
             Edit
           </Button>
           <Popconfirm
             title="Are you sure to delete this classroom?"
-            onConfirm={() => handleDelete(record._id)}
+            onConfirm={(e) => {
+              e?.stopPropagation();
+              handleDelete(record._id);
+            }}
             okText="Yes"
             cancelText="No"
           >
-            <Button danger size="small" icon={<DeleteOutlined />}>
+            <Button 
+              danger 
+              size="small" 
+              icon={<DeleteOutlined />}
+              onClick={(e) => e.stopPropagation()}
+            >
               Delete
             </Button>
           </Popconfirm>
@@ -305,9 +338,14 @@ const ClassroomManagement = () => {
           onChange={(e) => setSearchText(e.target.value)}
           allowClear
         />
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          Add Classroom
-        </Button>
+        <div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            Add Classroom
+          </Button>
+          <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+            Click on any row to view classroom details
+          </div>
+        </div>
       </div>
 
       <Table
@@ -317,6 +355,16 @@ const ClassroomManagement = () => {
         loading={loading}
         pagination={{ pageSize: 8 }}
         scroll={{ x: 1200 }}
+        onRow={(record) => ({
+          onClick: () => navigate(`/admin/classrooms/${record._id}`),
+          style: { cursor: 'pointer' },
+          onMouseEnter: (e) => {
+            e.currentTarget.style.backgroundColor = '#f5f5f5';
+          },
+          onMouseLeave: (e) => {
+            e.currentTarget.style.backgroundColor = '';
+          }
+        })}
       />
 
       <Modal

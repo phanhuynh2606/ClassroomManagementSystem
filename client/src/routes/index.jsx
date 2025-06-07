@@ -17,6 +17,7 @@ import ResetPassword from '../pages/auth/ResetPassword';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import UserManagement from '../pages/admin/components/UserManagement';
 import ClassroomManagement from '../pages/admin/components/ClassroomManagement';
+import AdminClassroomDetail from '../pages/admin/components/AdminClassroomDetail';
 import QuizManagement from '../pages/admin/components/QuizManagement';
 import QuestionManagement from '../pages/admin/components/QuestionManagement';
 import NotificationManagement from '../pages/admin/components/NotificationManagement';
@@ -87,6 +88,7 @@ const AppRouter = () => {
         <Route path="profile" element={<AdminProfile />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="classrooms" element={<ClassroomManagement />} />
+        <Route path="classrooms/:classroomId" element={<AdminClassroomDetail />} />
         <Route path="quizzes" element={<QuizManagement />} />
         <Route path="questions" element={<QuestionManagement />} />
         <Route path="notifications" element={<NotificationManagement />} />
