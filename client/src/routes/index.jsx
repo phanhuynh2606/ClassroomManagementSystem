@@ -17,6 +17,7 @@ import ResetPassword from '../pages/auth/ResetPassword';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import UserManagement from '../pages/admin/components/UserManagement';
 import ClassroomManagement from '../pages/admin/components/ClassroomManagement';
+import AdminClassroomDetail from '../pages/admin/components/AdminClassroomDetail';
 import QuizManagement from '../pages/admin/components/QuizManagement';
 import QuestionManagement from '../pages/admin/components/question/QuestionManagement';
 import NotificationManagement from '../pages/admin/components/NotificationManagement';
@@ -31,7 +32,9 @@ import TeacherProfile from '../pages/teacher/TeacherProfile';
 
 // Student Pages
 import StudentProfile from '../pages/student/StudentProfile';
-// import StudentDashboard from '../pages/student/StudentDashboard';
+import StudentClassroomManagement from '../pages/student/StudentClassroomManagement';
+import StudentDashboard from '../pages/student/StudentDashboard';
+import StudentClassroomDetail from '../pages/student/StudentClassroomDetail';
 // import MyClassess from '../pages/student/MyCourses';
 // import TakeQuiz from '../pages/student/TakeQuiz';
 // import MyGrades from '../pages/student/MyGrades';
@@ -85,6 +88,7 @@ const AppRouter = () => {
         <Route path="profile" element={<AdminProfile />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="classrooms" element={<ClassroomManagement />} />
+        <Route path="classrooms/:classroomId" element={<AdminClassroomDetail />} />
         <Route path="quizzes" element={<QuizManagement />} />
         <Route path="questions" element={<QuestionManagement />} />
         <Route path="notifications" element={<NotificationManagement />} />
@@ -130,10 +134,12 @@ const AppRouter = () => {
           </ProtectedRoute>
         }
       >
+        <Route index element={<StudentDashboard />} />
+        <Route path="dashboard" element={<StudentDashboard />} />
         <Route path="profile" element={<StudentProfile />} />
+        <Route path="classrooms" element={<StudentClassroomManagement />} />
+        <Route path="classroom/:classroomId" element={<StudentClassroomDetail />} />
         {/* Upcoming Student Features */}
-        <Route index element={<ComingSoon title="Dashboard Học sinh" />} />
-        <Route path="classrooms" element={<ComingSoon title="Lớp học của tôi" />} />
         <Route path="assignments" element={<ComingSoon title="Bài tập" />} />
         <Route path="grades" element={<ComingSoon title="Điểm số" />} />
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />

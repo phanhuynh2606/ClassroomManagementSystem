@@ -17,27 +17,38 @@ import {
   EditOutlined,
   DeleteOutlined,
   UserOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  ExclamationCircleOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import classroomAPI from '../../../services/api/classroom.api';
 
 const { Option } = Select;
 
 const ClassroomManagement = () => {
   const [form] = Form.useForm();
+  const [rejectForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
   const [editingClassroom, setEditingClassroom] = useState(null);
+  const [rejectingClassroom, setRejectingClassroom] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  
+  const navigate = useNavigate();
   const currentRole = useSelector((state) => state.users.currentRole);
 
   const fetchClassrooms = async () => {
     setLoading(true);
     try {
       const res = await classroomAPI.getAllByAdmin();
-      if (Array.isArray(res.data)) {
+      if (res.data && Array.isArray(res.data.data)) {
+        setClassrooms(res.data.data);
+      } else if (Array.isArray(res.data)) {
         setClassrooms(res.data);
       } else {
         message.error('Invalid response format');
@@ -63,8 +74,6 @@ const ClassroomManagement = () => {
     setEditingClassroom(classroom);
     form.resetFields();
 
-    const schedule = classroom.schedule || {};
-
     setTimeout(() => {
       form.setFieldsValue({
         code: classroom.code || '',
@@ -72,10 +81,6 @@ const ClassroomManagement = () => {
         description: classroom.description || '',
         category: classroom.category || '',
         level: classroom.level || '',
-        startDate: schedule.startDate?.slice(0, 10) || '',
-        endDate: schedule.endDate?.slice(0, 10) || '',
-        meetingDays: schedule.meetingDays || [],
-        meetingTime: schedule.meetingTime || '',
         maxStudents: classroom.maxStudents || '',
       });
     }, 0);
@@ -93,22 +98,47 @@ const ClassroomManagement = () => {
     }
   };
 
+  const handleApprove = async (id) => {
+    try {
+      await classroomAPI.approveClassroom(id);
+      message.success('Classroom approved successfully');
+      fetchClassrooms();
+    } catch (err) {
+      message.error('Failed to approve classroom');
+    }
+  };
+
+  const handleReject = (classroom) => {
+    setRejectingClassroom(classroom);
+    setIsRejectModalVisible(true);
+  };
+
+  const handleRejectSubmit = async () => {
+    try {
+      const values = await rejectForm.validateFields();
+      await classroomAPI.rejectClassroom(rejectingClassroom._id, values.reason);
+      message.success('Classroom rejected successfully');
+      setIsRejectModalVisible(false);
+      rejectForm.resetFields();
+      fetchClassrooms();
+    } catch (err) {
+      message.error('Failed to reject classroom');
+    }
+  };
+
+  const handleApproveDeletion = async (id) => {
+    try {
+      await classroomAPI.approveDeletion(id);
+      message.success('Classroom deletion approved');
+      fetchClassrooms();
+    } catch (err) {
+      message.error('Failed to approve deletion');
+    }
+  };
+
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      const schedule = {
-        startDate: new Date(values.startDate),
-        endDate: new Date(values.endDate),
-        meetingDays: values.meetingDays,
-        meetingTime: values.meetingTime,
-      };
-
-      delete values.startDate;
-      delete values.endDate;
-      delete values.meetingDays;
-      delete values.meetingTime;
-
-      values.schedule = schedule;
 
       if (editingClassroom) {
         await classroomAPI.updateByAdmin(editingClassroom._id, values);
@@ -140,6 +170,7 @@ const ClassroomManagement = () => {
       title: 'Class Code',
       dataIndex: 'code',
       key: 'code',
+      width: 120,
     },
     {
       title: 'Class Name',
@@ -165,20 +196,34 @@ const ClassroomManagement = () => {
       render: (teacher) => teacher?.fullName || 'N/A',
     },
     {
-      title: 'Max Students',
-      dataIndex: 'maxStudents',
-      key: 'maxStudents',
-      render: (num) => (
+      title: 'Students',
+      dataIndex: 'students',
+      key: 'students',
+      render: (students) => (
         <Space>
           <UserOutlined />
-          {num || 0}
+          {students?.length || 0}
         </Space>
       ),
     },
+    // {
+    //   title: 'Approval Status',
+    //   dataIndex: 'approvalStatus',
+    //   key: 'approvalStatus',
+    //   render: (status) => {
+    //     const config = {
+    //       pending: { color: 'orange', text: 'PENDING' },
+    //       approved: { color: 'green', text: 'APPROVED' },
+    //       rejected: { color: 'red', text: 'REJECTED' },
+    //     };
+    //     const { color, text } = config[status] || config.pending;
+    //     return <Tag color={color}>{text}</Tag>;
+    //   },
+    // },
     {
-      title: 'Status',
+      title: 'Active Status',
       dataIndex: 'isActive',
-      key: 'status',
+      key: 'isActive',
       render: (isActive) => {
         const color = isActive ? 'green' : 'red';
         return <Tag color={color}>{isActive ? 'ACTIVE' : 'INACTIVE'}</Tag>;
@@ -187,18 +232,76 @@ const ClassroomManagement = () => {
     {
       title: 'Actions',
       key: 'actions',
+      width: 280,
       render: (_, record) => (
-        <Space>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+        <Space size="small" wrap>
+          {record.approvalStatus === 'pending' && (
+            <>
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleApprove(record._id);
+                }}
+                style={{ backgroundColor: '#52c41a' }}
+              >
+                Approve
+              </Button>
+              <Button
+                danger
+                size="small"
+                icon={<CloseOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleReject(record);
+                }}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+          {record.deletionRequested && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<CheckOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleApproveDeletion(record._id);
+              }}
+              style={{ backgroundColor: '#722ed1' }}
+            >
+              Approve Deletion
+            </Button>
+          )}
+          
+          <Button 
+            size="small"
+            icon={<EditOutlined />} 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(record);
+            }}
+          >
             Edit
           </Button>
           <Popconfirm
             title="Are you sure to delete this classroom?"
-            onConfirm={() => handleDelete(record._id)}
+            onConfirm={(e) => {
+              e?.stopPropagation();
+              handleDelete(record._id);
+            }}
             okText="Yes"
             cancelText="No"
           >
-            <Button danger icon={<DeleteOutlined />}>
+            <Button 
+              danger 
+              size="small" 
+              icon={<DeleteOutlined />}
+              onClick={(e) => e.stopPropagation()}
+            >
               Delete
             </Button>
           </Popconfirm>
@@ -226,9 +329,11 @@ const ClassroomManagement = () => {
           onChange={(e) => setSearchText(e.target.value)}
           allowClear
         />
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          Add Classroom
-        </Button>
+        <div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            Add Classroom
+          </Button>
+        </div>
       </div>
 
       <Table
@@ -237,6 +342,17 @@ const ClassroomManagement = () => {
         rowKey={(record) => record._id}
         loading={loading}
         pagination={{ pageSize: 8 }}
+        scroll={{ x: 1200 }}
+        onRow={(record) => ({
+          onClick: () => navigate(`/admin/classrooms/${record._id}`),
+          style: { cursor: 'pointer' },
+          onMouseEnter: (e) => {
+            e.currentTarget.style.backgroundColor = '#f5f5f5';
+          },
+          onMouseLeave: (e) => {
+            e.currentTarget.style.backgroundColor = '';
+          }
+        })}
       />
 
       <Modal
@@ -246,6 +362,7 @@ const ClassroomManagement = () => {
         onCancel={() => setIsModalVisible(false)}
         maskClosable={false}
         okText={editingClassroom ? 'Update' : 'Add'}
+        width={600}
       >
         <Form form={form} layout="vertical" preserve={false}>
           <Form.Item
@@ -253,7 +370,7 @@ const ClassroomManagement = () => {
             label="Class Code"
             rules={[{ required: true, message: 'Please input class code!' }]}
           >
-            <Input />
+            <Input disabled={editingClassroom} />
           </Form.Item>
 
           <Form.Item
@@ -293,46 +410,6 @@ const ClassroomManagement = () => {
           </Form.Item>
 
           <Form.Item
-            name="startDate"
-            label="Start Date"
-            rules={[{ required: true, message: 'Please select start date!' }]}
-          >
-            <Input type="date" />
-          </Form.Item>
-
-          <Form.Item
-            name="endDate"
-            label="End Date"
-            rules={[{ required: true, message: 'Please select end date!' }]}
-          >
-            <Input type="date" />
-          </Form.Item>
-
-          <Form.Item
-            name="meetingDays"
-            label="Meeting Days"
-            rules={[{ required: true, message: 'Please select days!' }]}
-          >
-            <Select mode="multiple" placeholder="Select days">
-              <Option value="monday">Monday</Option>
-              <Option value="tuesday">Tuesday</Option>
-              <Option value="wednesday">Wednesday</Option>
-              <Option value="thursday">Thursday</Option>
-              <Option value="friday">Friday</Option>
-              <Option value="saturday">Saturday</Option>
-              <Option value="sunday">Sunday</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="meetingTime"
-            label="Meeting Time"
-            rules={[{ required: true, message: 'Please enter meeting time!' }]}
-          >
-            <Input type="time" />
-          </Form.Item>
-
-          <Form.Item
             name="maxStudents"
             label="Max Students"
             rules={[
@@ -346,6 +423,29 @@ const ClassroomManagement = () => {
             ]}
           >
             <Input type="number" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Rejection Modal */}
+      <Modal
+        title="Reject Classroom"
+        open={isRejectModalVisible}
+        onOk={handleRejectSubmit}
+        onCancel={() => {
+          setIsRejectModalVisible(false);
+          rejectForm.resetFields();
+        }}
+        okText="Reject"
+        okButtonProps={{ danger: true }}
+      >
+        <Form form={rejectForm} layout="vertical">
+          <Form.Item
+            name="reason"
+            label="Rejection Reason"
+            rules={[{ required: true, message: 'Please provide a reason for rejection!' }]}
+          >
+            <Input.TextArea rows={4} placeholder="Enter reason for rejection..." />
           </Form.Item>
         </Form>
       </Modal>
