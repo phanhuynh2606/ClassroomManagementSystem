@@ -24,7 +24,6 @@ import {
   UploadOutlined,
   MoreOutlined,
 } from '@ant-design/icons';
-import axios from 'axios';
 import { questionAPI } from '../../../../services/api';
 
 const { Option } = Select;
@@ -54,6 +53,8 @@ const QuestionManagement = () => {
     pageSize: 10,
     total: 0,
   });
+  const { confirm } = Modal;
+
 
   // Fetch questions from API
   const fetchQuestions = async (page = 1, limit = 10, search = searchText) => {
@@ -125,162 +126,173 @@ const QuestionManagement = () => {
     }
   };
 
-  // Delete question
-  const deleteQuestion = async (questionId) => {
-    try {
-      setLoading(true);
-      const response = await questionAPI.delete(questionId);
+  const deleteQuestion = (questionId) => {
+    confirm({
+      title: 'Bạn có chắc muốn xóa câu hỏi này?',
+      content: 'Hành động này không thể hoàn tác.',
+      okText: 'Xóa',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          setLoading(true);
+          const response = await questionAPI.delete(questionId);
 
-      if (response.data.success) {
-        message.success('Question deleted successfully');
-        fetchQuestions(pagination.current, pagination.pageSize, searchText);
+          if (response.success) {
+            message.success('Xóa câu hỏi thành công');
+            fetchQuestions(pagination.current, pagination.pageSize, searchText);
+          }
+        } catch (error) {
+          message.error('Xóa câu hỏi thất bại');
+          console.error('Lỗi khi xóa câu hỏi:', error);
+        } finally {
+          setLoading(false);
+        }
+      },
+      onCancel(){
+        console.log('Cancel delete');
       }
-    } catch (error) {
-      message.error('Failed to delete question');
-      console.error('Error deleting question:', error);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   useEffect(() => {
     fetchQuestions();
   }, [searchText, pagination.current, pagination.pageSize, difficultyFilter, categoryFilter, statusFilter]);
 
-const columns = [
-  {
-    title: "Actions",
-    key: "action",
-    dataIndex: "_id",
-    fixed: "left",
-    width: 80,
-    render: (id, record) => (
-      <Dropdown
-        menu={{
-          items: [
-            {
-              key: "1",
-              label: (
-                <div className="flex items-center gap-2 w-full" onClick={() => deleteQuestion(id)}>
-                  <DeleteOutlined />
-                  <span className="font-semibold cursor-pointer">Delete</span>
-                </div>
-              ),
-            },
-            {
-              key: "2",
-              label: (
-                <div className="flex items-center gap-2 w-full" onClick={() => handleEdit(record)}>
-                  <EditOutlined />
-                  <span className="font-semibold cursor-pointer">Edit</span>
-                </div>
-              ),
-            },
-          ],
-        }}
-        trigger={["click"]}
-      >
-        <MoreOutlined className="cursor-pointer text-lg" />
-      </Dropdown>
-    ),
-  },
-  {
-    title: 'Question',
-    dataIndex: 'content',
-    key: 'content',
-    width: 300,
-    ellipsis: true,
-    render: (text) => (
-      <div style={{ whiteSpace: 'pre-wrap' }}>
-        {text.length > 100 ? `${text.substring(0, 100)}...` : text}
-      </div>
-    ),
-  },
-  {
-    title: 'Difficulty',
-    dataIndex: 'difficulty',
-    key: 'difficulty',
-    width: 100,
-    render: (difficulty) => {
-      const colors = { easy: 'green', medium: 'orange', hard: 'red' };
-      return <Tag color={colors[difficulty]}>{difficulty.toUpperCase()}</Tag>;
+  const columns = [
+    {
+      title: "Actions",
+      key: "action",
+      dataIndex: "_id",
+      fixed: "left",
+      width: 80,
+      render: (id, record) => (
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: "1",
+                label: (
+                  <div className="flex items-center gap-2 w-full" onClick={() => deleteQuestion(id)}>
+                    <DeleteOutlined />
+                    <span className="font-semibold cursor-pointer">Delete</span>
+                  </div>
+                ),
+              },
+              {
+                key: "2",
+                label: (
+                  <div className="flex items-center gap-2 w-full" onClick={() => handleEdit(record)}>
+                    <EditOutlined />
+                    <span className="font-semibold cursor-pointer">Edit</span>
+                  </div>
+                ),
+              },
+            ],
+          }}
+          trigger={["click"]}
+        >
+          <MoreOutlined className="cursor-pointer text-lg" />
+        </Dropdown>
+      ),
     },
-  },
-  {
-    title: 'Category',
-    dataIndex: 'category',
-    key: 'category',
-    width: 150,
-    ellipsis: true,
-  },
-  {
-    title: 'Subject',
-    dataIndex: 'subjectCode',
-    key: 'subjectCode',
-    width: 100,
-  },
-  {
-    title: 'Points',
-    dataIndex: 'points',
-    key: 'points',
-    width: 80,
-  },
-  {
-    title: 'Deleted',
-    dataIndex: 'deleted',
-    key: 'deleted',
-    width: 100,
-    render: (deleted) => (
-      <Tag color={deleted ? 'red' : 'green'}>
-        {deleted ? 'Deleted' : 'Active'}
-      </Tag>
-    ),
-  },
-  {
-    title: 'Status',
-    dataIndex: 'status',
-    key: 'status',
-    width: 100,
-    render: (status) => {
-      const colors = { draft: 'default', published: 'green', archived: 'red' };
-      return <Tag color={colors[status]}>{status.toUpperCase()}</Tag>;
+    {
+      title: 'Question',
+      dataIndex: 'content',
+      key: 'content',
+      width: 300,
+      ellipsis: true,
+      render: (text) => (
+        <div style={{ whiteSpace: 'pre-wrap' }}>
+          {text.length > 100 ? `${text.substring(0, 100)}...` : text}
+        </div>
+      ),
     },
-  },
-  {
-    title: 'Statistics',
-    key: 'statistics',
-    width: 150,
-    render: (_, record) => (
-      <div>
-        <div>Total: {record.statistics?.totalAttempts || 0}</div>
-        <div>Correct: {record.statistics?.correctAttempts || 0}</div>
-      </div>
-    ),
-  },
-  {
-    title: 'AI Generated',
-    dataIndex: 'isAI',
-    key: 'isAI',
-    width: 100,
-    render: (isAI) => (
-      <Tag color={isAI ? 'blue' : 'default'}>
-        {isAI ? 'AI' : 'Manual'}
-      </Tag>
-    ),
-  },
-  {
-    title: 'Created By',
-    dataIndex: 'createdBy',
-    key: 'createdBy',
-    width: 250,
-    ellipsis: true,
-    render: (createdBy) => (
-      <div>
-        {createdBy?.fullName || 'Unknown'}<hr/> ({createdBy?.email || 'N/A'})
-      </div>
-    ),
-  },
-];
+    {
+      title: 'Difficulty',
+      dataIndex: 'difficulty',
+      key: 'difficulty',
+      width: 100,
+      render: (difficulty) => {
+        const colors = { easy: 'green', medium: 'orange', hard: 'red' };
+        return <Tag color={colors[difficulty]}>{difficulty.toUpperCase()}</Tag>;
+      },
+    },
+    {
+      title: 'Category',
+      dataIndex: 'category',
+      key: 'category',
+      width: 150,
+      ellipsis: true,
+    },
+    {
+      title: 'Subject',
+      dataIndex: 'subjectCode',
+      key: 'subjectCode',
+      width: 100,
+    },
+    {
+      title: 'Points',
+      dataIndex: 'points',
+      key: 'points',
+      width: 80,
+    },
+    {
+      title: 'Deleted',
+      dataIndex: 'deleted',
+      key: 'deleted',
+      width: 100,
+      render: (deleted) => (
+        <Tag color={deleted ? 'red' : 'green'}>
+          {deleted ? 'Deleted' : 'Active'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status) => {
+        const colors = { draft: 'default', published: 'green', archived: 'red' };
+        return <Tag color={colors[status]}>{status.toUpperCase()}</Tag>;
+      },
+    },
+    {
+      title: 'Statistics',
+      key: 'statistics',
+      width: 150,
+      render: (_, record) => (
+        <div>
+          <div>Total: {record.statistics?.totalAttempts || 0}</div>
+          <div>Correct: {record.statistics?.correctAttempts || 0}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'AI Generated',
+      dataIndex: 'isAI',
+      key: 'isAI',
+      width: 100,
+      render: (isAI) => (
+        <Tag color={isAI ? 'blue' : 'default'}>
+          {isAI ? 'AI' : 'Manual'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Created By',
+      dataIndex: 'createdBy',
+      key: 'createdBy',
+      width: 250,
+      ellipsis: true,
+      render: (createdBy) => (
+        <div>
+          {createdBy?.fullName || 'Unknown'}<hr /> ({createdBy?.email || 'N/A'})
+        </div>
+      ),
+    },
+  ];
 
   const handleAdd = () => {
     setEditingQuestion(null);
@@ -300,23 +312,38 @@ const columns = [
     setIsModalVisible(true);
   };
 
-  const handleEdit = (question) => {
-    setEditingQuestion(question);
-    form.setFieldsValue({
-      content: question.content,
-      options: question.options,
-      explanation: question.explanation,
-      difficulty: question.difficulty,
-      points: question.points,
-      isAI: question.isAI,
-      category: question.category,
-      subjectCode: question.subjectCode,
-      status: question.status,
-    });
-    console.log(question);
+  const handleEdit = async (question) => {
+  try {
+    setLoading(true);
+    const response = await questionAPI.getById(question._id);
 
-    setIsModalVisible(true);
-  };
+    if (response.success) {
+      const data = response.data;
+
+      setEditingQuestion(data);
+      form.setFieldsValue({
+        content: data.content,
+        options: data.options,
+        explanation: data.explanation,
+        difficulty: data.difficulty,
+        points: data.points,
+        isAI: data.isAI,
+        category: data.category,
+        subjectCode: data.subjectCode,
+        status: data.status,
+      });
+
+      setIsModalVisible(true);
+    } else {
+      message.error('Không tìm thấy dữ liệu câu hỏi');
+    }
+  } catch (error) {
+    console.error('Lỗi khi lấy chi tiết câu hỏi:', error);
+    message.error('Lỗi khi lấy chi tiết câu hỏi');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleModalOk = () => {
     form.validateFields().then((values) => {
@@ -340,7 +367,7 @@ const columns = [
   };
 
   return (
-    <div>
+    <div className='container my-14 p-4'>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
         <div>
           <Input.Search

@@ -11,10 +11,10 @@ const questionAPI = {
       status
     }
   }),
-  getById: (id) => axiosClient.get(`/questions/${id}`),
+  getById: (id) => axiosClient.get(`/admin/questions/${id}`),
   create: (data) => axiosClient.post('/questions', data),
   update: (id, data) => axiosClient.put(`/questions/${id}`, data),
-  delete: (id) => axiosClient.delete(`/questions/${id}`),
+  delete: (id) => axiosClient.delete(`/admin/questions/${id}`),
 };
 
 export default questionAPI; 

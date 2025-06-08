@@ -64,10 +64,40 @@ const getQuestions = async (req, res) => {
     }
 };
 
+const getQuestionById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const question = await Question.findById(id)
+            .populate('createdBy', '_id email password role image fullName isActive')
+            .populate('lastUpdatedBy', '_id email password role image fullName isActive')
+            .populate('usageHistory.quiz')
+            .populate('usageHistory.classroom')
+            .populate('usedInClassrooms')
+            .populate('deletedBy');
+
+        if (!question) {
+            return res.status(404).json({
+                success: false,
+                message: 'Question not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: question
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+}
+
 const deleteQuestion = async (req, res) => {
     try {
         const { id } = req.params;
-
         const question = await Question.findByIdAndDelete(id);
         if (!question) {
             return res.status(404).json({
@@ -92,5 +122,6 @@ const deleteQuestion = async (req, res) => {
 
 module.exports = {
     getQuestions,
+    getQuestionById,
     deleteQuestion
 }
