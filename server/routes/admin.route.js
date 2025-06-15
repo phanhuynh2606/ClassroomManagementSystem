@@ -3,6 +3,8 @@ const express = require('express');
 const { protect, authorize } = require('../middleware/auth.middleware');
 const ctrls = require('../controllers/admin.controller');
 const questionCtrl = require('../controllers/question.cotroller');
+const { uploadErrorHandler } = require('../middleware/errorr');
+const { questionImageUpload } = require('../middleware/upload.middleware');
 
 const router = express.Router();
 router.get('/users', protect, authorize('admin'), ctrls.getUsersByRole);
@@ -13,4 +15,8 @@ router.put('/users/:userId', protect, authorize('admin'), ctrls.updateUser);
 router.get('/questions', protect, authorize('admin'), questionCtrl.getQuestions);
 router.delete('/questions/:id', protect, authorize('admin'), questionCtrl.deleteQuestion);
 router.get('/questions/:id', protect, authorize('admin'), questionCtrl.getQuestionById);
+router.patch('/questions/:id', protect, authorize('admin'), questionCtrl.updateQuestion);
+router.post('/questions/image', protect, authorize('admin'), uploadErrorHandler, questionImageUpload.single('image'), questionCtrl.uploadQuestionImage);
+router.post('/questions-manual', protect, authorize('admin'), questionCtrl.createQuestionManual);
+router.get('/download-excel', protect, authorize('admin'), questionCtrl.downLoadTemplateExcel);
 module.exports = router; 

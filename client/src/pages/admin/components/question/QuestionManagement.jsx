@@ -2,32 +2,28 @@ import React, { useState, useEffect } from 'react';
 import {
   Table,
   Button,
-  Space,
   Input,
-  Modal,
-  Form,
   Select,
   message,
-  Popconfirm,
   Tag,
-  InputNumber,
-  Upload,
-  Spin,
-  Checkbox,
   Dropdown,
+  Modal,
 } from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
   EditOutlined,
   DeleteOutlined,
-  UploadOutlined,
   MoreOutlined,
 } from '@ant-design/icons';
 import { questionAPI } from '../../../../services/api';
+import ModalAddQuestion from './ModalAddQuestion';
+import ModalEditQuestion from './ModalEditQuestion';
+import ModalSelectMethod from './ModalSelectMethod';
+import ModalAddExcel from './ModalAddExcel';
+import ModalAddAi from './ModalAddAi';
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 const categoryOptions = [
   { value: 'PT1', label: 'PT1' },
@@ -39,9 +35,6 @@ const categoryOptions = [
 ];
 
 const QuestionManagement = () => {
-  const [form] = Form.useForm();
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingQuestion, setEditingQuestion] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState(null);
@@ -53,8 +46,17 @@ const QuestionManagement = () => {
     pageSize: 10,
     total: 0,
   });
-  const { confirm } = Modal;
 
+  // Modal states
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isAddExcelModalVisible, setIsAddExcelModalVisible] = useState(false);
+  const [isAddAIModalVisible, setIsAddAIModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [isMethodSelectVisible, setIsMethodSelectVisible] = useState(false);
+
+
+  const { confirm } = Modal;
 
   // Fetch questions from API
   const fetchQuestions = async (page = 1, limit = 10, search = searchText) => {
@@ -98,29 +100,41 @@ const QuestionManagement = () => {
     }
   };
 
-  // Create or update question
-  const saveQuestion = async (questionData) => {
+  // Create question
+  const createQuestion = async (questionData) => {
     try {
       setLoading(true);
-      let response;
+      const response = await questionAPI.create(questionData);
 
-      if (editingQuestion) {
-        // Update existing question
-        response = await questionAPI.update(editingQuestion._id, questionData);
-      } else {
-        // Create new question
-        response = await questionAPI.create(questionData);
-      }
-
-      if (response.data.success) {
-        message.success(editingQuestion ? 'Question updated successfully' : 'Question created successfully');
+      if (response.success) {
+        message.success('Question created successfully');
         fetchQuestions(pagination.current, pagination.pageSize, searchText);
-        setIsModalVisible(false);
-        form.resetFields();
+        setIsAddModalVisible(false);
       }
     } catch (error) {
-      message.error('Failed to save question');
-      console.error('Error saving question:', error);
+      message.error('Failed to create question');
+      console.error('Error creating question:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update question
+  const updateQuestion = async (questionData) => {
+    try {
+      setLoading(true);
+      const response = await questionAPI.update(editingQuestion._id, questionData);
+
+      if (response.success) {
+        message.success('Question updated successfully');
+        fetchQuestions(pagination.current, pagination.pageSize, searchText);
+        setIsEditModalVisible(false);
+        setEditingQuestion(null);
+      }
+      console.log('Updating question with data:', questionData);
+    } catch (error) {
+      message.error('Failed to update question');
+      console.error('Error updating question:', error);
     } finally {
       setLoading(false);
     }
@@ -294,67 +308,27 @@ const QuestionManagement = () => {
     },
   ];
 
-  const handleAdd = () => {
-    setEditingQuestion(null);
-    form.resetFields();
-    // Set default values for new question
-    form.setFieldsValue({
-      options: [
-        { content: '', isCorrect: false },
-        { content: '', isCorrect: false },
-        { content: '', isCorrect: false },
-        { content: '', isCorrect: false },
-      ],
-      status: 'draft',
-      isAI: false,
-      points: 1,
-    });
-    setIsModalVisible(true);
+  const handleAddManual = () => {
+    setIsAddModalVisible(true);
   };
 
   const handleEdit = async (question) => {
-  try {
-    setLoading(true);
-    const response = await questionAPI.getById(question._id);
+    try {
+      setLoading(true);
+      const response = await questionAPI.getById(question._id);
 
-    if (response.success) {
-      const data = response.data;
-
-      setEditingQuestion(data);
-      form.setFieldsValue({
-        content: data.content,
-        options: data.options,
-        explanation: data.explanation,
-        difficulty: data.difficulty,
-        points: data.points,
-        isAI: data.isAI,
-        category: data.category,
-        subjectCode: data.subjectCode,
-        status: data.status,
-      });
-
-      setIsModalVisible(true);
-    } else {
-      message.error('Không tìm thấy dữ liệu câu hỏi');
-    }
-  } catch (error) {
-    console.error('Lỗi khi lấy chi tiết câu hỏi:', error);
-    message.error('Lỗi khi lấy chi tiết câu hỏi');
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleModalOk = () => {
-    form.validateFields().then((values) => {
-      // Validate that at least one option is correct
-      const hasCorrectOption = values.options.some(option => option.isCorrect);
-      if (!hasCorrectOption) {
-        message.error('At least one option must be marked as correct');
-        return;
+      if (response.success) {
+        setEditingQuestion(response.data);
+        setIsEditModalVisible(true);
+      } else {
+        message.error('Không tìm thấy dữ liệu câu hỏi');
       }
-      saveQuestion(values);
-    });
+    } catch (error) {
+      console.error('Lỗi khi lấy chi tiết câu hỏi:', error);
+      message.error('Lỗi khi lấy chi tiết câu hỏi');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSearch = (value) => {
@@ -364,6 +338,18 @@ const QuestionManagement = () => {
 
   const handleTableChange = (paginationConfig) => {
     fetchQuestions(paginationConfig.current, paginationConfig.pageSize, searchText);
+  };
+
+  const handleAddModalCancel = () => {
+    setIsAddModalVisible(false);
+  };
+
+  const handleEditModalCancel = () => {
+    setIsEditModalVisible(false);
+    setEditingQuestion(null);
+  };
+  const handleOpenMethodSelect = () => {
+    setIsMethodSelectVisible(true);
   };
 
   return (
@@ -419,7 +405,7 @@ const QuestionManagement = () => {
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={handleAdd}
+          onClick={handleOpenMethodSelect}
         >
           Add Question
         </Button>
@@ -439,159 +425,64 @@ const QuestionManagement = () => {
         scroll={{ x: 'max-content' }}
       />
 
-      <Modal
-        title={editingQuestion ? 'Edit Question' : 'Add Question'}
-        open={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={() => setIsModalVisible(false)}
-        width={900}
-        confirmLoading={loading}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="content"
-            label="Question Content"
-            rules={[{ required: true, message: 'Please input question content!' }]}
-          >
-            <TextArea rows={4} />
-          </Form.Item>
+      {/* Add Question Modal */}
+      <ModalAddQuestion
+        visible={isAddModalVisible}
+        onCancel={handleAddModalCancel}
+        onSave={createQuestion}
+        loading={loading}
+      />
 
-          <Form.List
-            name="options"
-            rules={[
-              {
-                validator: async (_, options) => {
-                  if (!options || options.length < 2) {
-                    return Promise.reject(new Error('At least 2 options required'));
-                  }
-                },
-              },
-            ]}
-          >
-            {(fields, { add, remove }, { errors }) => (
-              <>
-                {fields.map(({ key, name, ...restField }) => (
-                  <Space key={key} style={{ display: 'flex', marginBottom: 8, width: '100%' }} align="baseline">
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'content']}
-                      rules={[{ required: true, message: 'Missing option content' }]}
-                      style={{ flex: 1 }}
-                    >
-                      <Input placeholder="Option content" />
-                    </Form.Item>
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'isCorrect']}
-                      valuePropName="checked"
-                    >
-                      <Checkbox>Correct</Checkbox>
-                    </Form.Item>
-                    {fields.length > 2 && (
-                      <Button type="link" onClick={() => remove(name)} danger>
-                        Delete
-                      </Button>
-                    )}
-                  </Space>
-                ))}
-                <Form.Item>
-                  <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                    Add Option
-                  </Button>
-                  <Form.ErrorList errors={errors} />
-                </Form.Item>
-              </>
-            )}
-          </Form.List>
+      {/* Edit Question Modal */}
+      <ModalEditQuestion
+        visible={isEditModalVisible}
+        onCancel={handleEditModalCancel}
+        onSave={updateQuestion}
+        loading={loading}
+        questionData={editingQuestion}
+      />
 
-          <Form.Item
-            name="explanation"
-            label="Explanation"
-          >
-            <TextArea rows={3} placeholder="Explanation for the correct answer" />
-          </Form.Item>
+      {/* Add Excel Modal */}
+      <ModalAddExcel
+        visible={isAddExcelModalVisible}
+        onCancel={() => setIsAddExcelModalVisible(false)}
+        onSave={(data) => {
+          // Handle saving imported data
+          console.log('Imported data:', data);
+          setIsAddExcelModalVisible(false);
+          message.success('Questions imported successfully!');
+          fetchQuestions(pagination.current, pagination.pageSize, searchText);
+        }}
+      />
 
-          <div style={{ display: 'flex', gap: 16 }}>
-            <Form.Item
-              name="difficulty"
-              label="Difficulty"
-              rules={[{ required: true, message: 'Please select difficulty!' }]}
-              style={{ flex: 1 }}
-            >
-              <Select>
-                <Option value="easy">Easy</Option>
-                <Option value="medium">Medium</Option>
-                <Option value="hard">Hard</Option>
-              </Select>
-            </Form.Item>
+      {/* AI Question Generation Modal */}
+      <ModalAddAi
+        visible={isAddAIModalVisible}
+        onCancel={() => setIsAddAIModalVisible(false)}
+        onSave={(data) => {
+          // Handle saving AI generated question
+          console.log('AI generated question:', data);
+          setIsAddAIModalVisible(false);
+          message.success('AI question generated successfully!');
+          fetchQuestions(pagination.current, pagination.pageSize, searchText);
+        }}
+      />
 
-            <Form.Item
-              name="points"
-              label="Points"
-              rules={[{ required: true, message: 'Please input points!' }]}
-              style={{ flex: 1 }}
-            >
-              <InputNumber min={1} style={{ width: '100%' }} />
-            </Form.Item>
-          </div>
-
-          <div style={{ display: 'flex', gap: 16 }}>
-            <Form.Item
-              name="category"
-              label="Category"
-              rules={[{ required: true, message: 'Please select category!' }]}
-              style={{ flex: 1 }}
-            >
-              <Select>
-                <Option value="PT1">PT1</Option>
-                <Option value="PT2">PT2</Option>
-                <Option value="QUIZ1">QUIZ1</Option>
-                <Option value="QUIZ2">QUIZ2</Option>
-                <Option value="FE">FE</Option>
-                <Option value="ASSIGNMENT">ASSIGNMENT</Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="subjectCode"
-              label="Subject Code"
-              rules={[{ required: true, message: 'Please input subject code!' }]}
-              style={{ flex: 1 }}
-            >
-              <Input placeholder="e.g., SCI101, GEO101" />
-            </Form.Item>
-          </div>
-
-          <div style={{ display: 'flex', gap: 16 }}>
-            <Form.Item
-              name="status"
-              label="Status"
-              rules={[{ required: true, message: 'Please select status!' }]}
-              style={{ flex: 1 }}
-            >
-              <Select>
-                <Option value="draft">Draft</Option>
-                <Option value="published">Published</Option>
-                <Option value="archived">Archived</Option>
-              </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="isAI"
-              valuePropName="checked"
-              style={{ flex: 1, display: 'flex', alignItems: 'center', marginTop: 30 }}
-            >
-              <Checkbox>AI Generated Question</Checkbox>
-            </Form.Item>
-          </div>
-
-          <Form.Item label="Question Image">
-            <Upload>
-              <Button icon={<UploadOutlined />}>Upload Image</Button>
-            </Upload>
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* Method Selection Modal */}
+      <ModalSelectMethod
+        visible={isMethodSelectVisible}
+        onCancel={() => setIsMethodSelectVisible(false)}
+        onSelectMethod={(method) => {
+          setIsMethodSelectVisible(false);
+          if (method === 'manual') {
+            handleAddManual();
+          } else if (method === 'excel') {
+            setIsAddExcelModalVisible(true);
+          } else if (method === 'ai') {
+            setIsAddAIModalVisible(true);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -2,6 +2,9 @@ const Question = require('../models/question.model');
 const User = require('../models/user.model');
 const Classroom = require('../models/classroom.model');
 const Quiz = require('../models/quiz.model');
+const XLSX = require('xlsx');
+const path = require('path');
+const { log } = require('console');
 
 const getQuestions = async (req, res) => {
     try {
@@ -119,9 +122,169 @@ const deleteQuestion = async (req, res) => {
     }
 };
 
+const updateQuestion = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { content, image, options, subjectCode, difficulty, category, status, explanation } = req.body;
+
+        const question = await Question.findByIdAndUpdate(id, {
+            content,
+            subjectCode,
+            difficulty,
+            category,
+            status,
+            options,
+            explanation,
+            image: image || null,
+            lastUpdatedAt: new Date(),
+            lastUpdatedBy: req.user._id
+        }, { new: true });
+
+        if (!question) {
+            return res.status(404).json({
+                success: false,
+                message: 'Question not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: question
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
+const uploadQuestionImage = async (req, res, next) => {
+    try {
+        console.log('req.file', req.file);
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No file uploaded'
+            });
+        }
+        const imageUrl = req.file?.path;
+
+        res.json({
+            success: true,
+            imageUrl,
+            message: 'Question image updated successfully'
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const createQuestionManual = async (req, res) => {
+    try {
+        const {
+            content,
+            image,
+            options,
+            subjectCode,
+            difficulty,
+            category,
+            status,
+            explanation,
+            explanationImage,
+            cooldownPeriod,
+            points,
+            statistics
+        } = req.body;
+
+        const newQuestion = new Question({
+            content,
+            image: image || null,
+            options,
+            subjectCode,
+            difficulty,
+            category,
+            status,
+            explanation,
+            explanationImage: explanationImage || '',
+            cooldownPeriod: cooldownPeriod || null,
+            points: points || 0,
+            statistics: statistics || {
+                totalAttempts: 0,
+                correctAttempts: 0
+            },
+            usageHistory: [],
+            usedInClassrooms: [],
+            deletedBy: null,
+            lastUpdatedAt: new Date(),
+            lastUsedAt: null,
+            usageCount: 0,
+            lastUpdatedBy: req.user?._id || null,
+            createdAt: new Date(),
+            createdBy: req.user?._id || null,
+            isAI: false,
+            isActive: true,
+            isArchived: false,
+            deletedAt: null,
+            deleted: false
+        });
+
+        await newQuestion.save();
+
+        res.status(201).json({
+            success: true,
+            data: newQuestion
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+}
+
+const downLoadTemplateExcel = (req, res) => {
+    try {
+        const templateData = [{
+            'Content': '',
+            'Question A': '',
+            'Question B': '',
+            'Question C': '',
+            'Question D': '',
+            'Correct Answer': '',
+            'Explanation': '',
+        }];
+
+        const worksheet = XLSX.utils.json_to_sheet(templateData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+
+        const buffer = XLSX.write(workbook, {
+            bookType: 'xlsx',
+            type: 'buffer'
+        });
+
+        res.setHeader('Content-Disposition', 'attachment; filename="templateQuestion.xlsx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.end(buffer);
+    } catch (error) {
+        console.error('Lỗi tạo file template:', error);
+        res.status(500).send('Lỗi server');
+    }
+};
+
+
 
 module.exports = {
     getQuestions,
     getQuestionById,
-    deleteQuestion
+    deleteQuestion,
+    updateQuestion,
+    uploadQuestionImage,
+    createQuestionManual,
+    downLoadTemplateExcel
 }

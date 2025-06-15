@@ -12,9 +12,17 @@ const questionAPI = {
     }
   }),
   getById: (id) => axiosClient.get(`/admin/questions/${id}`),
-  create: (data) => axiosClient.post('/questions', data),
-  update: (id, data) => axiosClient.put(`/questions/${id}`, data),
+  create: (data) => axiosClient.post('/admin/questions-manual', data),
+  update: (id, data) => axiosClient.patch(`/admin/questions/${id}`, data),
   delete: (id) => axiosClient.delete(`/admin/questions/${id}`),
+  downLoadTemplateExcel: () => axiosClient.get('/admin/download-excel', {
+    responseType: 'blob'
+  }),
+  uploadImage: (data) => axiosClient.post('/admin/questions/image', data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
 };
 
 export default questionAPI; 
