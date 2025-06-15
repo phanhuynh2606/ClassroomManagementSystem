@@ -7,13 +7,18 @@ import {
   message, 
   Alert,
   Card,
-  Spin
+  Spin,
+  Select,
+  InputNumber,
+  Switch
 } from 'antd';
 import { InfoCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
+import classroomAPI from '../../services/api/classroom.api';
 import './teacher.css';
 
 const { TextArea } = Input;
+const { Option } = Select;
 
 const EditClassForm = () => {
   const { classId } = useParams();
@@ -21,66 +26,74 @@ const EditClassForm = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [classCode, setClassCode] = useState('');
-
-  // Mock data - in real app, this would come from API
-  const [classData, setClassData] = useState({
-    id: 1,
-    name: 'Toán học 10A',
-    subject: 'Toán học',
-    code: 'MATH10A',
-    description: 'Lớp học toán dành cho học sinh lớp 10A',
-    status: 'approved'
-  });
 
   useEffect(() => {
-    // Simulate loading class data
     const loadClassData = async () => {
       setInitialLoading(true);
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Set form values
-        form.setFieldsValue({
-          name: classData.name,
-          subject: classData.subject,
-          description: classData.description,
-          code: classData.code
-        });
-        setClassCode(classData.code);
+        const response = await classroomAPI.getDetail(classId);
+        if (response.success) {
+          const classData = response.data;
+          
+          // Set form values
+          form.setFieldsValue({
+            name: classData.name,
+            description: classData.description,
+            category: classData.category,
+            level: classData.level,
+            maxStudents: classData.maxStudents,
+            settings: {
+              allowStudentInvite: classData.settings?.allowStudentInvite || false,
+              allowStudentPost: classData.settings?.allowStudentPost || false,
+              allowStudentComment: classData.settings?.allowStudentComment || false
+            }
+          });
+        } else {
+          message.error(response.message || 'Failed to load class information');
+          navigate('/teacher/classroom');
+        }
       } catch (error) {
-        message.error('Không thể tải thông tin lớp học');
+        console.error('Error loading class data:', error);
+        message.error(error.response?.data?.message || 'Unable to load class information');
+        navigate('/teacher/classroom');
       } finally {
         setInitialLoading(false);
       }
     };
 
-    loadClassData();
-  }, [classId, form, classData]);
-
-  const generateClassCode = () => {
-    // Generate a random class code
-    const prefix = 'WADA';
-    const number = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-    const newCode = `${prefix}${number}`;
-    setClassCode(newCode);
-    form.setFieldsValue({ code: newCode });
-  };
+    if (classId) {
+      loadClassData();
+    }
+  }, [classId, form, navigate]);
 
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const formData = {
+        name: values.name,
+        description: values.description,
+        category: values.category,
+        level: values.level,
+        maxStudents: values.maxStudents,
+        settings: {
+          allowStudentInvite: values.settings.allowStudentInvite,
+          allowStudentPost: values.settings.allowStudentPost,
+          allowStudentComment: values.settings.allowStudentComment
+        },
+        requireApproval: true // Always require admin approval for changes
+      };
+
+      const response = await classroomAPI.updateByTeacher(classId, formData);
       
-      console.log('Updated form values:', values);
-      message.success('Cập nhật lớp học thành công! Thay đổi sẽ cần được admin phê duyệt.');
-      
-      // Navigate back to class detail
-      navigate(`/teacher/classroom/${classId}`);
+      if (response.data.success) {
+        message.success('Class updated successfully! Changes will need admin approval.');
+        navigate(`/teacher/classroom/${classId}`);
+      } else {
+        message.error(response.data.message || 'Failed to update class');
+      }
     } catch (error) {
-      message.error('Có lỗi xảy ra khi cập nhật lớp học');
+      console.error('Error updating class:', error);
+      message.error(error.response?.data?.message || 'An error occurred while updating the class');
     } finally {
       setLoading(false);
     }
@@ -102,19 +115,19 @@ const EditClassForm = () => {
     <div className="p-6">
       <Button
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate(`/teacher/classroom/${classId}`)}
+        onClick={handleCancel}
         className="mb-4"
       >
-        Quay lại
+        Back
       </Button>
 
       <div className="flex justify-center">
         <div className="max-w-2xl w-full">
           <Card>
             <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Chỉnh sửa lớp học</h2>
+              <h2 className="text-xl font-semibold mb-2">Edit Class</h2>
               <p className="text-gray-600">
-                Cập nhật thông tin lớp học. Thay đổi sẽ cần được admin phê duyệt.
+                Update class information. Changes will need admin approval.
               </p>
             </div>
 
@@ -125,69 +138,106 @@ const EditClassForm = () => {
               className="space-y-4"
             >
               <Form.Item
-                label="Tên lớp học"
+                label="Class Name"
                 name="name"
                 rules={[
-                  { required: true, message: 'Vui lòng nhập tên lớp học' },
-                  { min: 3, message: 'Tên lớp học phải có ít nhất 3 ký tự' }
+                  { required: true, message: 'Please enter class name' },
+                  { min: 3, message: 'Class name must be at least 3 characters' }
                 ]}
               >
                 <Input 
-                  placeholder="Nhập tên lớp học"
+                  placeholder="Enter class name"
                   className="h-10"
                 />
               </Form.Item>
 
               <Form.Item
-                label="Môn học"
-                name="subject"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập môn học' }
-                ]}
-              >
-                <Input 
-                  placeholder="Nhập tên môn học"
-                  className="h-10"
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Mô tả lớp học"
+                label="Description"
                 name="description"
               >
                 <TextArea
-                  placeholder="Nhập mô tả về lớp học (không bắt buộc)"
+                  placeholder="Enter class description (optional)"
                   rows={4}
                   showCount
                   maxLength={500}
                 />
               </Form.Item>
 
+              <div className="grid grid-cols-2 gap-4">
+                <Form.Item
+                  label="Category"
+                  name="category"
+                  rules={[
+                    { required: true, message: 'Please select category' }
+                  ]}
+                >
+                  <Select placeholder="Select category">
+                    <Option value="academic">Academic</Option>
+                    <Option value="professional">Professional</Option>
+                    <Option value="other">Other</Option>
+                  </Select>
+                </Form.Item>
+
+                <Form.Item
+                  label="Level"
+                  name="level"
+                  rules={[
+                    { required: true, message: 'Please select level' }
+                  ]}
+                >
+                  <Select placeholder="Select level">
+                    <Option value="beginner">Beginner</Option>
+                    <Option value="intermediate">Intermediate</Option>
+                    <Option value="advanced">Advanced</Option>
+                  </Select>
+                </Form.Item>
+              </div>
+
               <Form.Item
-                label="Mã lớp học"
-                name="code"
+                label="Maximum Students"
+                name="maxStudents"
+                rules={[
+                  { required: true, message: 'Please enter maximum number of students' },
+                  { type: 'number', min: 1, message: 'Must be at least 1 student' }
+                ]}
               >
-                <div className="flex gap-2">
-                  <Input
-                    value={classCode}
-                    placeholder="Mã lớp học"
-                    readOnly
-                    className="flex-1 h-10"
-                  />
-                  <Button 
-                    onClick={generateClassCode}
-                    className="h-10"
-                  >
-                    Tạo mới
-                  </Button>
-                </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  Học sinh sẽ dùng mã này để tham gia lớp học
-                </div>
+                <InputNumber
+                  placeholder="Enter max students"
+                  className="w-full h-10"
+                  min={1}
+                  max={200}
+                />
               </Form.Item>
 
+              <div className="border-t pt-4">
+                <h3 className="text-lg font-medium mb-4">Class Settings</h3>
+                <Form.Item
+                  label="Allow Students to Invite Others"
+                  name={['settings', 'allowStudentInvite']}
+                  valuePropName="checked"
+                >
+                  <Switch />
+                </Form.Item>
+
+                <Form.Item
+                  label="Allow Students to Create Posts"
+                  name={['settings', 'allowStudentPost']}
+                  valuePropName="checked"
+                >
+                  <Switch />
+                </Form.Item>
+
+                <Form.Item
+                  label="Allow Students to Comment"
+                  name={['settings', 'allowStudentComment']}
+                  valuePropName="checked"
+                >
+                  <Switch />
+                </Form.Item>
+              </div>
+
               <Alert
-                message="Việc cập nhật lớp học sẽ cần được admin phê duyệt trước khi có hiệu lực."
+                message="Class updates will need admin approval before taking effect."
                 type="info"
                 icon={<InfoCircleOutlined />}
                 className="mb-6"
@@ -199,18 +249,18 @@ const EditClassForm = () => {
                     onClick={handleCancel}
                     className="h-10 px-6"
                   >
-                    Hủy
+                    Cancel
                   </Button>
                   <Button 
                     type="primary" 
                     htmlType="submit"
                     loading={loading}
                     style={{
-                        color: 'white',
-                        height: '40px'
+                      color: 'white',
+                      height: '40px'
                     }}
                   >
-                    Cập nhật lớp học
+                    Update Class
                   </Button>
                 </Space>
               </Form.Item>

@@ -48,6 +48,7 @@ const TeacherLayout = () => {
     if (path.startsWith('/teacher/students')) return 'students';
     if (path.startsWith('/teacher/reports')) return 'reports';
     if (path.startsWith('/teacher/schedule')) return 'schedule';
+    if (path.startsWith('/teacher/requests')) return 'requests';
     if (path.startsWith('/teacher/notifications')) return 'notifications';
     if (path.startsWith('/teacher/profile')) return 'profile';
     return 'dashboard';
@@ -88,7 +89,7 @@ const TeacherLayout = () => {
     },
     {
       key: 'grades',
-      icon: <CheckSquareOutlined />,
+      icon: <LineChartOutlined />,
       label: 'Chấm điểm',
       onClick: () => navigate('/teacher/grades'),
     },
@@ -117,6 +118,12 @@ const TeacherLayout = () => {
       icon: <BarChartOutlined />,
       label: 'Báo cáo',
       onClick: () => navigate('/teacher/reports'),
+    },
+    {
+      key: 'requests',
+      icon: <CheckSquareOutlined />,
+      label: 'Quản lý yêu cầu',
+      onClick: () => navigate('/teacher/requests'),
     },
     {
       type: 'divider',

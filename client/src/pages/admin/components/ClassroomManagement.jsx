@@ -17,9 +17,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   UserOutlined,
-  CheckOutlined,
-  CloseOutlined,
-  ExclamationCircleOutlined,
   EyeOutlined,
 } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
@@ -30,11 +27,8 @@ const { Option } = Select;
 
 const ClassroomManagement = () => {
   const [form] = Form.useForm();
-  const [rejectForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
   const [editingClassroom, setEditingClassroom] = useState(null);
-  const [rejectingClassroom, setRejectingClassroom] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -95,44 +89,6 @@ const ClassroomManagement = () => {
       fetchClassrooms();
     } catch (err) {
       message.error('Failed to delete classroom');
-    }
-  };
-
-  const handleApprove = async (id) => {
-    try {
-      await classroomAPI.approveClassroom(id);
-      message.success('Classroom approved successfully');
-      fetchClassrooms();
-    } catch (err) {
-      message.error('Failed to approve classroom');
-    }
-  };
-
-  const handleReject = (classroom) => {
-    setRejectingClassroom(classroom);
-    setIsRejectModalVisible(true);
-  };
-
-  const handleRejectSubmit = async () => {
-    try {
-      const values = await rejectForm.validateFields();
-      await classroomAPI.rejectClassroom(rejectingClassroom._id, values.reason);
-      message.success('Classroom rejected successfully');
-      setIsRejectModalVisible(false);
-      rejectForm.resetFields();
-      fetchClassrooms();
-    } catch (err) {
-      message.error('Failed to reject classroom');
-    }
-  };
-
-  const handleApproveDeletion = async (id) => {
-    try {
-      await classroomAPI.approveDeletion(id);
-      message.success('Classroom deletion approved');
-      fetchClassrooms();
-    } catch (err) {
-      message.error('Failed to approve deletion');
     }
   };
 
@@ -206,20 +162,6 @@ const ClassroomManagement = () => {
         </Space>
       ),
     },
-    // {
-    //   title: 'Approval Status',
-    //   dataIndex: 'approvalStatus',
-    //   key: 'approvalStatus',
-    //   render: (status) => {
-    //     const config = {
-    //       pending: { color: 'orange', text: 'PENDING' },
-    //       approved: { color: 'green', text: 'APPROVED' },
-    //       rejected: { color: 'red', text: 'REJECTED' },
-    //     };
-    //     const { color, text } = config[status] || config.pending;
-    //     return <Tag color={color}>{text}</Tag>;
-    //   },
-    // },
     {
       title: 'Active Status',
       dataIndex: 'isActive',
@@ -232,54 +174,13 @@ const ClassroomManagement = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 280,
+      width: 120,
       render: (_, record) => (
-        <Space size="small" wrap>
-          {record.approvalStatus === 'pending' && (
-            <>
-              <Button
-                type="primary"
-                size="small"
-                icon={<CheckOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleApprove(record._id);
-                }}
-                style={{ backgroundColor: '#52c41a' }}
-              >
-                Approve
-              </Button>
-              <Button
-                danger
-                size="small"
-                icon={<CloseOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleReject(record);
-                }}
-              >
-                Reject
-              </Button>
-            </>
-          )}
-          {record.deletionRequested && (
-            <Button
-              type="primary"
-              size="small"
-              icon={<CheckOutlined />}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleApproveDeletion(record._id);
-              }}
-              style={{ backgroundColor: '#722ed1' }}
-            >
-              Approve Deletion
-            </Button>
-          )}
-          
-          <Button 
+        <Space size="small">
+          <Button
+            type="primary"
             size="small"
-            icon={<EditOutlined />} 
+            icon={<EditOutlined />}
             onClick={(e) => {
               e.stopPropagation();
               handleEdit(record);
@@ -288,7 +189,7 @@ const ClassroomManagement = () => {
             Edit
           </Button>
           <Popconfirm
-            title="Are you sure to delete this classroom?"
+            title="Are you sure you want to delete this classroom?"
             onConfirm={(e) => {
               e?.stopPropagation();
               handleDelete(record._id);
@@ -296,9 +197,10 @@ const ClassroomManagement = () => {
             okText="Yes"
             cancelText="No"
           >
-            <Button 
-              danger 
-              size="small" 
+            <Button
+              type="primary"
+              danger
+              size="small"
               icon={<DeleteOutlined />}
               onClick={(e) => e.stopPropagation()}
             >
@@ -312,37 +214,33 @@ const ClassroomManagement = () => {
 
   return (
     <div>
-      <div
-        style={{
-          marginBottom: 16,
-          marginTop: 25,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
+      <div style={{ margin: '20px', display: 'flex', justifyContent: 'space-between' }}>
         <Input
-          placeholder="Search classrooms..."
+          placeholder="Search by code, name or teacher"
           prefix={<SearchOutlined />}
-          style={{ width: 300 }}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          allowClear
+          style={{ width: 300 }}
         />
-        <div>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Add Classroom
-          </Button>
-        </div>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAdd}
+        >
+          Add Classroom
+        </Button>
       </div>
 
       <Table
         columns={columns}
         dataSource={filteredClassrooms}
-        rowKey={(record) => record._id}
+        rowKey="_id"
         loading={loading}
-        pagination={{ pageSize: 8 }}
-        scroll={{ x: 1200 }}
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showTotal: (total) => `Total ${total} items`,
+        }}
         onRow={(record) => ({
           onClick: () => navigate(`/admin/classrooms/${record._id}`),
           style: { cursor: 'pointer' },
@@ -360,11 +258,12 @@ const ClassroomManagement = () => {
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={() => setIsModalVisible(false)}
-        maskClosable={false}
-        okText={editingClassroom ? 'Update' : 'Add'}
         width={600}
       >
-        <Form form={form} layout="vertical" preserve={false}>
+        <Form
+          form={form}
+          layout="vertical"
+        >
           <Form.Item
             name="code"
             label="Class Code"
@@ -372,7 +271,6 @@ const ClassroomManagement = () => {
           >
             <Input disabled={editingClassroom} />
           </Form.Item>
-
           <Form.Item
             name="name"
             label="Class Name"
@@ -380,23 +278,25 @@ const ClassroomManagement = () => {
           >
             <Input />
           </Form.Item>
-
-          <Form.Item name="description" label="Description">
-            <Input.TextArea rows={3} />
+          <Form.Item
+            name="description"
+            label="Description"
+          >
+            <Input.TextArea rows={4} />
           </Form.Item>
-
           <Form.Item
             name="category"
             label="Category"
             rules={[{ required: true, message: 'Please select category!' }]}
           >
             <Select>
-              <Option value="academic">Academic</Option>
-              <Option value="professional">Professional</Option>
+              <Option value="programming">Programming</Option>
+              <Option value="mathematics">Mathematics</Option>
+              <Option value="science">Science</Option>
+              <Option value="language">Language</Option>
               <Option value="other">Other</Option>
             </Select>
           </Form.Item>
-
           <Form.Item
             name="level"
             label="Level"
@@ -408,44 +308,12 @@ const ClassroomManagement = () => {
               <Option value="advanced">Advanced</Option>
             </Select>
           </Form.Item>
-
           <Form.Item
             name="maxStudents"
-            label="Max Students"
-            rules={[
-              { required: true, message: 'Please input max number of students!' },
-              {
-                type: 'number',
-                min: 1,
-                message: 'Must be at least 1',
-                transform: (value) => Number(value),
-              },
-            ]}
+            label="Maximum Students"
+            rules={[{ required: true, message: 'Please input maximum students!' }]}
           >
-            <Input type="number" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* Rejection Modal */}
-      <Modal
-        title="Reject Classroom"
-        open={isRejectModalVisible}
-        onOk={handleRejectSubmit}
-        onCancel={() => {
-          setIsRejectModalVisible(false);
-          rejectForm.resetFields();
-        }}
-        okText="Reject"
-        okButtonProps={{ danger: true }}
-      >
-        <Form form={rejectForm} layout="vertical">
-          <Form.Item
-            name="reason"
-            label="Rejection Reason"
-            rules={[{ required: true, message: 'Please provide a reason for rejection!' }]}
-          >
-            <Input.TextArea rows={4} placeholder="Enter reason for rejection..." />
+            <Input type="number" min={1} />
           </Form.Item>
         </Form>
       </Modal>

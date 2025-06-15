@@ -9,7 +9,8 @@ import {
   QuestionCircleOutlined,
   BellOutlined,
   LogoutOutlined,
-  TeamOutlined
+  TeamOutlined,
+  FileTextOutlined
 } from '@ant-design/icons';
 import { FaUserGroup,FaUsersGear } from "react-icons/fa6";
 import { GiTeacher } from "react-icons/gi";
@@ -72,6 +73,7 @@ const AdminLayout = () => {
     else if (key === '3') navigate('/admin/classrooms');
     else if (key === '4') navigate('/admin/quizzes');
     else if (key === '5') navigate('/admin/notifications');
+    else if (key === '6') navigate('/admin/requests');
   };
 
   const menuItems = React.useMemo(() => [
@@ -148,7 +150,16 @@ const AdminLayout = () => {
           <span>Notifications</span>
         </Tooltip>
       ) : 'Notifications',
-          },
+    },
+    {
+      key: '6',
+      icon: <FileTextOutlined />,
+      label: collapsed ? (
+        <Tooltip title="Request Management" placement="right">
+          <span>Request Management</span>
+        </Tooltip>
+      ) : 'Request Management',
+    },
     ], [collapsed]);
 
   // Determine which menu item should be selected based on current path and role
@@ -167,6 +178,9 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/notifications')) {
       return ['5'];
     }
+    if (path.startsWith('/admin/requests')) {
+      return ['6'];
+    }
     if (path.startsWith('/admin/dashboard')) {
       return ['1'];
     }
@@ -175,7 +189,7 @@ const AdminLayout = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed}>
+      <Sider trigger={null} collapsible collapsed={collapsed} width={245}>
         <div className="demo-logo-vertical" >
           <img src={logo} alt="logo" style={{ width: '100%', height: 'auto' }} />
         </div>
@@ -233,6 +247,7 @@ const AdminLayout = () => {
         </Header>
         <Content
           style={{
+            scrollbarWidth: 'none',
             margin: '24px 16px',
             padding: 24,
             background: colorBgContainer,

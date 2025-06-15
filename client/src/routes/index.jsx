@@ -21,6 +21,7 @@ import AdminClassroomDetail from '../pages/admin/components/AdminClassroomDetail
 import QuizManagement from '../pages/admin/components/QuizManagement';
 import QuestionManagement from '../pages/admin/components/QuestionManagement';
 import NotificationManagement from '../pages/admin/components/NotificationManagement';
+import AdminRequestManagement from '../pages/admin/components/AdminRequestManagement';
 import AdminProfile from '../pages/admin/AdminProfile';
 
 // Teacher Pages
@@ -29,6 +30,7 @@ import TeacherClassroomManagement from '../pages/teacher/ClassroomManagement';
 import TeacherClassroomDetail from '../pages/teacher/ClassroomDetail';
 import EditClassForm from '../pages/teacher/EditClassForm';
 import TeacherProfile from '../pages/teacher/TeacherProfile';
+import TeacherRequestManagement from '../pages/teacher/TeacherRequestManagement';
 
 // Student Pages
 import StudentProfile from '../pages/student/StudentProfile';
@@ -92,6 +94,7 @@ const AppRouter = () => {
         <Route path="quizzes" element={<QuizManagement />} />
         <Route path="questions" element={<QuestionManagement />} />
         <Route path="notifications" element={<NotificationManagement />} />
+        <Route path="requests" element={<AdminRequestManagement />} />
       </Route>
 
       {/* Teacher Routes */}
@@ -111,6 +114,9 @@ const AppRouter = () => {
         <Route path="classroom" element={<TeacherClassroomManagement />} />
         <Route path="classroom/:classId" element={<TeacherClassroomDetail />} />
         <Route path="classroom/edit/:classId" element={<EditClassForm />} />
+
+        {/* Request Management */}
+        <Route path="requests" element={<TeacherRequestManagement />} />
 
         {/* Profile */}
         <Route path="profile" element={<TeacherProfile />} />

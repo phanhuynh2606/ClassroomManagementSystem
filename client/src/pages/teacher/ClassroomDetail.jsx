@@ -11,7 +11,8 @@ import {
   message,
   Tooltip,
   Modal,
-  Spin
+  Spin,
+  Alert
 } from 'antd';
 import { 
   EditOutlined, 
@@ -53,16 +54,16 @@ const ClassroomDetail = () => {
   const fetchClassroomData = async () => {
     setLoading(true);
     try {
-      const response = await classroomAPI.getAllByTeacher();
-      const classroom = response.data.find(c => c._id === classId);
-      if (classroom) {
-        setClassData(classroom);
+      const response = await classroomAPI.getDetail(classId);
+      if (response.success) {
+        setClassData(response.data);
       } else {
-        message.error('Classroom not found');
+        message.error(response.message || 'Classroom not found');
         navigate('/teacher/classroom');
       }
     } catch (error) {
-      message.error('Failed to fetch classroom data');
+      console.error('Error fetching classroom:', error);
+      message.error(error.response?.data?.message || 'Failed to fetch classroom data');
       navigate('/teacher/classroom');
     } finally {
       setLoading(false);
@@ -73,8 +74,8 @@ const ClassroomDetail = () => {
     setStudentsLoading(true);
     try {
       const response = await classroomAPI.getStudentsByTeacher(classId);
-      if (response.data.success) {
-        setStudentsData(response.data.data.students || []);
+      if (response.success) {
+        setStudentsData(response.data.students || []);
       }
     } catch (error) {
       console.error('Error fetching students:', error);
@@ -120,12 +121,16 @@ const ClassroomDetail = () => {
 
   const getApprovalStatusBadge = (status) => {
     const statusConfig = {
+      active: { status: "success", text: "Active" },
+      inactive: { status: "default", text: "Inactive" },
+      pending_delete: { status: "error", text: "Pending Deletion" },
+      pending_edit: { status: "processing", text: "Pending Edit" },
       approved: { status: "success", text: "Approved" },
       pending: { status: "processing", text: "Pending Approval" },
       rejected: { status: "error", text: "Rejected" }
     };
     
-    const config = statusConfig[status] || statusConfig.pending;
+    const config = statusConfig[status] || statusConfig.inactive;
     return <Badge status={config.status} text={config.text}/>;
   };
 
@@ -301,26 +306,59 @@ const ClassroomDetail = () => {
             )}
           </div>
           <Space direction="vertical" align="end">
-            {getApprovalStatusBadge(classData.approvalStatus)}
+            {getApprovalStatusBadge(classData.status)}
             <Space>
-              <Button 
-                icon={<EditOutlined />}
-                onClick={handleEditClass}
-                className="flex items-center hover:text-white hover:bg-blue-600"
-              >
-                Edit
-              </Button>
-              <Button 
-                danger
-                icon={<DeleteOutlined />}
-                onClick={handleDeleteClass}
-                className="flex items-center hover:text-white hover:bg-red-600"
-              >
-                Delete Class
-              </Button>
+              {classData.status === 'active' && (
+                <Button 
+                  icon={<EditOutlined />}
+                  onClick={handleEditClass}
+                  className="flex items-center hover:text-white hover:bg-blue-600"
+                >
+                  Edit
+                </Button>
+              )}
+              {classData.status === 'active' && (
+                <Button 
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={handleDeleteClass}
+                  className="flex items-center hover:text-white hover:bg-red-600"
+                >
+                  Delete Class
+                </Button>
+              )}
             </Space>
           </Space>
         </div>
+
+        {/* Status Messages */}
+        {classData.status === 'inactive' && (
+          <Alert
+            message="This classroom is currently inactive"
+            description="Students cannot access this classroom while it is inactive."
+            type="info"
+            showIcon
+            className="mb-4"
+          />
+        )}
+        {classData.status === 'pending_delete' && (
+          <Alert
+            message="Deletion Request Pending"
+            description="This classroom is pending deletion approval from the administrator."
+            type="warning"
+            showIcon
+            className="mb-4"
+          />
+        )}
+        {classData.status === 'pending_edit' && (
+          <Alert
+            message="Edit Request Pending"
+            description="Changes to this classroom are pending approval from the administrator."
+            type="warning"
+            showIcon
+            className="mb-4"
+          />
+        )}
 
         {/* Class Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

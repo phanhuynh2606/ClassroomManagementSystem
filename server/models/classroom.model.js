@@ -54,6 +54,12 @@ const classroomSchema = new mongoose.Schema(
       enum: ['beginner', 'intermediate', 'advanced'],
       default: 'beginner'
     },
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'pending_delete', 'pending_edit', 'pending_creation', 'deleted'],
+      default: 'inactive',
+      index: true
+    },
     isActive: {
       type: Boolean,
       default: false, // Default false, will be activated after approval
@@ -98,6 +104,7 @@ classroomSchema.index({ teacher: 1, isActive: 1 });
 classroomSchema.index({ 'students.student': 1, 'students.status': 1 });
 classroomSchema.index({ code: 1, isActive: 1 });
 classroomSchema.index({ category: 1, level: 1 });
+classroomSchema.index({ status: 1, isActive: 1 });
 
 const Classroom = mongoose.model('Classroom', classroomSchema);
 
