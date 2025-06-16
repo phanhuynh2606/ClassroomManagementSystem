@@ -18,5 +18,6 @@ router.get('/questions/:id', protect, authorize('admin'), questionCtrl.getQuesti
 router.patch('/questions/:id', protect, authorize('admin'), questionCtrl.updateQuestion);
 router.post('/questions/image', protect, authorize('admin'), uploadErrorHandler, questionImageUpload.single('image'), questionCtrl.uploadQuestionImage);
 router.post('/questions-manual', protect, authorize('admin'), questionCtrl.createQuestionManual);
+router.post('/questions-excel', protect, authorize('admin'), questionCtrl.createQuestionFromExcel);
 router.get('/download-excel', protect, authorize('admin'), questionCtrl.downLoadTemplateExcel);
 module.exports = router; 

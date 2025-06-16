@@ -83,7 +83,6 @@ const ModalAddQuestion = ({ visible, onCancel, onSave, loading }) => {
     accept: 'image/*'
   };
 
-  // Set default values when modal opens
   useEffect(() => {
     if (visible) {
       form.setFieldsValue({

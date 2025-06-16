@@ -16,6 +16,8 @@ import {
   FileExcelOutlined
 } from '@ant-design/icons';
 import { questionAPI } from '../../../../services/api';
+import * as XLSX from 'xlsx';
+
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -25,37 +27,6 @@ const ModalAddExcel = ({ visible, onCancel, onSave, loading }) => {
   const [previewData, setPreviewData] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const sampleData = [
-    {
-      key: '1',
-      content: 'What is the capital of France?',
-      optionA: 'London',
-      optionB: 'Berlin',
-      optionC: 'Paris',
-      optionD: 'Madrid',
-      correctAnswer: 'C',
-      explanation: 'Paris is the capital and largest city of France.',
-      difficulty: 'easy',
-      category: 'PT1',
-      subjectCode: 'GEO101',
-      points: 1
-    },
-    {
-      key: '2',
-      content: 'What is 2 + 2?',
-      optionA: '3',
-      optionB: '4',
-      optionC: '5',
-      optionD: '6',
-      correctAnswer: 'B',
-      explanation: 'Basic arithmetic: 2 + 2 = 4',
-      difficulty: 'easy',
-      category: 'QUIZ1',
-      subjectCode: 'MATH101',
-      points: 1
-    }
-  ];
 
   const columns = [
     {
@@ -100,6 +71,11 @@ const ModalAddExcel = ({ visible, onCancel, onSave, loading }) => {
       width: 80,
     },
     {
+      title: 'Explanation',
+      dataIndex: 'explanation',
+      key: 'explanation',
+    },
+    {
       title: 'Difficulty',
       dataIndex: 'difficulty',
       key: 'difficulty',
@@ -109,6 +85,12 @@ const ModalAddExcel = ({ visible, onCancel, onSave, loading }) => {
       title: 'Category',
       dataIndex: 'category',
       key: 'category',
+      width: 100,
+    },
+    {
+      title: 'Subject Code',
+      dataIndex: 'subjectCode',
+      key: 'subjectCode',
       width: 100,
     },
   ];
@@ -134,7 +116,7 @@ const ModalAddExcel = ({ visible, onCancel, onSave, loading }) => {
 
       setFileList([file]);
       processExcelFile(file);
-      return false; // Prevent auto upload
+      return false;
     },
     onRemove: () => {
       setFileList([]);
@@ -148,27 +130,38 @@ const ModalAddExcel = ({ visible, onCancel, onSave, loading }) => {
     setUploadProgress(0);
 
     try {
-      // Simulate file processing with progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      const reader = new FileReader();
 
-      // Simulate API call to process Excel file
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
 
-      clearInterval(progressInterval);
-      setUploadProgress(100);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
 
-      // Mock processed data - in real app, this would come from API
-      setPreviewData(sampleData);
-      message.success('Excel file processed successfully!');
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        console.log('Parsed JSON Data:', jsonData);
 
+        const mappedData = jsonData.map((row, index) => ({
+          key: index + 1,
+          content: row['Content'] || '',
+          optionA: row['Option A'] || '',
+          optionB: row['Option B'] || '',
+          optionC: row['Option C'] || '',
+          optionD: row['Option D'] || '',
+          correctAnswer: row['Correct Answer'] || '',
+          explanation: row['Explanation'] || '',
+          difficulty: row['Difficulty'] || '',
+          category: row['Category'] || '',
+          subjectCode: row['Subject Code'] || '',
+        }));
+
+        setPreviewData(mappedData);
+        setUploadProgress(100);
+        message.success('Excel file processed successfully!');
+      };
+
+      reader.readAsArrayBuffer(file);
     } catch (error) {
       message.error('Failed to process Excel file');
       console.error('Error processing file:', error);
@@ -183,25 +176,23 @@ const ModalAddExcel = ({ visible, onCancel, onSave, loading }) => {
       return;
     }
 
-    // Convert preview data to question format
     const questionsData = previewData.map(item => ({
       content: item.content,
       options: [
-        { content: item.optionA, isCorrect: item.correctAnswer === 'A' },
-        { content: item.optionB, isCorrect: item.correctAnswer === 'B' },
-        { content: item.optionC, isCorrect: item.correctAnswer === 'C' },
-        { content: item.optionD, isCorrect: item.correctAnswer === 'D' },
+        { content: item.optionA, isCorrect: item.correctAnswer === item.optionA ? true : false, image: null },
+        { content: item.optionB, isCorrect: item.correctAnswer === item.optionB ? true : false, image: null },
+        { content: item.optionC, isCorrect: item.correctAnswer === item.optionC ? true : false, image: null },
+        { content: item.optionD, isCorrect: item.correctAnswer === item.optionD ? true : false, image: null },
       ],
       explanation: item.explanation,
       difficulty: item.difficulty,
       category: item.category,
       subjectCode: item.subjectCode,
-      points: item.points,
-      status: 'draft',
-      isAI: false,
     }));
-
     onSave(questionsData);
+    setFileList([]);
+    setPreviewData([]);
+    setUploadProgress(0);
   };
 
   const handleCancel = () => {
@@ -212,31 +203,31 @@ const ModalAddExcel = ({ visible, onCancel, onSave, loading }) => {
     onCancel();
   };
 
-const downloadTemplate = async () => {
+  const downloadTemplate = async () => {
     try {
 
-        
-        const response = await questionAPI.downLoadTemplateExcel();
-        
-        if (!(response instanceof Blob)) {
-            console.error('Response data is not a Blob!');
-            return;
-        }
-        
-        const url = window.URL.createObjectURL(response);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'templateQuestion.xlsx');
-        document.body.appendChild(link);
-        link.click();
-        
-        link.remove();
-        window.URL.revokeObjectURL(url);
+
+      const response = await questionAPI.downLoadTemplateExcel();
+
+      if (!(response instanceof Blob)) {
+        console.error('Response data is not a Blob!');
+        return;
+      }
+
+      const url = window.URL.createObjectURL(response);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'templateQuestion.xlsx');
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
-        message.error('Failed to download template');
-        console.error('Error downloading template:', error);
+      message.error('Failed to download template');
+      console.error('Error downloading template:', error);
     }
-};
+  };
 
   return (
     <Modal

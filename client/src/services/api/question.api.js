@@ -12,7 +12,8 @@ const questionAPI = {
     }
   }),
   getById: (id) => axiosClient.get(`/admin/questions/${id}`),
-  create: (data) => axiosClient.post('/admin/questions-manual', data),
+  createManual: (data) => axiosClient.post('/admin/questions-manual', data),
+  createExcel: (data) => axiosClient.post('/admin/questions-excel', data),
   update: (id, data) => axiosClient.patch(`/admin/questions/${id}`, data),
   delete: (id) => axiosClient.delete(`/admin/questions/${id}`),
   downLoadTemplateExcel: () => axiosClient.get('/admin/download-excel', {

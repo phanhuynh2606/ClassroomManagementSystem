@@ -58,7 +58,6 @@ const QuestionManagement = () => {
 
   const { confirm } = Modal;
 
-  // Fetch questions from API
   const fetchQuestions = async (page = 1, limit = 10, search = searchText) => {
     try {
       setLoading(true);
@@ -100,11 +99,10 @@ const QuestionManagement = () => {
     }
   };
 
-  // Create question
   const createQuestion = async (questionData) => {
     try {
       setLoading(true);
-      const response = await questionAPI.create(questionData);
+      const response = await questionAPI.createManual(questionData);
 
       if (response.success) {
         message.success('Question created successfully');
@@ -119,7 +117,6 @@ const QuestionManagement = () => {
     }
   };
 
-  // Update question
   const updateQuestion = async (questionData) => {
     try {
       setLoading(true);
@@ -331,6 +328,26 @@ const QuestionManagement = () => {
     }
   };
 
+  const handleAddExcel = async (data) => {
+     try {
+      setLoading(true);
+      console.log('Data to create questions from Excel:', data);
+      
+      const response = await questionAPI.createExcel(data);
+
+     if (response.success) {
+        message.success('Question created successfully');
+        fetchQuestions(pagination.current, pagination.pageSize, searchText);
+        setIsAddExcelModalVisible(false);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tạo câu hỏi:', error);
+      message.error('Lỗi khi tạo câu hỏi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = (value) => {
     setSearchText(value.target.value);
     fetchQuestions(1, pagination.pageSize, value);
@@ -442,25 +459,16 @@ const QuestionManagement = () => {
         questionData={editingQuestion}
       />
 
-      {/* Add Excel Modal */}
       <ModalAddExcel
         visible={isAddExcelModalVisible}
         onCancel={() => setIsAddExcelModalVisible(false)}
-        onSave={(data) => {
-          // Handle saving imported data
-          console.log('Imported data:', data);
-          setIsAddExcelModalVisible(false);
-          message.success('Questions imported successfully!');
-          fetchQuestions(pagination.current, pagination.pageSize, searchText);
-        }}
+        onSave={handleAddExcel}
       />
 
-      {/* AI Question Generation Modal */}
       <ModalAddAi
         visible={isAddAIModalVisible}
         onCancel={() => setIsAddAIModalVisible(false)}
         onSave={(data) => {
-          // Handle saving AI generated question
           console.log('AI generated question:', data);
           setIsAddAIModalVisible(false);
           message.success('AI question generated successfully!');
@@ -468,7 +476,6 @@ const QuestionManagement = () => {
         }}
       />
 
-      {/* Method Selection Modal */}
       <ModalSelectMethod
         visible={isMethodSelectVisible}
         onCancel={() => setIsMethodSelectVisible(false)}
