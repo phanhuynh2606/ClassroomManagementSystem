@@ -189,7 +189,7 @@ const AdminLayout = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed} width={245}>
+      <Sider trigger={null} collapsible collapsed={collapsed} width={'10.4%'}>
         <div className="demo-logo-vertical" >
           <img src={logo} alt="logo" style={{ width: '100%', height: 'auto' }} />
         </div>

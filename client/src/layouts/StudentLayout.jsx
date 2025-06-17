@@ -66,7 +66,7 @@ const StudentLayout = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed}>
+      <Sider trigger={null} collapsible collapsed={collapsed} width={'11%'}>
       <div className="demo-logo-vertical" >
           <img src={logo} alt="logo" style={{ width: '100%', height: 'auto' }} />
         </div>

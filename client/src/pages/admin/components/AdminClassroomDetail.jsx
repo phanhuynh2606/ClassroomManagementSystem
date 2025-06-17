@@ -17,7 +17,12 @@ import {
   Badge,
   Empty,
   Table,
-  Input
+  Input,
+  Modal,
+  Form,
+  Select,
+  Switch,
+  InputNumber
 } from 'antd';
 import { 
   UserOutlined,
@@ -35,6 +40,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import classroomAPI from '../../../services/api/classroom.api';
 
 const { Title, Text } = Typography;
+const { TextArea } = Input;
+const { Option } = Select;
 
 const AdminClassroomDetail = () => {
   const { classroomId } = useParams();
@@ -45,6 +52,11 @@ const AdminClassroomDetail = () => {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [students, setStudents] = useState([]);
   const [searchText, setSearchText] = useState('');
+  
+  // Edit dialog states
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editForm] = Form.useForm();
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     if (classroomId) {
@@ -201,6 +213,65 @@ const AdminClassroomDetail = () => {
     },
   ];
 
+  const handleEdit = () => {
+    if (classroom) {
+      // Set form values with current classroom data
+      const currentValues = {
+        name: classroom.name || '',
+        description: classroom.description || '',
+        maxStudents: classroom.maxStudents || 50,
+        category: classroom.category || 'academic',
+        level: classroom.level || 'beginner',
+        isActive: classroom.isActive || false,
+        allowStudentInvite: classroom.settings?.allowStudentInvite ?? false,
+        allowStudentPost: classroom.settings?.allowStudentPost ?? true,
+        allowStudentComment: classroom.settings?.allowStudentComment ?? true,
+      };
+      
+      console.log('Setting form values:', currentValues);
+      editForm.setFieldsValue(currentValues);
+      setEditModalVisible(true);
+    } else {
+      message.error('Classroom data not available');
+    }
+  };
+
+  const handleEditSubmit = async (values) => {
+    setEditLoading(true);
+    try {
+      const updateData = {
+        name: values.name,
+        description: values.description,
+        maxStudents: values.maxStudents,
+        category: values.category,
+        level: values.level,
+        isActive: values.isActive,
+        settings: {
+          allowStudentInvite: values.allowStudentInvite,
+          allowStudentPost: values.allowStudentPost,
+          allowStudentComment: values.allowStudentComment,
+        }
+      };
+
+      await classroomAPI.updateByAdmin(classroomId, updateData);
+      message.success('Classroom updated successfully');
+      setEditModalVisible(false);
+      editForm.resetFields();
+      // Refresh classroom details
+      await fetchClassroomDetails();
+    } catch (error) {
+      message.error('Failed to update classroom');
+      console.error('Error updating classroom:', error);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditModalVisible(false);
+    editForm.resetFields();
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -311,7 +382,7 @@ const AdminClassroomDetail = () => {
             )}
             <Button
               icon={<EditOutlined />}
-              onClick={() => navigate(`/admin/classrooms/edit/${classroomId}`)}
+              onClick={handleEdit}
               block
             >
               Edit Classroom
@@ -392,6 +463,228 @@ const AdminClassroomDetail = () => {
     </div>
   );
 
+  const renderEditModal = () => (
+    <Modal
+      title={`Edit Classroom: ${classroom?.name || 'Unknown'}`}
+      open={editModalVisible}
+      onCancel={handleEditCancel}
+      footer={null}
+      width={600}
+      destroyOnClose
+      afterOpenChange={(open) => {
+        if (open && classroom) {
+          // Re-populate form when modal opens to ensure data is current
+          const currentValues = {
+            name: classroom.name || '',
+            description: classroom.description || '',
+            maxStudents: classroom.maxStudents || 50,
+            category: classroom.category || 'academic',
+            level: classroom.level || 'beginner',
+            isActive: classroom.isActive || false,
+            allowStudentInvite: classroom.settings?.allowStudentInvite ?? false,
+            allowStudentPost: classroom.settings?.allowStudentPost ?? true,
+            allowStudentComment: classroom.settings?.allowStudentComment ?? true,
+          };
+          editForm.setFieldsValue(currentValues);
+        }
+              }}
+      >
+        {/* Current Classroom Info */}
+        <Card size="small" className="mb-4" style={{ backgroundColor: '#f9f9f9' }}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Text strong>Current Class Code: </Text>
+              <Text code>{classroom?.code}</Text>
+            </Col>
+            <Col span={12}>
+              <Text strong>Created: </Text>
+              <Text>{classroom?.createdAt ? new Date(classroom.createdAt).toLocaleDateString() : 'N/A'}</Text>
+            </Col>
+            <Col span={12}>
+              <Text strong>Teacher: </Text>
+              <Text>{classroom?.teacher?.fullName || 'N/A'}</Text>
+            </Col>
+            <Col span={12}>
+              <Text strong>Current Students: </Text>
+              <Text>{students.length}/{classroom?.maxStudents || 0}</Text>
+            </Col>
+          </Row>
+        </Card>
+
+        <Form
+          form={editForm}
+          layout="vertical"
+          onFinish={handleEditSubmit}
+          preserve={false}
+          initialValues={{
+            name: classroom?.name || '',
+            description: classroom?.description || '',
+            maxStudents: classroom?.maxStudents || 50,
+            category: classroom?.category || 'academic',
+            level: classroom?.level || 'beginner',
+            isActive: classroom?.isActive || false,
+            allowStudentInvite: classroom?.settings?.allowStudentInvite ?? false,
+            allowStudentPost: classroom?.settings?.allowStudentPost ?? true,
+            allowStudentComment: classroom?.settings?.allowStudentComment ?? true,
+          }}
+        >
+          <Row gutter={16}>
+          <Col span={24}>
+            <Form.Item
+              label="Classroom Name"
+              name="name"
+              rules={[
+                { required: true, message: 'Please input classroom name!' },
+                { min: 3, message: 'Classroom name must be at least 3 characters!' }
+              ]}
+            >
+              <Input placeholder="Enter classroom name" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label="Category"
+              name="category"
+              rules={[{ required: true, message: 'Please select a category!' }]}
+            >
+              <Select placeholder="Select category">
+                <Option value="academic">Academic</Option>
+                <Option value="professional">Professional</Option>
+                <Option value="other">Other</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label="Level"
+              name="level"
+              rules={[{ required: true, message: 'Please select a level!' }]}
+            >
+              <Select placeholder="Select level">
+                <Option value="beginner">Beginner</Option>
+                <Option value="intermediate">Intermediate</Option>
+                <Option value="advanced">Advanced</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label="Max Students"
+              name="maxStudents"
+              rules={[
+                { required: true, message: 'Please input max students!' },
+                { type: 'number', min: Math.max(1, students.length), max: 1000, message: `Max students must be between ${Math.max(1, students.length)} and 1000!` },
+                {
+                  validator: (_, value) => {
+                    if (value && value < students.length) {
+                      return Promise.reject(new Error(`Max students cannot be less than current students (${students.length})`));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
+              tooltip={`Current students: ${students.length}. Max students must be at least ${students.length}.`}
+            >
+              <InputNumber
+                min={Math.max(1, students.length)}
+                max={1000}
+                placeholder="Enter max students"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label="Active Status"
+              name="isActive"
+              valuePropName="checked"
+            >
+              <Switch 
+                checkedChildren="Active" 
+                unCheckedChildren="Inactive"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={24}>
+            <Form.Item
+              label="Description"
+              name="description"
+            >
+              <TextArea
+                rows={4}
+                placeholder="Enter classroom description (optional)"
+                maxLength={500}
+                showCount
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={24}>
+            <Card title="Classroom Settings" size="small" className="mb-4">
+              <Row gutter={16}>
+                {/* <Col span={8}>
+                  <Form.Item
+                    label="Allow Student Invite"
+                    name="allowStudentInvite"
+                    valuePropName="checked"
+                  >
+                    <Switch size="small" />
+                  </Form.Item>
+                </Col> */}
+                <Col span={8}>
+                  <Form.Item
+                    label="Allow Student Post"
+                    name="allowStudentPost"
+                    valuePropName="checked"
+                  >
+                    <Switch size="small" />
+                  </Form.Item>
+                </Col>
+                <Col span={10}>
+                  <Form.Item
+                    label="Allow Student Comment"
+                    name="allowStudentComment"
+                    valuePropName="checked"
+                  >
+                    <Switch size="small" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Card>
+          </Col>
+        </Row>
+
+        <Row justify="end" gutter={8}>
+          <Col>
+            <Button onClick={handleEditCancel}>
+              Cancel
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={editLoading}
+            >
+              Update Classroom
+            </Button>
+          </Col>
+        </Row>
+      </Form>
+    </Modal>
+  );
+
   const tabItems = [
     {
       key: 'overview',
@@ -455,6 +748,8 @@ const AdminClassroomDetail = () => {
         items={tabItems}
         size="large"
       />
+
+      {renderEditModal()}
     </div>
   );
 };

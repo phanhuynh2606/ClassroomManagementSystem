@@ -211,13 +211,13 @@ const EditClassForm = () => {
 
               <div className="border-t pt-4">
                 <h3 className="text-lg font-medium mb-4">Class Settings</h3>
-                <Form.Item
+                {/* <Form.Item
                   label="Allow Students to Invite Others"
                   name={['settings', 'allowStudentInvite']}
                   valuePropName="checked"
                 >
                   <Switch />
-                </Form.Item>
+                </Form.Item> */}
 
                 <Form.Item
                   label="Allow Students to Create Posts"
