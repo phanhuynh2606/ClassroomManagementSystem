@@ -25,6 +25,11 @@ const classroomAPI = {
   joinClassroom: (code) => axiosClient.post('/classrooms/student/join', { code }),
   leaveClassroom: (id) => axiosClient.delete(`/classrooms/student/${id}/leave`),
 
+  // Ban student APIs
+  banStudent: (classroomId, studentId, reason) => axiosClient.post(`/classrooms/${classroomId}/ban/${studentId}`, { reason }),
+  unbanStudent: (classroomId, studentId) => axiosClient.post(`/classrooms/${classroomId}/unban/${studentId}`),
+  getBannedStudents: (classroomId) => axiosClient.get(`/classrooms/${classroomId}/banned-students`),
+
   // Shared APIs
   getStudents: (id) => axiosClient.get(`/classrooms/${id}/students`),
   getById: (id) => axiosClient.get(`/classrooms/${id}`),

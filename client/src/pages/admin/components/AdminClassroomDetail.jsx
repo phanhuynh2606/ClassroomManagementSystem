@@ -58,10 +58,18 @@ const AdminClassroomDetail = () => {
   const [editForm] = Form.useForm();
   const [editLoading, setEditLoading] = useState(false);
 
+  // Ban/Unban dialog states
+  const [banModalVisible, setBanModalVisible] = useState(false);
+  const [banForm] = Form.useForm();
+  const [banLoading, setBanLoading] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [bannedStudents, setBannedStudents] = useState([]);
+
   useEffect(() => {
     if (classroomId) {
       fetchClassroomDetails();
       fetchStudents();
+      fetchBannedStudents();
     }
   }, [classroomId]);
 
@@ -109,6 +117,60 @@ const AdminClassroomDetail = () => {
     } finally {
       setStudentsLoading(false);
     }
+  };
+
+  const fetchBannedStudents = async () => {
+    try {
+      const response = await classroomAPI.getBannedStudents(classroomId);
+      const data = response.data.data || response.data || [];
+      setBannedStudents(data);
+    } catch (error) {
+      console.log('Cannot fetch banned students:', error);
+      setBannedStudents([]);
+    }
+  };
+
+  const handleBanStudent = (student) => {
+    setSelectedStudent(student);
+    setBanModalVisible(true);
+    banForm.resetFields();
+  };
+
+  const handleUnbanStudent = async (student) => {
+    try {
+      const studentId = student.student?._id || student._id;
+      await classroomAPI.unbanStudent(classroomId, studentId);
+      message.success('Student unbanned successfully');
+      await fetchStudents();
+      await fetchBannedStudents();
+    } catch (error) {
+      message.error('Failed to unban student');
+      console.error('Error unbanning student:', error);
+    }
+  };
+
+  const handleBanSubmit = async (values) => {
+    setBanLoading(true);
+    try {
+      const studentId = selectedStudent.student?._id || selectedStudent._id;
+      await classroomAPI.banStudent(classroomId, studentId, values.reason);
+      message.success('Student banned successfully');
+      setBanModalVisible(false);
+      banForm.resetFields();
+      await fetchStudents();
+      await fetchBannedStudents();
+    } catch (error) {
+      message.error('Failed to ban student');
+      console.error('Error banning student:', error);
+    } finally {
+      setBanLoading(false);
+    }
+  };
+
+  const handleBanCancel = () => {
+    setBanModalVisible(false);
+    banForm.resetFields();
+    setSelectedStudent(null);
   };
 
   const handleApprove = async () => {
@@ -205,11 +267,45 @@ const AdminClassroomDetail = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status?.toUpperCase() || 'UNKNOWN'}
-        </Tag>
-      ),
+      render: (status) => {
+        const color = status === 'active' ? 'green' : status === 'banned' ? 'red' : 'orange';
+        return (
+          <Tag color={color}>
+            {status?.toUpperCase() || 'UNKNOWN'}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => {
+        const status = record.status;
+        const studentInfo = record.student || record;
+        
+        return (
+          <Space size="small">
+            {status === 'active' && (
+              <Button
+                type="primary"
+                danger
+                onClick={() => handleBanStudent(record)}
+              >
+                Ban
+              </Button>
+            )}
+            {status === 'banned' && (
+              <Button
+                type="primary"
+                onClick={() => handleUnbanStudent(record)}
+                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+              >
+                Unban
+              </Button>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -685,6 +781,140 @@ const AdminClassroomDetail = () => {
     </Modal>
   );
 
+  const renderBannedStudents = () => {
+    const bannedColumns = [
+      {
+        title: 'Student Name',
+        key: 'studentName',
+        render: (_, record) => (
+          <Space>
+            <Avatar size="small" icon={<UserOutlined />} />
+            <Text>{record.studentName || 'N/A'}</Text>
+          </Space>
+        ),
+      },
+      {
+        title: 'Email',
+        dataIndex: 'studentEmail',
+        key: 'studentEmail',
+      },
+      {
+        title: 'Banned Date',
+        dataIndex: 'bannedAt',
+        key: 'bannedAt',
+        render: (date) => date ? new Date(date).toLocaleDateString() : 'N/A',
+      },
+      {
+        title: 'Banned By',
+        dataIndex: 'bannedBy',
+        key: 'bannedBy',
+      },
+      {
+        title: 'Reason',
+        dataIndex: 'banReason',
+        key: 'banReason',
+        ellipsis: true,
+      },
+      {
+        title: 'Actions',
+        key: 'actions',
+        render: (_, record) => (
+          <Button
+            type="primary"
+            onClick={() => handleUnbanStudent({ student: { _id: record.studentId } })}
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+          >
+            Unban
+          </Button>
+        ),
+      },
+    ];
+
+    return (
+      <div>
+        <div className="mb-4 flex justify-between items-center">
+          <Text type="secondary">
+            Total banned: {bannedStudents.length} students
+          </Text>
+        </div>
+        
+        <Table
+          columns={bannedColumns}
+          dataSource={bannedStudents}
+          rowKey="studentId"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} banned students`,
+          }}
+          locale={{
+            emptyText: 'No banned students'
+          }}
+        />
+      </div>
+    );
+  };
+
+  const renderBanModal = () => (
+    <Modal
+      title={`Ban Student: ${selectedStudent?.student?.fullName || selectedStudent?.fullName || 'Unknown'}`}
+      open={banModalVisible}
+      onCancel={handleBanCancel}
+      footer={null}
+      width={500}
+      destroyOnClose
+    >
+      <Form
+        form={banForm}
+        layout="vertical"
+        onFinish={handleBanSubmit}
+        preserve={false}
+      >
+        <div className="mb-4">
+          <Text type="secondary">
+            You are about to ban this student from the classroom. This action will prevent them from accessing classroom content and participating in activities.
+          </Text>
+        </div>
+
+        <Form.Item
+          label="Reason for Ban"
+          name="reason"
+          rules={[
+            { required: true, message: 'Please provide a reason for banning this student!' },
+            { min: 10, message: 'Reason must be at least 10 characters!' }
+          ]}
+        >
+          <TextArea
+            rows={4}
+            placeholder="Enter the reason for banning this student..."
+            maxLength={500}
+            showCount
+          />
+        </Form.Item>
+
+        <Row justify="end" gutter={8}>
+          <Col>
+            <Button onClick={handleBanCancel}>
+              Cancel
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              danger
+              htmlType="submit"
+              loading={banLoading}
+            >
+              Ban Student
+            </Button>
+          </Col>
+        </Row>
+      </Form>
+    </Modal>
+  );
+
   const tabItems = [
     {
       key: 'overview',
@@ -706,6 +936,17 @@ const AdminClassroomDetail = () => {
         </Space>
       ),
       children: renderStudents()
+    },
+    {
+      key: 'banned',
+      label: (
+        <Space>
+          <UserOutlined />
+          Banned Students
+          <Badge count={bannedStudents.length} size="small" />
+        </Space>
+      ),
+      children: renderBannedStudents()
     }
   ];
 
@@ -750,6 +991,7 @@ const AdminClassroomDetail = () => {
       />
 
       {renderEditModal()}
+      {renderBanModal()}
     </div>
   );
 };

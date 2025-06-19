@@ -142,7 +142,7 @@ const TeacherLayout = () => {
         trigger={null} 
         collapsible 
         collapsed={collapsed}
-        width={'12.2%'}
+        width={'250px'}
         collapsedWidth={80}
         style={{
           background: '#001529'

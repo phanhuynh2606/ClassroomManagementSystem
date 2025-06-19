@@ -592,10 +592,10 @@ const rejectRequest = async (req, res) => {
 
     // For rejected requests, we may need to update classroom status
     if (request.type === 'classroom_creation') {
-      // For rejected creation requests, mark classroom as rejected
+      // For rejected creation requests, mark classroom as inactive
       const classroom = await Classroom.findById(request.classroom);
       if (classroom) {
-        classroom.status = 'rejected';
+        classroom.status = 'inactive';
         classroom.isActive = false;
         await classroom.save();
       }

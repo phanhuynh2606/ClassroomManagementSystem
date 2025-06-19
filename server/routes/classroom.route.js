@@ -14,7 +14,7 @@ router.put('/admin/:classroomId/approve', protect, authorize('admin'), ctrls.app
 router.put('/admin/:classroomId/reject', protect, authorize('admin'), ctrls.rejectClassroom);
 router.put('/admin/:classroomId/approve-deletion', protect, authorize('admin'), ctrls.approveDeletionRequest);
 router.put('/admin/:classroomId/reject-deletion', protect, authorize('admin'), ctrls.rejectDeletionRequest);
-router.put('/admin/:classroomId/approve-edit', protect, authorize('admin'), ctrls.testApproveEditRequest);
+router.put('/admin/:classroomId/approve-edit', protect, authorize('admin'), ctrls.approveEditRequest);
 router.put('/admin/:classroomId/reject-edit', protect, authorize('admin'), ctrls.rejectEditRequest);
 
 // Teacher routes
@@ -28,6 +28,11 @@ router.get('/teacher/:classroomId/students', protect, authorize('teacher'), ctrl
 router.get('/student', protect, authorize('student'), ctrls.getStudentClassrooms);
 router.post('/student/join', protect, authorize('student'), ctrls.joinClassroom);
 router.delete('/student/:classroomId/leave', protect, authorize('student'), ctrls.leaveClassroom);
+
+// Ban student routes
+router.post('/:classroomId/ban/:studentId', protect, authorize('teacher', 'admin'), ctrls.banStudent);
+router.post('/:classroomId/unban/:studentId', protect, authorize('teacher', 'admin'), ctrls.unbanStudent);
+router.get('/:classroomId/banned-students', protect, authorize('teacher', 'admin'), ctrls.getBannedStudents);
 
 // Shared routes (with role-based access control in controller)
 router.get('/:classroomId/students', protect, authorize('teacher', 'admin'), ctrls.getClassroomStudents);

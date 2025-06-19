@@ -94,8 +94,6 @@ const AdminDashboard = () => {
 
   return (
     <div>
-      <h2>Admin Dashboard</h2>
-      
       {/* Statistics Cards */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>

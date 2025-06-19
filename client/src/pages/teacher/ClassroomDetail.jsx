@@ -12,7 +12,11 @@ import {
   Tooltip,
   Modal,
   Spin,
-  Alert
+  Alert,
+  Form,
+  Row,
+  Col,
+  Avatar
 } from 'antd';
 import { 
   EditOutlined, 
@@ -29,7 +33,7 @@ import classroomAPI from '../../services/api/classroom.api';
 import './teacher.css';
 
 const { Title, Text } = Typography;
-const { Search } = Input;
+const { Search, TextArea } = Input;
 
 const ClassroomDetail = () => {
   const { classId } = useParams();
@@ -43,11 +47,18 @@ const ClassroomDetail = () => {
   
   const [classData, setClassData] = useState(null);
   const [studentsData, setStudentsData] = useState([]);
+  
+  // Ban/Unban states
+  const [banModalVisible, setBanModalVisible] = useState(false);
+  const [banLoading, setBanLoading] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [bannedStudents, setBannedStudents] = useState([]);
 
   useEffect(() => {
     if (classId) {
       fetchClassroomData();
       fetchStudentsData();
+      fetchBannedStudents();
     }
   }, [classId]);
 
@@ -83,6 +94,57 @@ const ClassroomDetail = () => {
     } finally {
       setStudentsLoading(false);
     }
+  };
+
+  const fetchBannedStudents = async () => {
+    try {
+      const response = await classroomAPI.getBannedStudents(classId);
+      const data = response.data.data || response.data || [];
+      setBannedStudents(data);
+    } catch (error) {
+      console.log('Cannot fetch banned students:', error);
+      setBannedStudents([]);
+    }
+  };
+
+  const handleBanStudent = (student) => {
+    setSelectedStudent(student);
+    setBanModalVisible(true);
+  };
+
+  const handleUnbanStudent = async (student) => {
+    try {
+      const studentId = student.student?._id || student._id;
+      await classroomAPI.unbanStudent(classId, studentId);
+      message.success('Student unbanned successfully');
+      await fetchStudentsData();
+      await fetchBannedStudents();
+    } catch (error) {
+      message.error('Failed to unban student');
+      console.error('Error unbanning student:', error);
+    }
+  };
+
+  const handleBanSubmit = async (reason) => {
+    setBanLoading(true);
+    try {
+      const studentId = selectedStudent.student?._id || selectedStudent._id;
+      await classroomAPI.banStudent(classId, studentId, reason);
+      message.success('Student banned successfully');
+      setBanModalVisible(false);
+      await fetchStudentsData();
+      await fetchBannedStudents();
+    } catch (error) {
+      message.error('Failed to ban student');
+      console.error('Error banning student:', error);
+    } finally {
+      setBanLoading(false);
+    }
+  };
+
+  const handleBanCancel = () => {
+    setBanModalVisible(false);
+    setSelectedStudent(null);
   };
 
   const handleCopyClassCode = () => {
@@ -184,60 +246,86 @@ const ClassroomDetail = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
-      render: (status) => (
-        <Badge 
-          color={status === 'active' ? 'green' : 'red'}
-          text={status?.toUpperCase() || 'UNKNOWN'}
-        />
-      ),
+      width: 150,
+      render: (status) => {
+        const color = status === 'active' ? 'green' : status === 'banned' ? 'red' : 'orange';
+        return (
+          <Badge 
+            color={color}
+            text={status?.toUpperCase() || 'UNKNOWN'}
+          />
+        );
+      },
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 150,
+      render: (_, record) => {
+        return (
+          <Space size="small">
+            <Button
+              type="primary"
+              danger
+              onClick={() => handleBanStudent(record)}
+            >
+              Ban
+            </Button>
+          </Space>
+        );
+      },
     },
   ];
 
-  const StudentList = () => (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <Search
-          placeholder="Search students..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          onSearch={setSearchText}
-          style={{ width: 300 }}
-          prefix={<SearchOutlined />}
-        />
-        <div className="flex items-center gap-4">
-          <Text type="secondary">
-            Total: {studentsData.length} students
-          </Text>
-          {classData?.code && (
-            <Button
-              icon={<CopyOutlined />}
-              onClick={handleCopyClassCode}
-            >
-              Copy Class Code: {classData.code}
-            </Button>
-          )}
+  const StudentList = () => {
+    // Filter out banned students from the main student list
+    const activeStudents = studentsData.filter(student => student.status !== 'banned');
+    
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <Search
+            placeholder="Search students..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onSearch={setSearchText}
+            style={{ width: 300 }}
+            prefix={<SearchOutlined />}
+          />
+          <div className="flex items-center gap-4">
+            <Text type="secondary">
+              Total: {activeStudents.length} students
+            </Text>
+            {classData?.code && (
+              <Button
+                icon={<CopyOutlined />}
+                onClick={handleCopyClassCode}
+              >
+                Copy Class Code: {classData.code}
+              </Button>
+            )}
+          </div>
         </div>
+        
+        <Table
+          columns={studentColumns}
+          dataSource={activeStudents}
+          rowKey={(record) => record.student?._id || record._id}
+          loading={studentsLoading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} students`,
+          }}
+          locale={{
+            emptyText: studentsLoading ? 'Loading...' : 'No students enrolled yet'
+          }}
+        />
       </div>
-      
-      <Table
-        columns={studentColumns}
-        dataSource={studentsData}
-        rowKey={(record) => record.student?._id || record._id}
-        loading={studentsLoading}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) =>
-            `${range[0]}-${range[1]} of ${total} students`,
-        }}
-        locale={{
-          emptyText: studentsLoading ? 'Loading...' : 'No students enrolled yet'
-        }}
-      />
-    </div>
-  );
+    );
+  };
 
   const AssignmentList = () => (
     <div className="text-center py-12">
@@ -247,11 +335,164 @@ const ClassroomDetail = () => {
     </div>
   );
 
+  const BannedStudentsList = () => {
+    const bannedColumns = [
+      {
+        title: 'Student Name',
+        key: 'studentName',
+        render: (_, record) => (
+          <Space>
+            <Avatar size="small" icon={<UserOutlined />} />
+            <Text>{record.studentName || 'N/A'}</Text>
+          </Space>
+        ),
+      },
+      {
+        title: 'Email',
+        dataIndex: 'studentEmail',
+        key: 'studentEmail',
+      },
+      {
+        title: 'Banned Date',
+        dataIndex: 'bannedAt',
+        key: 'bannedAt',
+        render: (date) => date ? new Date(date).toLocaleDateString() : 'N/A',
+      },
+      {
+        title: 'Banned By',
+        dataIndex: 'bannedBy',
+        key: 'bannedBy',
+      },
+      {
+        title: 'Reason',
+        dataIndex: 'banReason',
+        key: 'banReason',
+        ellipsis: true,
+      },
+      {
+        title: 'Actions',
+        key: 'actions',
+        render: (_, record) => (
+          <Button
+            type="primary"
+            onClick={() => handleUnbanStudent({ student: { _id: record.studentId } })}
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+          >
+            Unban
+          </Button>
+        ),
+      },
+    ];
+
+    return (
+      <div>
+        <div className="mb-4 flex justify-between items-center">
+          <Text type="secondary">
+            Total banned: {bannedStudents.length} students
+          </Text>
+        </div>
+        
+        <Table
+          columns={bannedColumns}
+          dataSource={bannedStudents}
+          rowKey="studentId"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} banned students`,
+          }}
+          locale={{
+            emptyText: 'No banned students'
+          }}
+        />
+      </div>
+    );
+  };
+
+  const BanModal = () => {
+    const [banForm] = Form.useForm();
+
+    const handleSubmit = async (values) => {
+      await handleBanSubmit(values.reason);
+      banForm.resetFields();
+    };
+
+    const handleCancel = () => {
+      handleBanCancel();
+      banForm.resetFields();
+    };
+
+    return (
+      <Modal
+        title={`Ban Student: ${selectedStudent?.student?.fullName || selectedStudent?.fullName || 'Unknown'}`}
+        open={banModalVisible}
+        onCancel={handleCancel}
+        footer={null}
+        width={500}
+        destroyOnClose
+      >
+        <Form
+          form={banForm}
+          layout="vertical"
+          onFinish={handleSubmit}
+          preserve={false}
+        >
+          <div className="mb-4">
+            <Text type="secondary">
+              You are about to ban this student from the classroom. This action will prevent them from accessing classroom content and participating in activities.
+            </Text>
+          </div>
+
+          <Form.Item
+            label="Reason for Ban"
+            name="reason"
+            rules={[
+              { required: true, message: 'Please provide a reason for banning this student!' },
+              { min: 10, message: 'Reason must be at least 10 characters!' }
+            ]}
+          >
+            <TextArea
+              rows={4}
+              placeholder="Enter the reason for banning this student..."
+              maxLength={500}
+              showCount
+            />
+          </Form.Item>
+
+          <Row justify="end" gutter={8}>
+            <Col>
+              <Button onClick={handleCancel}>
+                Cancel
+              </Button>
+            </Col>
+            <Col>
+              <Button
+                type="primary"
+                danger
+                htmlType="submit"
+                loading={banLoading}
+              >
+                Ban Student
+              </Button>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+    );
+  };
+
   const tabItems = [
     {
       key: 'students',
-      label: `Students (${studentsData.length})`,
+      label: `Students (${studentsData.filter(student => student.status !== 'banned').length})`,
       children: <StudentList />
+    },
+    {
+      key: 'banned',
+      label: `Banned Students (${bannedStudents.length})`,
+      children: <BannedStudentsList />
     },
     {
       key: 'assignments',
@@ -370,7 +611,7 @@ const ClassroomDetail = () => {
           </Card>
           <Card size="small">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{studentsData.length}</div>
+              <div className="text-2xl font-bold text-green-600">{studentsData.filter(student => student.status !== 'banned').length}</div>
               <div className="text-gray-500">Students</div>
             </div>
           </Card>
@@ -424,6 +665,9 @@ const ClassroomDetail = () => {
           </Text>
         </div>
       </Modal>
+
+      {/* Ban Student Modal */}
+      <BanModal />
     </div>
   );
 };
