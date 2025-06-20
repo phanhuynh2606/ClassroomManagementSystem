@@ -30,30 +30,7 @@ const NotificationManagement = () => {
   const [searchText, setSearchText] = useState('');
 
   // Mock data - replace with actual API calls
-  const [notifications, setNotifications] = useState([
-    {
-      key: '1',
-      title: 'System Maintenance',
-      content: 'The system will be down for maintenance on Saturday from 2-4 AM.',
-      type: 'system',
-      priority: 'high',
-      status: 'active',
-      startDate: '2024-03-20',
-      endDate: '2024-03-21',
-      targetAudience: ['all'],
-    },
-    {
-      key: '2',
-      title: 'New Feature Release',
-      content: 'We have added new features to improve your learning experience.',
-      type: 'announcement',
-      priority: 'medium',
-      status: 'active',
-      startDate: '2024-03-19',
-      endDate: '2024-03-26',
-      targetAudience: ['students', 'teachers'],
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const columns = [
     {
