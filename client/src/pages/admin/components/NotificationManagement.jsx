@@ -218,7 +218,7 @@ const NotificationManagement = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between',marginLeft: 25,marginRight: 20,marginTop: 20 }}>
         <Input
           placeholder="Search notifications..."
           prefix={<SearchOutlined />}
@@ -235,7 +235,7 @@ const NotificationManagement = () => {
         </Button>
       </div>
 
-      <Table columns={columns} dataSource={filteredNotifications} />
+      <Table columns={columns} dataSource={filteredNotifications} style={{ marginLeft: 20, marginRight: 20 }} />
 
       <Modal
         title={editingNotification ? 'Edit Notification' : 'Add Notification'}

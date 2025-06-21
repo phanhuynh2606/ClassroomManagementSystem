@@ -203,7 +203,7 @@ const QuizManagement = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between',marginLeft: 25,marginRight: 20,marginTop: 20 }}>
         <Input
           placeholder="Search quizzes..."
           prefix={<SearchOutlined />}
@@ -220,7 +220,7 @@ const QuizManagement = () => {
         </Button>
       </div>
 
-      <Table columns={columns} dataSource={filteredQuizzes} />
+      <Table columns={columns} dataSource={filteredQuizzes} style={{ marginLeft: 20, marginRight: 20 }} />
 
       <Modal
         title={editingQuiz ? 'Edit Quiz' : 'Add Quiz'}

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Layout, Menu, Button, theme, Space, Avatar, Tooltip } from 'antd';
 import {
   MenuFoldOutlined,
@@ -34,7 +34,7 @@ const AdminLayout = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (collapsed) {
       prevOpenKeys.current = openKeys;
       setOpenKeys([]);
@@ -66,7 +66,7 @@ const AdminLayout = () => {
   };
 
   const handleMenuClick = ({ key }) => {
-    if (key === '1') navigate('/admin/dashboard');
+    if (key === '1') navigate('/admin/');
     else if (key === '2-1') handleRoleChange('admin');
     else if (key === '2-2') handleRoleChange('teacher');
     else if (key === '2-3') handleRoleChange('student');
@@ -191,7 +191,7 @@ const AdminLayout = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed} width={245}>
         <div className="demo-logo-vertical" >
-          <img src={logo} alt="logo" style={{ width: '100%', height: 'auto' }} />
+          <img src={logo} alt="logo" style={{ width: '80%', height: 'auto',marginBottom : "10px" }} />
         </div>
         <Menu
           theme="dark"
@@ -226,7 +226,6 @@ const AdminLayout = () => {
           <Space align="center" style={{ marginRight: 16 }}>
             <Avatar
               src={user?.image}
-              icon={<UserOutlined />}
               style={{ cursor: 'pointer' }}
               onClick={() => navigate('/admin/profile')}
             />

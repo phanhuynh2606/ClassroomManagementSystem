@@ -517,7 +517,7 @@ const AdminRequestManagement = () => {
       </Card>
 
       <Card>
-        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ marginBottom: '16px' }}>
           <Tabs
             activeKey={activeTab}
             onChange={setActiveTab}
@@ -525,7 +525,7 @@ const AdminRequestManagement = () => {
               {
                 key: 'all',
                 label: (
-                  <Badge count={stats.total} offset={[10, 0]}>
+                  <Badge count={stats.total} offset={[10, -3]}>
                     All Requests
                   </Badge>
                 ),
@@ -533,7 +533,7 @@ const AdminRequestManagement = () => {
               {
                 key: 'pending',
                 label: (
-                  <Badge count={stats.pending} offset={[10, 0]}>
+                  <Badge count={stats.pending} offset={[10, -3]}>
                     Pending
                   </Badge>
                 ),
@@ -541,7 +541,7 @@ const AdminRequestManagement = () => {
               {
                 key: 'approved',
                 label: (
-                  <Badge count={stats.approved} offset={[10, 0]}>
+                  <Badge count={stats.approved} offset={[10, -3]}>
                     Approved
                   </Badge>
                 ),
@@ -549,7 +549,7 @@ const AdminRequestManagement = () => {
               {
                 key: 'rejected',
                 label: (
-                  <Badge count={stats.rejected} offset={[10, 0]}>
+                  <Badge count={stats.rejected} offset={[14, -3]}>
                     Rejected
                   </Badge>
                 ),

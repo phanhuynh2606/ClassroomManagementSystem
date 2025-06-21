@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/charts": "^2.4.0",
+    "@ant-design/plots": "^2.5.0",
     "@google-cloud/local-auth": "^3.0.1",
     "@react-oauth/google": "^0.12.2",
     "@reduxjs/toolkit": "^1.9.5",
