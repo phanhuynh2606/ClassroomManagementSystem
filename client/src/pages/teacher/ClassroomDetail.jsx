@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Card, 
   Tabs, 
@@ -12,7 +12,18 @@ import {
   Tooltip,
   Modal,
   Spin,
-  Alert
+  Alert,
+  Avatar,
+  Divider,
+  Form,
+  Upload,
+  Tag,
+  Empty,
+  Timeline,
+  Select,
+  Row,
+  Col,
+  Layout
 } from 'antd';
 import { 
   EditOutlined, 
@@ -22,27 +33,142 @@ import {
   PlusOutlined,
   ArrowLeftOutlined,
   ExclamationCircleOutlined,
-  UserOutlined
+  UserOutlined,
+  SendOutlined,
+  PaperClipOutlined,
+  ClockCircleOutlined,
+  BookOutlined,
+  BellOutlined,
+  MessageOutlined,
+  FileTextOutlined,
+  CalendarOutlined,
+  VideoCameraOutlined,
+  LinkOutlined,
+  BoldOutlined,
+  ItalicOutlined,
+  UnderlineOutlined,
+  UnorderedListOutlined,
+  OrderedListOutlined,
+  FormatPainterOutlined,
+  MoreOutlined,
+  SettingOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import classroomAPI from '../../services/api/classroom.api';
 import './teacher.css';
 
+// Import components
+import StreamHeader from './components/StreamHeader';
+import StreamSidebar from './components/StreamSidebar';
+import AnnouncementEditor from './components/AnnouncementEditor';
+import StreamItem from './components/StreamItem';
+import StreamEmptyState from './components/StreamEmptyState';
+import PeopleTab from './components/StudentList';
+import ClassworkTab from './components/AssignmentList';
+import GradesTab from './components/GradesTab';
+
 const { Title, Text } = Typography;
 const { Search } = Input;
+const { TextArea } = Input;
+const { Option } = Select;
+const { Sider, Content } = Layout;
 
 const ClassroomDetail = () => {
   const { classId } = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('students');
+  const [activeTab, setActiveTab] = useState('stream');
   const [searchText, setSearchText] = useState('');
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [studentsLoading, setStudentsLoading] = useState(false);
+  const [postingAnnouncement, setPostingAnnouncement] = useState(false);
+  const [announcementForm] = Form.useForm();
+  const [richTextContent, setRichTextContent] = useState('');
+  const [targetAudience, setTargetAudience] = useState('all_students');
+  const [showEditor, setShowEditor] = useState(false);
+  const [editorFocused, setEditorFocused] = useState(false);
+  const [attachments, setAttachments] = useState([]);
   
   const [classData, setClassData] = useState(null);
   const [studentsData, setStudentsData] = useState([]);
+  const [streamData, setStreamData] = useState([
+    {
+      id: '1',
+      type: 'announcement',
+      title: 'Welcome to the new semester!',
+      content: 'Dear students, welcome to our Programming Fundamentals class. Please check the syllabus and prepare for our first assignment.',
+      author: {
+        name: 'John Smith',
+        avatar: null,
+        role: 'Teacher'
+      },
+      createdAt: '2024-01-15T10:30:00Z',
+      attachments: [],
+      comments: [
+        {
+          id: 'c1',
+          author: 'Alice Johnson',
+          content: 'Thank you for the warm welcome!',
+          createdAt: '2024-01-15T11:00:00Z'
+        }
+      ]
+    },
+    {
+      id: '2',
+      type: 'assignment',
+      title: 'Assignment 1: Basic Programming Concepts',
+      content: 'Complete the exercises in Chapter 1-3. Due date: January 25th, 2024.',
+      author: {
+        name: 'John Smith',
+        avatar: null,
+        role: 'Teacher'
+      },
+      createdAt: '2024-01-16T14:20:00Z',
+      dueDate: '2024-01-25T23:59:00Z',
+      attachments: [
+        {
+          name: 'assignment1_template.pdf',
+          size: '245 KB'
+        }
+      ],
+      comments: []
+    },
+    {
+      id: '3',
+      type: 'material',
+      title: 'Lecture Slides - Week 1',
+      content: 'Here are the slides from our first week covering introduction to programming.',
+      author: {
+        name: 'John Smith',
+        avatar: null,
+        role: 'Teacher'
+      },
+      createdAt: '2024-01-14T09:15:00Z',
+      attachments: [
+        {
+          name: 'week1_slides.pptx',
+          size: '1.2 MB'
+        }
+      ],
+      comments: []
+    },
+    {
+      id: '4',
+      type: 'activity',
+      title: 'Student Alice Johnson joined the class',
+      content: '',
+      author: {
+        name: 'System',
+        avatar: null,
+        role: 'System'
+      },
+      createdAt: '2024-01-13T16:45:00Z',
+      attachments: [],
+      comments: []
+    }
+  ]);
 
   useEffect(() => {
     if (classId) {
@@ -85,22 +211,22 @@ const ClassroomDetail = () => {
     }
   };
 
-  const handleCopyClassCode = () => {
+  const handleCopyClassCode = useCallback(() => {
     if (classData?.code) {
       navigator.clipboard.writeText(classData.code);
       message.success('Class code copied to clipboard');
     }
-  };
+  }, [classData?.code]);
 
-  const handleEditClass = () => {
+  const handleEditClass = useCallback(() => {
     navigate(`/teacher/classroom/edit/${classId}`);
-  };
+  }, [navigate, classId]);
 
-  const handleDeleteClass = () => {
+  const handleDeleteClass = useCallback(() => {
     setDeleteModalVisible(true);
-  };
+  }, []);
 
-  const confirmDeleteClass = async () => {
+  const confirmDeleteClass = useCallback(async () => {
     setDeleting(true);
     try {
       await classroomAPI.deleteByTeacher(classId);
@@ -113,11 +239,60 @@ const ClassroomDetail = () => {
     } finally {
       setDeleting(false);
     }
-  };
+  }, [classId, navigate]);
 
-  const handleCancelDelete = () => {
+  const handleCancelDelete = useCallback(() => {
     setDeleteModalVisible(false);
-  };
+  }, []);
+
+  const handlePostAnnouncement = useCallback(async (values) => {
+    setPostingAnnouncement(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newAnnouncement = {
+        id: Date.now().toString(),
+        type: 'announcement',
+        title: values.title || 'Class Announcement',
+        content: richTextContent || values.content,
+        author: {
+          name: 'John Smith', // Should be current teacher's name
+          avatar: null,
+          role: 'Teacher'
+        },
+        createdAt: new Date().toISOString(),
+        attachments: attachments,
+        comments: []
+      };
+      
+      setStreamData(prev => [newAnnouncement, ...prev]);
+      announcementForm.resetFields();
+      setRichTextContent('');
+      setShowEditor(false);
+      setAttachments([]);
+      message.success('Announcement posted successfully!');
+    } catch (error) {
+      message.error('Failed to post announcement');
+    } finally {
+      setPostingAnnouncement(false);
+    }
+  }, [richTextContent, attachments, announcementForm]);
+
+  const formatTimeAgo = useCallback((dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
+  }, []);
 
   const getApprovalStatusBadge = (status) => {
     const statusConfig = {
@@ -134,131 +309,111 @@ const ClassroomDetail = () => {
     return <Badge status={config.status} text={config.text}/>;
   };
 
-  const studentColumns = [
-    {
-      title: 'Student ID',
-      dataIndex: ['student', '_id'],
-      key: 'studentId',
-      width: 120,
-      render: (id) => id?.slice(-6)?.toUpperCase() || 'N/A',
-    },
-    {
-      title: 'Full Name',
-      dataIndex: ['student', 'fullName'],
-      key: 'fullName',
-      filteredValue: searchText ? [searchText] : null,
-      onFilter: (value, record) =>
-        record.student?.fullName?.toLowerCase().includes(value.toLowerCase()) || false,
-    },
-    {
-      title: 'Email',
-      dataIndex: ['student', 'email'],
-      key: 'email',
-    },
-    {
-      title: 'Average Score',
-      dataIndex: 'averageScore',
-      key: 'averageScore',
-      width: 140,
-      render: (score) => (
-        <Badge 
-          color={score >= 80 ? 'green' : score >= 65 ? 'orange' : 'red'}
-          text={`${score}/100`}
-        />
-      ),
-    },
-    {
-      title: 'Submissions',
-      dataIndex: 'submissionCount',
-      key: 'submissionCount',
-      width: 130,
-    },
-    {
-      title: 'Joined Date',
-      dataIndex: 'joinedAt',
-      key: 'joinedAt',
-      width: 130,
-      render: (date) => new Date(date).toLocaleDateString(),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status) => (
-        <Badge 
-          color={status === 'active' ? 'green' : 'red'}
-          text={status?.toUpperCase() || 'UNKNOWN'}
-        />
-      ),
-    },
-  ];
+  const StudentListComponent = useMemo(() => (
+    <PeopleTab 
+      studentsData={studentsData}
+      studentsLoading={studentsLoading}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      classData={classData}
+      handleCopyClassCode={handleCopyClassCode}
+    />
+  ), [studentsData, studentsLoading, searchText, classData, handleCopyClassCode]);
 
-  const StudentList = () => (
+  const AssignmentListComponent = useMemo(() => (
+    <ClassworkTab />
+  ), []);
+
+  const StreamTab = useMemo(() => (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <Search
-          placeholder="Search students..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          onSearch={setSearchText}
-          style={{ width: 300 }}
-          prefix={<SearchOutlined />}
-        />
-        <div className="flex items-center gap-4">
-          <Text type="secondary">
-            Total: {studentsData.length} students
-          </Text>
-          {classData?.code && (
-            <Button
-              icon={<CopyOutlined />}
-              onClick={handleCopyClassCode}
-            >
-              Copy Class Code: {classData.code}
-            </Button>
-          )}
-        </div>
-      </div>
-      
-      <Table
-        columns={studentColumns}
-        dataSource={studentsData}
-        rowKey={(record) => record.student?._id || record._id}
-        loading={studentsLoading}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) =>
-            `${range[0]}-${range[1]} of ${total} students`,
-        }}
-        locale={{
-          emptyText: studentsLoading ? 'Loading...' : 'No students enrolled yet'
-        }}
-      />
-    </div>
-  );
+      <StreamHeader classData={classData} />
 
-  const AssignmentList = () => (
-    <div className="text-center py-12">
-      <Text type="secondary" className="text-lg">
-        Assignment management feature is under development
-      </Text>
-    </div>
-  );
+      <Row gutter={24}>
+        {/* Left Sidebar */}
+        <Col xs={24} lg={6}>
+          <StreamSidebar 
+            classData={classData} 
+            handleCopyClassCode={handleCopyClassCode} 
+          />
+        </Col>
 
-  const tabItems = [
+        {/* Main Content */}
+        <Col xs={24} lg={18}>
+          <div className="space-y-6">
+            {/* Announcement Editor */}
+            <AnnouncementEditor
+              showEditor={showEditor}
+              setShowEditor={setShowEditor}
+              richTextContent={richTextContent}
+              setRichTextContent={setRichTextContent}
+              targetAudience={targetAudience}
+              setTargetAudience={setTargetAudience}
+              attachments={attachments}
+              setAttachments={setAttachments}
+              handlePostAnnouncement={handlePostAnnouncement}
+              postingAnnouncement={postingAnnouncement}
+              announcementForm={announcementForm}
+            />
+
+            {/* Stream Items */}
+            {streamData.length === 0 ? (
+              <StreamEmptyState />
+            ) : (
+              streamData.map((item) => (
+                <StreamItem 
+                  key={item.id} 
+                  item={item} 
+                  formatTimeAgo={formatTimeAgo} 
+                />
+              ))
+            )}
+          </div>
+        </Col>
+      </Row>
+    </div>
+  ), [classData, handleCopyClassCode, showEditor, richTextContent, targetAudience, attachments, handlePostAnnouncement, postingAnnouncement, announcementForm, streamData, formatTimeAgo]);
+
+  const ClassworkTabComponent = useMemo(() => (
+    <ClassworkTab />
+  ), []);
+
+  const PeopleTabComponent = useMemo(() => (
+    <PeopleTab 
+      studentsData={studentsData}
+      studentsLoading={studentsLoading}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      classData={classData}
+      handleCopyClassCode={handleCopyClassCode}
+    />
+  ), [studentsData, studentsLoading, searchText, classData, handleCopyClassCode]);
+
+  const GradesTabComponent = useMemo(() => (
+    <GradesTab />
+  ), []);
+
+  const tabItems = useMemo(() => [
     {
-      key: 'students',
-      label: `Students (${studentsData.length})`,
-      children: <StudentList />
+      key: 'stream',
+      label: 'Stream',
+      children: StreamTab
     },
     {
-      key: 'assignments',
-      label: 'Assignments',
-      children: <AssignmentList />
+      key: 'classwork',
+      label: 'Classwork',
+      children: ClassworkTabComponent
+    },
+    {
+      key: 'people',
+      label: 'People',
+      children: PeopleTabComponent
+    },
+    {
+      key: 'grades',
+      label: 'Grades',
+      children: GradesTabComponent
     }
-  ];
+  ], [StreamTab, ClassworkTabComponent, PeopleTabComponent, GradesTabComponent]);
 
   if (loading) {
     return (

@@ -31,6 +31,9 @@ import TeacherClassroomDetail from '../pages/teacher/ClassroomDetail';
 import EditClassForm from '../pages/teacher/EditClassForm';
 import TeacherProfile from '../pages/teacher/TeacherProfile';
 import TeacherRequestManagement from '../pages/teacher/TeacherRequestManagement';
+import TeacherTodo from '../pages/teacher/TeacherTodo';
+import TeacherMaterials from '../pages/teacher/TeacherMaterials';
+import TeacherSettings from '../pages/teacher/TeacherSettings';
 
 // Student Pages
 import StudentProfile from '../pages/student/StudentProfile';
@@ -119,20 +122,17 @@ const AppRouter = () => {
         <Route path="classroom/:classId" element={<TeacherClassroomDetail />} />
         <Route path="classroom/edit/:classId" element={<EditClassForm />} />
 
-        {/* Request Management */}
+        {/* Core Features */}
+        <Route path="todo" element={<TeacherTodo />} />
+        <Route path="materials" element={<TeacherMaterials />} />
+
+        {/* Management */}
         <Route path="requests" element={<TeacherRequestManagement />} />
-
-        {/* Profile */}
-        <Route path="profile" element={<TeacherProfile />} />
-
-        {/* Upcoming Features */}
-        <Route path="quizzes" element={<ComingSoon title="Quản lý Bài kiểm tra" />} />
-        <Route path="assignments" element={<ComingSoon title="Quản lý Bài tập" />} />
-        <Route path="grades" element={<ComingSoon title="Chấm điểm" />} />
-        <Route path="reports" element={<ComingSoon title="Báo cáo & Thống kê" />} />
-        <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
-        <Route path="students" element={<ComingSoon title="Quản lý Học sinh" />} />
         <Route path="notifications" element={<ComingSoon title="Thông báo" />} />
+
+        {/* Settings & Profile */}
+        <Route path="settings" element={<TeacherSettings />} />
+        <Route path="profile" element={<TeacherProfile />} />
       </Route>
 
       {/* Student Routes */}
