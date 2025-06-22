@@ -74,6 +74,7 @@ const AdminLayout = () => {
     else if (key === '4') navigate('/admin/quizzes');
     else if (key === '5') navigate('/admin/notifications');
     else if (key === '6') navigate('/admin/requests');
+    else if (key === '7') navigate('/admin/questions');
   };
 
   const menuItems = React.useMemo(() => [
@@ -143,7 +144,7 @@ const AdminLayout = () => {
       ) : 'Quiz Management',
     },
      {
-      key: '6',
+      key: '7',
       icon: <QuestionCircleOutlined />,
       label: 'Question Management',
       onClick: () => navigate('/admin/questions'),
@@ -185,6 +186,9 @@ const AdminLayout = () => {
       return ['5'];
     }
     if (path.startsWith('/admin/questions')) {
+      return ['7'];
+    }
+    if (path.startsWith('/admin/requests')) {
       return ['6'];
     }
     if (path.startsWith('/admin/dashboard')) {
