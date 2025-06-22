@@ -142,6 +142,12 @@ const AdminLayout = () => {
         </Tooltip>
       ) : 'Quiz Management',
     },
+     {
+      key: '6',
+      icon: <QuestionCircleOutlined />,
+      label: 'Question Management',
+      onClick: () => navigate('/admin/questions'),
+    },
     {
       key: '5',
       icon: <BellOutlined />,
@@ -178,7 +184,7 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/notifications')) {
       return ['5'];
     }
-    if (path.startsWith('/admin/requests')) {
+    if (path.startsWith('/admin/questions')) {
       return ['6'];
     }
     if (path.startsWith('/admin/dashboard')) {

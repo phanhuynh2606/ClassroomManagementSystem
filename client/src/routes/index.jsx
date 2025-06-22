@@ -19,7 +19,7 @@ import UserManagement from '../pages/admin/components/UserManagement';
 import ClassroomManagement from '../pages/admin/components/ClassroomManagement';
 import AdminClassroomDetail from '../pages/admin/components/AdminClassroomDetail';
 import QuizManagement from '../pages/admin/components/QuizManagement';
-import QuestionManagement from '../pages/admin/components/QuestionManagement';
+import QuestionManagement from '../pages/admin/components/question/QuestionManagement';
 import NotificationManagement from '../pages/admin/components/NotificationManagement';
 import AdminRequestManagement from '../pages/admin/components/AdminRequestManagement';
 import AdminProfile from '../pages/admin/AdminProfile';
