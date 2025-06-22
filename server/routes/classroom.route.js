@@ -13,6 +13,9 @@ router.put('/admin/:classroomId', protect, authorize('admin'), ctrls.updateClass
 router.put('/admin/:classroomId/approve', protect, authorize('admin'), ctrls.approveClassroom);
 router.put('/admin/:classroomId/reject', protect, authorize('admin'), ctrls.rejectClassroom);
 router.put('/admin/:classroomId/approve-deletion', protect, authorize('admin'), ctrls.approveDeletionRequest);
+router.put('/admin/:classroomId/reject-deletion', protect, authorize('admin'), ctrls.rejectDeletionRequest);
+router.put('/admin/:classroomId/approve-edit', protect, authorize('admin'), ctrls.testApproveEditRequest);
+router.put('/admin/:classroomId/reject-edit', protect, authorize('admin'), ctrls.rejectEditRequest);
 
 // Teacher routes
 router.get('/teacher', protect, authorize('teacher'), ctrls.getTeacherClassrooms);

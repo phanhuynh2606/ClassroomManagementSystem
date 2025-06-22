@@ -8,11 +8,15 @@ import {
   Col, 
   Typography,
   message,
-  Spin 
+  Spin,
+  Space
 } from 'antd';
 import { 
   UserOutlined,
   CopyOutlined,
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import CreateClassForm from './CreateClassForm';
@@ -32,17 +36,19 @@ const ClassroomManagement = () => {
     try {
       const response = await classroomAPI.getAllByTeacher();
       
-      if (response.data && response.data.success && Array.isArray(response.data.data)) {
-        setClasses(response.data.data);
+      if (response && response.success && Array.isArray(response.data)) {
+        setClasses(response.data);
       } else if (Array.isArray(response.data)) {
         setClasses(response.data);
       } else if (Array.isArray(response)) {
         setClasses(response);
       } else {
+        console.error('Unexpected response format:', response);
         setClasses([]);
       }
     } catch (error) {
       message.error('Failed to fetch classrooms');
+      console.error('Error fetching classrooms:', error);
       setClasses([]);
     } finally {
       setLoading(false);
@@ -55,73 +61,130 @@ const ClassroomManagement = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      approved: { status: "success", text: "Approved" },
-      pending: { status: "processing", text: "Pending Approval" },
-      rejected: { status: "error", text: "Rejected" }
+      active: {
+        type: 'success',
+        text: 'Active'
+      },
+      inactive: {
+        type: 'default',
+        text: 'Inactive'
+      },
+      pending_delete: {
+        type: 'error',
+        text: 'Pending Delete'
+      },
+      pending_edit: {
+        type: 'warning',
+        text: 'Pending Edit'
+      },
+      pending_creation: {
+        type: 'warning',
+        text: 'Pending Creation'
+      },
+      deleted: {
+        type: 'default',
+        text: 'Deleted'
+      }
     };
     
-    const config = statusConfig[status] || statusConfig.pending;
-    return <Badge status={config.status} text={config.text}/>;
+    const config = statusConfig[status] || statusConfig.inactive;
+    return <Badge status={config.type} text={config.text} />;
+  };
+
+  const getCardStyle = (status) => {
+    const styleConfig = {
+      active: {
+        background: '#f6ffed',
+        borderColor: '#b7eb8f'
+      },
+      inactive: {
+        background: '#f5f5f5',
+        borderColor: '#d9d9d9'
+      },
+      pending_delete: {
+        background: '#fff2f0',
+        borderColor: '#ffccc7'
+      },
+      pending_edit: {
+        background: '#fff7e6',
+        borderColor: '#ffd591'
+      },
+      pending_creation: {
+        background: '#e6f7ff',
+        borderColor: '#91d5ff',
+      },
+      deleted: {
+        background: '#f5f5f5',
+        borderColor: '#d9d9d9',
+        opacity: 0.7
+      }
+    };
+    
+    return styleConfig[status] || styleConfig.inactive;
   };
 
   const handleViewDetails = (classId) => {
     navigate(`/teacher/classroom/${classId}`);
   };
 
-  const ClassCard = ({ classItem }) => (
-    <Card
-      className="h-full hover:shadow-lg transition-shadow duration-200"
-      actions={[
-        <Button 
-          type="primary" 
-          onClick={() => handleViewDetails(classItem._id)}
-          className="text-blue-600 border rounded text-white"
-          style={{ width: '95%' }}
-        >
-          View Details
-        </Button>
-      ]}
-    >
-      <div className="mb-4">
-        <div className="flex justify-between items-start mb-2">
-          <Title level={4} className="mb-0">
-            {classItem.name || 'No Name'}
-          </Title>
-          {getStatusBadge(classItem.approvalStatus)}
-        </div>
-        {classItem.description && (
-          <Text className="block mb-3 text-sm text-gray-600">
-            {classItem.description}
-          </Text>
-        )}
-      </div>
-      
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <CopyOutlined className="text-gray-400" />
-          <Text className="text-sm">
-            Class Code: <Text strong>{classItem.code || 'No Code'}</Text>
-          </Text>
-        </div>
-        <div className="flex items-center gap-2">
-          <UserOutlined className="text-gray-400" />
-          <Text className="text-sm">
-            {classItem.students?.length || 0} students
-          </Text>
-        </div>
-        <div className="text-sm text-gray-500">
-          Category: {classItem.category || 'N/A'} | Level: {classItem.level || 'N/A'}
-        </div>
-        {classItem.approvalStatus === 'rejected' && classItem.rejectionReason && (
-          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
-            <Text type="danger" className="text-sm">
-              Rejection Reason: {classItem.rejectionReason}
-            </Text>
-          </div>
-        )}
-      </div>
-    </Card>
-  );
+  const ClassCard = ({ classItem, onEdit, onDelete, onView }) => {
+    const cardStyle = getCardStyle(classItem.status);
+    const canEdit = classItem.status === 'active';
+
+    return (
+      <Card
+        hoverable
+        style={{
+          ...cardStyle,
+          marginBottom: 16,
+          transition: 'all 0.3s'
+        }}
+        actions={[
+          <Button 
+            type="link" 
+            onClick={() => onView(classItem._id)}
+            icon={<EyeOutlined />}
+          >
+            View
+          </Button>,
+          // canEdit && (
+          //   <Button 
+          //     type="link" 
+          //     onClick={() => onEdit(classItem._id)}
+          //     icon={<EditOutlined />}
+          //   >
+          //     Edit
+          //   </Button>
+          // ),
+          // canEdit && (
+          //   <Button 
+          //     type="link" 
+          //     danger
+          //     onClick={() => onDelete(classItem._id)}
+          //     icon={<DeleteOutlined />}
+          //   >
+          //     Delete
+          //   </Button>
+          // )
+        ].filter(Boolean)}
+      >
+        <Card.Meta
+          title={
+            <Space>
+              {classItem.name}
+              {getStatusBadge(classItem.status)}
+            </Space>
+          }
+          description={
+            <Space direction="vertical" size="small">
+              <Text>Code: {classItem.code}</Text>
+              <Text>Students: {classItem.students?.length || 0}/{classItem.maxStudents}</Text>
+            </Space>
+          }
+        />
+      </Card>
+    );
+  };
 
   const ClassList = () => (
     <Spin spinning={loading}>
@@ -129,7 +192,7 @@ const ClassroomManagement = () => {
         <Row gutter={[24, 24]}>
           {classes.map((classItem) => (
             <Col xs={24} sm={12} lg={8} key={classItem._id}>
-              <ClassCard classItem={classItem} />
+              <ClassCard classItem={classItem} onView={handleViewDetails} />
             </Col>
           ))}
           {classes.length === 0 && !loading && (

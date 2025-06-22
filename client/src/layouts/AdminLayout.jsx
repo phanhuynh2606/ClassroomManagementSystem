@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Layout, Menu, Button, theme, Space, Avatar, Tooltip } from 'antd';
 import {
   MenuFoldOutlined,
@@ -9,7 +9,8 @@ import {
   QuestionCircleOutlined,
   BellOutlined,
   LogoutOutlined,
-  TeamOutlined
+  TeamOutlined,
+  FileTextOutlined
 } from '@ant-design/icons';
 import { FaUserGroup,FaUsersGear } from "react-icons/fa6";
 import { GiTeacher } from "react-icons/gi";
@@ -33,7 +34,7 @@ const AdminLayout = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (collapsed) {
       prevOpenKeys.current = openKeys;
       setOpenKeys([]);
@@ -65,13 +66,14 @@ const AdminLayout = () => {
   };
 
   const handleMenuClick = ({ key }) => {
-    if (key === '1') navigate('/admin/dashboard');
+    if (key === '1') navigate('/admin/');
     else if (key === '2-1') handleRoleChange('admin');
     else if (key === '2-2') handleRoleChange('teacher');
     else if (key === '2-3') handleRoleChange('student');
     else if (key === '3') navigate('/admin/classrooms');
     else if (key === '4') navigate('/admin/quizzes');
     else if (key === '5') navigate('/admin/notifications');
+    else if (key === '6') navigate('/admin/requests');
   };
 
   const menuItems = React.useMemo(() => [
@@ -154,7 +156,16 @@ const AdminLayout = () => {
           <span>Notifications</span>
         </Tooltip>
       ) : 'Notifications',
-          },
+    },
+    {
+      key: '6',
+      icon: <FileTextOutlined />,
+      label: collapsed ? (
+        <Tooltip title="Request Management" placement="right">
+          <span>Request Management</span>
+        </Tooltip>
+      ) : 'Request Management',
+    },
     ], [collapsed]);
 
   // Determine which menu item should be selected based on current path and role
@@ -184,9 +195,9 @@ const AdminLayout = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed}>
+      <Sider trigger={null} collapsible collapsed={collapsed} width={245}>
         <div className="demo-logo-vertical" >
-          <img src={logo} alt="logo" style={{ width: '100%', height: 'auto' }} />
+          <img src={logo} alt="logo" style={{ width: '80%', height: 'auto',marginBottom : "10px" }} />
         </div>
         <Menu
           theme="dark"
@@ -221,7 +232,6 @@ const AdminLayout = () => {
           <Space align="center" style={{ marginRight: 16 }}>
             <Avatar
               src={user?.image}
-              icon={<UserOutlined />}
               style={{ cursor: 'pointer' }}
               onClick={() => navigate('/admin/profile')}
             />
@@ -242,6 +252,7 @@ const AdminLayout = () => {
         </Header>
         <Content
           style={{
+            scrollbarWidth: 'none',
             margin: '24px 16px',
             padding: 24,
             background: colorBgContainer,

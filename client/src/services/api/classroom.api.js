@@ -14,6 +14,7 @@ const classroomAPI = {
 
   // Teacher APIs
   getAllByTeacher: () => axiosClient.get('/classrooms/teacher'),
+  getTeacherClassrooms: () => axiosClient.get('/classrooms/teacher'),
   createByTeacher: (data) => axiosClient.post('/classrooms/teacher', data),
   updateByTeacher: (id, data) => axiosClient.put(`/classrooms/teacher/${id}`, data),
   deleteByTeacher: (id) => axiosClient.delete(`/classrooms/teacher/${id}`),

@@ -221,14 +221,14 @@ const StudentClassroomDetail = () => {
              <Button 
                block 
                icon={<TrophyOutlined />}
-               onClick={() => message.info('Assignments feature coming soon!')}
+               onClick={() => navigate(`/student/assignments`)}
              >
                Assignments
              </Button>
              <Button 
                block 
                icon={<ClockCircleOutlined />}
-               onClick={() => message.info('Quiz feature coming soon!')}
+               onClick={() => navigate(`/student/quizzes`)}
              >
                Quizzes
              </Button>
