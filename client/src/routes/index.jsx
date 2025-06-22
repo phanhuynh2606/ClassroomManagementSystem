@@ -37,6 +37,10 @@ import StudentProfile from '../pages/student/StudentProfile';
 import StudentClassroomManagement from '../pages/student/StudentClassroomManagement';
 import StudentDashboard from '../pages/student/StudentDashboard';
 import StudentClassroomDetail from '../pages/student/StudentClassroomDetail';
+import StudentAssignmentList from '../pages/student/StudentAssignmentList';
+import StudentAssignmentDetail from '../pages/student/StudentAssignmentDetail';
+import StudentQuizList from '../pages/student/StudentQuizList';
+import QuizPage from '../pages/student/QuizPage';
 // import MyClassess from '../pages/student/MyCourses';
 // import TakeQuiz from '../pages/student/TakeQuiz';
 // import MyGrades from '../pages/student/MyGrades';
@@ -146,7 +150,10 @@ const AppRouter = () => {
         <Route path="classrooms" element={<StudentClassroomManagement />} />
         <Route path="classroom/:classroomId" element={<StudentClassroomDetail />} />
         {/* Upcoming Student Features */}
-        <Route path="assignments" element={<ComingSoon title="Bài tập" />} />
+        <Route path="assignments" element={<StudentAssignmentList />} />
+        <Route path="assignments/:assignmentId" element={<StudentAssignmentDetail/>} />
+        <Route path="quizzes" element={<StudentQuizList/>} />
+        <Route path="quizzes/:quizId" element={<QuizPage/>} />
         <Route path="grades" element={<ComingSoon title="Điểm số" />} />
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
       </Route>
