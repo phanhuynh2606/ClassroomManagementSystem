@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Table, Empty, Typography } from 'antd';
+import { Card, Table, Empty, Typography, Modal } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import './student.css';
 
@@ -15,7 +15,15 @@ const StudentQuizList = () => {
     { topic: '*** Review for Test 2 ***', name: 'PT 2', quizClose: 'Monday, 21 October 2024, 12:00 AM', grade: '-' },
     { topic: '*** Review for Test 3 ***', name: 'Review for Progress Test 3', quizClose: 'Wednesday, 6 November 2024, 12:00 AM', grade: '10/10' },
   ];
-
+  const handleQuizStart = (index) => {
+    Modal.confirm({
+      title: 'Start quiz?',
+      content: 'Are you sure you want to begin this quiz? You will be timed.',
+      okText: 'Start',
+      cancelText: 'Cancel',
+      onOk: () => navigate(`/student/quizzes/${index}`),
+    });
+  };
   const columns = [
     {
       title: 'Topic',
@@ -31,7 +39,7 @@ const StudentQuizList = () => {
         <Text
           type="danger"
           style={{ cursor: 'pointer' }}
-          onClick={() => navigate(`/student/quizzes/${index}`)}
+          onClick={() => handleQuizStart(index)}
         >
           {text}
         </Text>
