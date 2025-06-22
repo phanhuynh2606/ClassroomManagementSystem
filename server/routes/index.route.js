@@ -7,7 +7,7 @@ const initRoutes = (app) => {
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/admin', adminRoutes);
-  app.use("/api/ai", genderAIRoute);
+  app.use("/api/questions/ai/", genderAIRoute);
   app.use('/api/classrooms', classroomRoutes);
 };
 

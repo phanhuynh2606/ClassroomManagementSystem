@@ -13,7 +13,7 @@ const genAI = new GoogleGenAI({
 const MODEL_ID = 'gemini-2.5-flash';
 const upload = multer({ dest: 'uploads/' });
 
-const PROMPT_TEMPLATE = (content) => `
+const PROMPT_TEMPLATE = (content, topic, numberOfQuestions, difficulty) => `
 You are a data extractor.
 
 Given the content below contains one or more multiple-choice questions, extract each question into the following JSON format **only**:
@@ -22,12 +22,13 @@ Given the content below contains one or more multiple-choice questions, extract 
   {
     "question": "The question text here",
     "options": [
-      "a. Option A",
-      "b. Option B",
-      "c. Option C",
-      "d. Option D"
+      "Option A",
+      "Option B",
+      "Option C",
+      "Option D"
     ],
-    "answer": "a"
+    "answer": "a",
+    explanation: "The explanation for the answer here"
   }
 ]
 
@@ -36,6 +37,7 @@ Rules:
 - Each question must include exactly 4 options.
 - The answer must be one of "a", "b", "c", or "d".
 - DO NOT include markdown, explanations, headers, or any extra text.
+- Topic is ${topic}, render ${numberOfQuestions} questions with difficulty ${difficulty}.
 
 If no questions are found, return: []
 
@@ -43,8 +45,8 @@ Content:
 ${content}
 `.trim();
 
-async function generateJsonFromText(content) {
-    const contents = [{ role: 'user', parts: [{ text: PROMPT_TEMPLATE(content) }] }];
+async function generateJsonFromText(content, topic, numberOfQuestions, difficulty) {
+    const contents = [{ role: 'user', parts: [{ text: PROMPT_TEMPLATE(content, topic, numberOfQuestions, difficulty) }] }];
     const response = await genAI.models.generateContent({
         model: MODEL_ID,
         contents,
@@ -96,7 +98,7 @@ async function extractTextFromFile(file) {
     throw new Error('Unsupported file type for text extraction: ' + file.mimetype);
 }
 
-async function generateFromImage(buffer, mimeType) {
+async function generateFromImage(buffer, mimeType, topic, numberOfQuestions, difficulty) {
     const base64Data = buffer.toString('base64');
 
     const contents = [
@@ -104,7 +106,7 @@ async function generateFromImage(buffer, mimeType) {
             role: 'user',
             parts: [
                 {
-                    text: PROMPT_TEMPLATE('This image contains questions. Please extract them.')
+                    text: PROMPT_TEMPLATE('This image contains questions. Please extract them.', topic, numberOfQuestions, difficulty),
                 },
                 {
                     inlineData: { mimeType, data: base64Data },
@@ -151,18 +153,26 @@ async function generateFromImage(buffer, mimeType) {
 router.post('/generate-from-file', upload.single('file'), async (req, res) => {
     try {
         const file = req.file;
+        const {
+            topic,
+            numberOfQuestions,
+            difficulty
+        } = req.body;
+        if (!topic || !numberOfQuestions) {
+            return res.status(400).json({ error: 'Topic and number of questions are required' });
+        }
         if (!file) return res.status(400).json({ error: 'No file uploaded' });
 
         const buffer = await fs.readFile(file.path);
         let result;
 
         if (file.mimetype.startsWith('image/')) {
-            result = await generateFromImage(buffer, file.mimetype);
+            result = await generateFromImage(buffer, file.mimetype, topic, numberOfQuestions, difficulty);
         } else if (
             file.mimetype === 'application/pdf'
         ) {
             const extractedText = await extractTextFromFile(file);
-            result = await generateJsonFromText(extractedText);
+            result = await generateJsonFromText(extractedText, topic, numberOfQuestions, difficulty);
         } else {
             return res.status(415).json({ error: 'Unsupported file type: ' + file.mimetype });
         }

@@ -61,10 +61,19 @@ const QuestionManagement = () => {
   const fetchQuestions = async (page = 1, limit = 10, search = searchText) => {
     try {
       setLoading(true);
-      const response = await questionAPI.getAll(page, limit, search, difficultyFilter, categoryFilter, statusFilter);
+      const response = await questionAPI.getAll(
+        page,
+        limit,
+        search,
+        difficultyFilter,
+        categoryFilter,
+        statusFilter
+      );
 
       if (response.success) {
-        const formattedQuestions = response.data.map((question) => ({
+        const questions = response.data;
+        const paging = response.pagination;
+        const formattedQuestions = questions.map((question) => ({
           key: question._id,
           _id: question._id,
           content: question.content,
@@ -87,11 +96,12 @@ const QuestionManagement = () => {
 
         setQuestions(formattedQuestions);
         setPagination({
-          current: response.data.pagination.page,
-          pageSize: response.data.pagination.limit,
-          total: response.data.pagination.total,
+          current: paging.page,
+          pageSize: paging.limit,
+          total: paging.total,
         });
       }
+
     } catch (error) {
       console.error('Error fetching questions:', error);
     } finally {
@@ -160,15 +170,16 @@ const QuestionManagement = () => {
           setLoading(false);
         }
       },
-      onCancel(){
+      onCancel() {
         console.log('Cancel delete');
       }
     });
   };
 
-  useEffect(() => {
-    fetchQuestions();
-  }, [searchText, pagination.current, pagination.pageSize, difficultyFilter, categoryFilter, statusFilter]);
+useEffect(() => {
+  fetchQuestions(1, pagination.pageSize, searchText);
+}, [searchText, difficultyFilter, categoryFilter, statusFilter]);
+
 
   const columns = [
     {
@@ -329,13 +340,11 @@ const QuestionManagement = () => {
   };
 
   const handleAddExcel = async (data) => {
-     try {
+    try {
       setLoading(true);
-      console.log('Data to create questions from Excel:', data);
-      
       const response = await questionAPI.createExcel(data);
 
-     if (response.success) {
+      if (response.success) {
         message.success('Question created successfully');
         fetchQuestions(pagination.current, pagination.pageSize, searchText);
         setIsAddExcelModalVisible(false);
@@ -348,14 +357,41 @@ const QuestionManagement = () => {
     }
   };
 
-  const handleSearch = (value) => {
-    setSearchText(value.target.value);
-    fetchQuestions(1, pagination.pageSize, value);
+  const handleAddAi = async (data) => {
+    try {
+      setLoading(true);
+      const response = await questionAPI.createAI(data);
+
+      if (response.success) {
+        message.success('AI question created successfully');
+        setIsAddAIModalVisible(false);
+        fetchQuestions(pagination.current, pagination.pageSize, searchText);
+      }
+    } catch (error) {
+      console.error('Error opening AI modal:', error);
+      message.error('Failed to open AI question modal');
+    }
   };
 
-  const handleTableChange = (paginationConfig) => {
-    fetchQuestions(paginationConfig.current, paginationConfig.pageSize, searchText);
-  };
+const handleSearch = (value) => {
+  setSearchText(value.target.value);
+  setPagination((prev) => ({
+    ...prev,
+    current: 1,
+  }));
+  fetchQuestions(1, pagination.pageSize, value.target.value);
+};
+
+
+const handleTableChange = (paginationConfig) => {
+  const { current, pageSize } = paginationConfig;
+  setPagination((prev) => ({
+    ...prev,
+    current,
+    pageSize,
+  }));
+  fetchQuestions(current, pageSize, searchText);
+};
 
   const handleAddModalCancel = () => {
     setIsAddModalVisible(false);
@@ -442,7 +478,6 @@ const QuestionManagement = () => {
         scroll={{ x: 'max-content' }}
       />
 
-      {/* Add Question Modal */}
       <ModalAddQuestion
         visible={isAddModalVisible}
         onCancel={handleAddModalCancel}
@@ -450,7 +485,6 @@ const QuestionManagement = () => {
         loading={loading}
       />
 
-      {/* Edit Question Modal */}
       <ModalEditQuestion
         visible={isEditModalVisible}
         onCancel={handleEditModalCancel}
@@ -468,12 +502,7 @@ const QuestionManagement = () => {
       <ModalAddAi
         visible={isAddAIModalVisible}
         onCancel={() => setIsAddAIModalVisible(false)}
-        onSave={(data) => {
-          console.log('AI generated question:', data);
-          setIsAddAIModalVisible(false);
-          message.success('AI question generated successfully!');
-          fetchQuestions(pagination.current, pagination.pageSize, searchText);
-        }}
+        onSave={handleAddAi}
       />
 
       <ModalSelectMethod

@@ -15,12 +15,15 @@ import {
   Space,
   Card,
   Tag,
+  Upload,
 } from 'antd';
-import { 
+import {
   RobotOutlined,
   ReloadOutlined,
-  BulbOutlined
+  BulbOutlined,
+  UploadOutlined
 } from '@ant-design/icons';
+import { questionAPI } from '../../../../services/api';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -41,60 +44,8 @@ const ModalAddAi = ({ visible, onCancel, onSave, loading }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [selectedQuestions, setSelectedQuestions] = useState([]);
+  const [uploadedFile, setUploadedFile] = useState(null);
 
-  const sampleGeneratedQuestions = [
-    {
-      key: '1',
-      content: 'What is the primary function of mitochondria in a cell?',
-      options: [
-        { content: 'Protein synthesis', isCorrect: false },
-        { content: 'Energy production', isCorrect: true },
-        { content: 'DNA replication', isCorrect: false },
-        { content: 'Waste disposal', isCorrect: false },
-      ],
-      explanation: 'Mitochondria are known as the powerhouse of the cell because they produce ATP through cellular respiration.',
-      difficulty: 'medium',
-      category: 'PT1',
-      subjectCode: 'BIO101',
-      points: 2,
-      status: 'draft',
-      isAI: true,
-    },
-    {
-      key: '2',
-      content: 'Which of the following is NOT a renewable energy source?',
-      options: [
-        { content: 'Solar power', isCorrect: false },
-        { content: 'Wind power', isCorrect: false },
-        { content: 'Nuclear power', isCorrect: true },
-        { content: 'Hydroelectric power', isCorrect: false },
-      ],
-      explanation: 'Nuclear power relies on uranium, which is a finite resource, making it non-renewable.',
-      difficulty: 'easy',
-      category: 'QUIZ1',
-      subjectCode: 'ENV101',
-      points: 1,
-      status: 'draft',
-      isAI: true,
-    },
-    {
-      key: '3',
-      content: 'What is the time complexity of binary search algorithm?',
-      options: [
-        { content: 'O(n)', isCorrect: false },
-        { content: 'O(log n)', isCorrect: true },
-        { content: 'O(n²)', isCorrect: false },
-        { content: 'O(1)', isCorrect: false },
-      ],
-      explanation: 'Binary search divides the search space in half with each comparison, resulting in O(log n) time complexity.',
-      difficulty: 'hard',
-      category: 'FE',
-      subjectCode: 'CS201',
-      points: 3,
-      status: 'draft',
-      isAI: true,
-    }
-  ];
 
   const columns = [
     {
@@ -139,12 +90,6 @@ const ModalAddAi = ({ visible, onCancel, onSave, loading }) => {
       width: 100,
     },
     {
-      title: 'Points',
-      dataIndex: 'points',
-      key: 'points',
-      width: 80,
-    },
-    {
       title: 'Options',
       key: 'options',
       width: 200,
@@ -162,52 +107,67 @@ const ModalAddAi = ({ visible, onCancel, onSave, loading }) => {
     },
   ];
 
-  const handleGenerate = async () => {
-    try {
-      const values = await form.validateFields();
-      setIsGenerating(true);
-      setGeneratingProgress(0);
-      setGeneratedQuestions([]);
-      setSelectedQuestions([]);
+const handleGenerate = async () => {
+  try {
+    const values = await form.validateFields();
+    setIsGenerating(true);
+    setGeneratingProgress(0);
+    setGeneratedQuestions([]);
+    setSelectedQuestions([]);
 
-      // Simulate AI generation progress
-      const progressInterval = setInterval(() => {
-        setGeneratingProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 300);
+    const progressInterval = setInterval(() => {
+      setGeneratingProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 5;
+      });
+    }, 200);
 
-      // Simulate API call to AI service
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      clearInterval(progressInterval);
-      setGeneratingProgress(100);
-      
-      // Mock generated questions with form values applied
-      const generatedWithFormValues = sampleGeneratedQuestions.map((q, index) => ({
-        ...q,
+    const formData = new FormData();
+    formData.append('topic', values.topic);
+    formData.append('numberOfQuestions', values.numberOfQuestions);
+    formData.append('difficulty', values.difficulty);
+    formData.append('file', uploadedFile);
+
+    const response = await questionAPI.genderAi(formData);
+
+    clearInterval(progressInterval); 
+    setGeneratingProgress(100);
+
+    if (!response || !response.answer || !Array.isArray(response.answer.parsed) || response.answer.parsed.length === 0) {
+      message.error('No questions generated. Please try again.');
+      return;
+    }
+
+    const generatedWithFormValues = response.answer.parsed.map((q, index) => {
+      const correctIndex = q.answer.toLowerCase().charCodeAt(0) - 97;
+
+      return {
+        content: q.question,
         key: `generated-${index + 1}`,
         difficulty: values.difficulty,
         category: values.category,
         subjectCode: values.subjectCode,
-        points: values.points,
-      }));
-      
-      setGeneratedQuestions(generatedWithFormValues);
-      setSelectedQuestions(generatedWithFormValues.map(q => q.key)); // Select all by default
-      message.success(`Generated ${values.numberOfQuestions} questions successfully!`);
-      
-    } catch (error) {
-      message.error('Failed to generate questions');
-      console.error('Error generating questions:', error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+        options: q.options.map((opt, i) => ({
+          content: opt,
+          isCorrect: i === correctIndex,
+        })),
+      };
+    });
+
+    setGeneratedQuestions(generatedWithFormValues);
+    setSelectedQuestions(generatedWithFormValues.map(q => q.key));
+    message.success(`Generated ${generatedWithFormValues.length} questions successfully!`);
+  } catch (error) {
+    message.error('Failed to generate questions');
+    console.error('Error generating questions:', error);
+  } finally {
+    setIsGenerating(false);
+  }
+};
+
 
   const handleQuestionSelect = (questionKey, checked) => {
     if (checked) {
@@ -231,11 +191,16 @@ const ModalAddAi = ({ visible, onCancel, onSave, loading }) => {
       return;
     }
 
-    const questionsToSave = generatedQuestions.filter(q => 
+    const questionsToSave = generatedQuestions.filter(q =>
       selectedQuestions.includes(q.key)
     );
-
     onSave(questionsToSave);
+    form.resetFields();
+    setGeneratedQuestions([]);
+    setSelectedQuestions([]);
+    setGeneratingProgress(0);
+    setIsGenerating(false);
+    setUploadedFile(null);
   };
 
   const handleCancel = () => {
@@ -244,6 +209,7 @@ const ModalAddAi = ({ visible, onCancel, onSave, loading }) => {
     setSelectedQuestions([]);
     setGeneratingProgress(0);
     setIsGenerating(false);
+    setUploadedFile(null);
     onCancel();
   };
 
@@ -262,9 +228,9 @@ const ModalAddAi = ({ visible, onCancel, onSave, loading }) => {
         <Button key="cancel" onClick={handleCancel}>
           Cancel
         </Button>,
-        <Button 
-          key="save" 
-          type="primary" 
+        <Button
+          key="save"
+          type="primary"
           onClick={handleSave}
           loading={loading}
           disabled={selectedQuestions.length === 0}
@@ -305,16 +271,6 @@ const ModalAddAi = ({ visible, onCancel, onSave, loading }) => {
               </Form.Item>
             </div>
 
-            <Form.Item
-              name="context"
-              label="Additional Context (Optional)"
-            >
-              <TextArea 
-                rows={3} 
-                placeholder="Provide additional context, specific topics, or requirements for the questions..."
-              />
-            </Form.Item>
-
             <div style={{ display: 'flex', gap: 16 }}>
               <Form.Item
                 name="difficulty"
@@ -352,21 +308,34 @@ const ModalAddAi = ({ visible, onCancel, onSave, loading }) => {
               >
                 <Input placeholder="e.g., BIO101, MATH201" />
               </Form.Item>
-
-              <Form.Item
-                name="points"
-                label="Points per Question"
-                rules={[{ required: true, message: 'Please input points!' }]}
-                style={{ flex: 1 }}
-              >
-                <InputNumber min={1} max={10} style={{ width: '100%' }} placeholder="1" />
-              </Form.Item>
             </div>
+            <Form.Item
+              label="Attach Image or PDF"
+              style={{ flex: 1 }}
+            >
+              <Upload
+                beforeUpload={(file) => {
+                  const isPdfOrImage = file.type === 'application/pdf' || file.type.startsWith('image/');
+                  if (!isPdfOrImage) {
+                    message.error('Only PDF or image files are allowed!');
+                    return false;
+                  }
+
+                  setUploadedFile(file);
+                  return false;
+                }}
+                onRemove={() => setUploadedFile(null)}
+                fileList={uploadedFile ? [uploadedFile] : []}
+                maxCount={1}
+              >
+                <Button icon={<UploadOutlined />}>Choose File or Image</Button>
+              </Upload>
+            </Form.Item>
 
             <Form.Item>
-              <Button 
-                type="primary" 
-                icon={<RobotOutlined />} 
+              <Button
+                type="primary"
+                icon={<RobotOutlined />}
                 onClick={handleGenerate}
                 loading={isGenerating}
                 size="large"

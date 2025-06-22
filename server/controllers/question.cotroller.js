@@ -332,6 +332,60 @@ const createQuestionFromExcel = async (req, res) => {
     }
 };
 
+const createQuestionFromAI = async (req, res) => {
+    try {
+        const data = req.body;
+
+        if (!Array.isArray(data)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or missing data. Expected an array.'
+            });
+        }
+        const questions = data.map((index) => ({
+            content: index.content || '',
+            options: index.options || [],
+            explanation: index.explanation || '',
+            subjectCode: index.subjectCode || '',
+            difficulty: index.difficulty || 'Easy',
+            category: index.category || '',
+            status: 'published',
+            image: null,
+            explanationImage: '',
+            cooldownPeriod: null,
+            points: index.points || 1,
+            statistics: {
+                totalAttempts: 0,
+                correctAttempts: 0
+            },
+            usageHistory: [],
+            usedInClassrooms: [],
+            deletedBy: null,
+            lastUpdatedAt: new Date(),
+            lastUsedAt: null,
+            usageCount: 0,
+            lastUpdatedBy: req.user?._id || null,
+            createdAt: new Date(),
+            createdBy: req.user?._id || null,
+            isAI: true,
+            isActive: true,
+            isArchived: false,
+            deletedAt: null,
+            deleted: false
+        }));
+
+        await Question.insertMany(questions);
+
+        res.status(201).json({
+            success: true,
+            message: `${questions.length} questions created successfully`
+        });
+    } catch (error) {
+        console.error('Error creating questions from Excel:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+}
+
 
 
 module.exports = {
@@ -342,5 +396,6 @@ module.exports = {
     uploadQuestionImage,
     createQuestionManual,
     downLoadTemplateExcel,
-    createQuestionFromExcel
+    createQuestionFromExcel,
+    createQuestionFromAI
 }

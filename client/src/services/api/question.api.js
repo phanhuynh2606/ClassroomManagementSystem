@@ -14,6 +14,14 @@ const questionAPI = {
   getById: (id) => axiosClient.get(`/admin/questions/${id}`),
   createManual: (data) => axiosClient.post('/admin/questions-manual', data),
   createExcel: (data) => axiosClient.post('/admin/questions-excel', data),
+  createAI: (data) => axiosClient.post('/admin/questions-ai', data),
+  genderAi: (formData) => axiosClient.post('/questions/ai/generate-from-file', formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    }
+  ),
   update: (id, data) => axiosClient.patch(`/admin/questions/${id}`, data),
   delete: (id) => axiosClient.delete(`/admin/questions/${id}`),
   downLoadTemplateExcel: () => axiosClient.get('/admin/download-excel', {
