@@ -32,20 +32,24 @@ import {
   DeleteOutlined,
   EyeOutlined,
   TrophyOutlined,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
+import { useNavigate } from 'react-router-dom';
 
 // Import the new modal components
 import AssignmentCreateModal from './AssignmentCreateModal';
 import QuizCreateModal from './QuizCreateModal';
 import AssignmentGradingModal from './AssignmentGradingModal';
+import SubmissionManagement from './SubmissionManagement';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
 const ClassworkTab = () => {
+  const navigate = useNavigate();
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [createType, setCreateType] = useState('assignment');
   const [form] = Form.useForm();
@@ -57,6 +61,7 @@ const ClassworkTab = () => {
   const [gradingModalVisible, setGradingModalVisible] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [submissionManagementVisible, setSubmissionManagementVisible] = useState(false);
 
   // Mock data for classwork items
   const [classworkItems, setClassworkItems] = useState([
@@ -334,6 +339,15 @@ const ClassworkTab = () => {
     }
   };
 
+  const handleViewAllSubmissions = (assignment) => {
+    // Navigate to assignment detail page
+    navigate(`/teacher/classroom/1/assignment/${assignment.id}`);
+  };
+
+  const handleViewAssignmentDetail = (assignment) => {
+    navigate(`/teacher/classroom/1/assignment/${assignment.id}`);
+  };
+
   const handleSaveGrade = async (gradingData) => {
     try {
       setLoading(true);
@@ -408,6 +422,8 @@ const ClassworkTab = () => {
                         type="text" 
                         icon={<EyeOutlined />}
                         size="small"
+                        onClick={() => handleViewAssignmentDetail(item)}
+                        title="Xem chi tiết"
                       />
                       <Button 
                         type="text" 
@@ -415,15 +431,26 @@ const ClassworkTab = () => {
                         size="small"
                       />
                       {item.type === 'assignment' && (
-                        <Button 
-                          type="text" 
-                          icon={<TrophyOutlined />}
-                          size="small"
-                          onClick={() => handleGradeSubmission(item)}
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          Grade
-                        </Button>
+                        <>
+                          <Button 
+                            type="text" 
+                            icon={<TrophyOutlined />}
+                            size="small"
+                            onClick={() => handleGradeSubmission(item)}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            Grade
+                          </Button>
+                          <Button 
+                            type="text" 
+                            icon={<TeamOutlined />}
+                            size="small"
+                            onClick={() => handleViewAllSubmissions(item)}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            Submissions
+                          </Button>
+                        </>
                       )}
                       <Button 
                         type="text" 
@@ -554,8 +581,8 @@ const ClassworkTab = () => {
               </p>
             </Upload.Dragger>
           </Form.Item>
-                  </Form>
-        </Modal>
+        </Form>
+      </Modal>
 
       {/* Assignment Create Modal */}
       <AssignmentCreateModal
@@ -583,6 +610,14 @@ const ClassworkTab = () => {
         loading={loading}
         assignment={selectedAssignment}
         submission={selectedSubmission}
+      />
+
+      {/* Submission Management Modal */}
+      <SubmissionManagement
+        visible={submissionManagementVisible}
+        onCancel={() => setSubmissionManagementVisible(false)}
+        onBack={() => setSubmissionManagementVisible(false)}
+        assignment={selectedAssignment}
       />
     </div>
   );

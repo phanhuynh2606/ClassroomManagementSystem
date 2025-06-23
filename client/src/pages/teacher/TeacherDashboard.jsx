@@ -37,7 +37,8 @@ import {
   FilePdfOutlined,
   PrinterOutlined,
   MoreOutlined,
-  LineChartOutlined
+  LineChartOutlined,
+  TrophyOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import './teacher.css';
@@ -289,6 +290,14 @@ const TeacherDashboard = () => {
           className="h-12 text-left flex items-center"
         >
           Việc cần làm
+        </Button>
+        <Button 
+          block 
+          icon={<TrophyOutlined />}
+          onClick={() => navigate('/teacher/grading-demo')}
+          className="h-12 text-left flex items-center bg-gradient-to-r from-purple-500 to-blue-600 text-white border-none hover:from-purple-600 hover:to-blue-700"
+        >
+          🎯 Demo Hệ thống Chấm điểm
         </Button>
       </div>
     </Card>

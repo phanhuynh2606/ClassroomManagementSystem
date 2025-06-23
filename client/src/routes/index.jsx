@@ -34,6 +34,8 @@ import TeacherRequestManagement from '../pages/teacher/TeacherRequestManagement'
 import TeacherTodo from '../pages/teacher/TeacherTodo';
 import TeacherMaterials from '../pages/teacher/TeacherMaterials';
 import TeacherSettings from '../pages/teacher/TeacherSettings';
+import AssignmentDetail from '../pages/teacher/AssignmentDetail';
+import GradingSystemDemo from '../pages/teacher/GradingSystemDemo';
 
 // Student Pages
 import StudentProfile from '../pages/student/StudentProfile';
@@ -121,6 +123,7 @@ const AppRouter = () => {
         <Route path="classroom" element={<TeacherClassroomManagement />} />
         <Route path="classroom/:classId" element={<TeacherClassroomDetail />} />
         <Route path="classroom/edit/:classId" element={<EditClassForm />} />
+        <Route path="classroom/:classId/assignment/:assignmentId" element={<AssignmentDetail />} />
 
         {/* Core Features */}
         <Route path="todo" element={<TeacherTodo />} />
@@ -133,6 +136,9 @@ const AppRouter = () => {
         {/* Settings & Profile */}
         <Route path="settings" element={<TeacherSettings />} />
         <Route path="profile" element={<TeacherProfile />} />
+        
+        {/* Demo & Help */}
+        <Route path="grading-demo" element={<GradingSystemDemo />} />
       </Route>
 
       {/* Student Routes */}
