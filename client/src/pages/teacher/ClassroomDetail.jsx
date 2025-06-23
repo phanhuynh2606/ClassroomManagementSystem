@@ -25,9 +25,9 @@ import {
   Col,
   Layout
 } from 'antd';
-import { 
-  EditOutlined, 
-  DeleteOutlined, 
+import {
+  EditOutlined,
+  DeleteOutlined,
   CopyOutlined,
   SearchOutlined,
   PlusOutlined,
@@ -67,6 +67,7 @@ import StreamEmptyState from './components/StreamEmptyState';
 import PeopleTab from './components/StudentList';
 import ClassworkTab from './components/AssignmentList';
 import GradesTab from './components/GradesTab';
+import MaterialList from './components/MaterialList';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -230,7 +231,7 @@ const ClassroomDetail = () => {
     setDeleting(true);
     try {
       await classroomAPI.deleteByTeacher(classId);
-      
+
       message.success('Deletion request sent to admin for approval');
       setDeleteModalVisible(false);
       navigate('/teacher/classroom');
@@ -304,9 +305,9 @@ const ClassroomDetail = () => {
       pending: { status: "processing", text: "Pending Approval" },
       rejected: { status: "error", text: "Rejected" }
     };
-    
+
     const config = statusConfig[status] || statusConfig.inactive;
-    return <Badge status={config.status} text={config.text}/>;
+    return <Badge status={config.status} text={config.text} />;
   };
 
   const StudentListComponent = useMemo(() => (
@@ -391,12 +392,18 @@ const ClassroomDetail = () => {
   const GradesTabComponent = useMemo(() => (
     <GradesTab />
   ), []);
+ 
 
   const tabItems = useMemo(() => [
     {
       key: 'stream',
       label: 'Stream',
       children: StreamTab
+    },
+    {
+      key: 'materials',
+      label: 'Materials', 
+      children: <MaterialList classId={classId} classData={classData} />
     },
     {
       key: 'classwork',
@@ -464,7 +471,7 @@ const ClassroomDetail = () => {
             {getApprovalStatusBadge(classData.status)}
             <Space>
               {classData.status === 'active' && (
-                <Button 
+                <Button
                   icon={<EditOutlined />}
                   onClick={handleEditClass}
                   className="flex items-center hover:text-white hover:bg-blue-600"
@@ -473,7 +480,7 @@ const ClassroomDetail = () => {
                 </Button>
               )}
               {classData.status === 'active' && (
-                <Button 
+                <Button
                   danger
                   icon={<DeleteOutlined />}
                   onClick={handleDeleteClass}
@@ -574,7 +581,7 @@ const ClassroomDetail = () => {
         <div className="py-4">
           <ExclamationCircleOutlined className="text-orange-500 mr-2" />
           <Text>
-            Are you sure you want to delete "{classData.name}"? 
+            Are you sure you want to delete "{classData.name}"?
             This action will require admin approval.
           </Text>
         </div>
