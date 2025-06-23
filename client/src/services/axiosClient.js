@@ -24,7 +24,7 @@ axiosClient.interceptors.response.use(
     const errorCode = error.response?.data?.code;
 
     // If error is 401 and we haven't tried to refresh token yet
-    if (error.response?.status === 401 && !originalRequest._retry && errorCode === 'ACCESS_TOKEN_EXPIRED') {
+    if (error.response?.status === 401 && !originalRequest._retry && (errorCode === 'ACCESS_TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN')) {
       originalRequest._retry = true;
 
       try {
@@ -35,22 +35,22 @@ axiosClient.interceptors.response.use(
         if (newToken) {
           // Update token in localStorage
           localStorage.setItem('token', newToken);
-          
+
           // Update Authorization header for subsequent requests
           axiosClient.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-          
+
           // Update the original request's Authorization header
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          
+
           // Retry the original request
           return axiosClient(originalRequest);
         }
       } catch (refreshError) {
         console.log("Refresh error:", refreshError.response?.data);
-        if(refreshError.response?.data?.code === "REFRESH_TOKEN_EXPIRED" || refreshError.response?.data?.code === "NO_REFRESH_TOKEN"){
-        localStorage.removeItem('token');
-        localStorage.removeItem('persist:root');
-        window.location.href = '/login';
+        if (refreshError.response?.data?.code === "REFRESH_TOKEN_EXPIRED" || refreshError.response?.data?.code === "NO_REFRESH_TOKEN") {
+          localStorage.removeItem('token');
+          localStorage.removeItem('persist:root');
+          window.location.href = '/login';
         }
         // If refresh fails, redirect to login
 

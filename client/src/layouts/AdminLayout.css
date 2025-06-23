@@ -1,4 +1,4 @@
-ant-menu ant-menu-sub ant-menu-inline{
+.ant-menu .ant-menu-sub .ant-menu-inline{
   height: auto;
 }
 .ant-menu.ant-menu-sub.ant-menu-inline{
@@ -9,4 +9,107 @@ ant-menu ant-menu-sub ant-menu-inline{
 .ant-menu-item-selected a{
   background-color: #1487f3b0!important;
   
+}
+/* Enhanced Glass-morphism Menu Styling */
+.ant-menu.ant-menu-sub.ant-menu-inline {
+  height: auto !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  /* margin: 4px 2px!important; */
+  /* margin-left: 5px!important; */
+}
+.ant-menu-item {
+  /* margin: 4px 8px !important; */
+  border-radius: 8px !important;
+  /* padding-left: 36px!important; */
+  transition: all 0.3s ease !important;
+  background: transparent !important;
+}
+
+.ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+}
+.ant-menu-item-selected {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%) !important;
+  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.3);
+  transform: translateX(-2px);
+}
+.ant-menu-item-selected a,
+.ant-menu-item-selected .ant-menu-title-content {
+  color: white !important;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+/* Submenu Styling */
+.ant-menu-submenu-title {
+  /* margin: 4px 8px !important; */
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+.ant-menu-submenu-title:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  transform: translateX(4px);
+}
+/* Menu Icons */
+.ant-menu-item .anticon,
+.ant-menu-submenu-title .anticon {
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+}
+.ant-menu-item:hover .anticon,
+.ant-menu-submenu-title:hover .anticon {
+  color: #f1f1f1;
+  transform: scale(1.1);
+}
+
+.ant-menu-item-selected .anticon {
+  color: white !important;
+  transform: scale(1.1);
+}
+
+/* Logo Animation */
+.demo-logo-vertical img {
+  transition: all 0.3s ease;
+}
+
+.demo-logo-vertical:hover img {
+  transform: scale(1.05);
+  filter: brightness(1.3) contrast(1.2);
+}
+/* Menu Text Styling */
+.ant-menu-item .ant-menu-title-content,
+.ant-menu-submenu-title .ant-menu-title-content {
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+}
+
+.ant-menu-item:hover .ant-menu-title-content,
+.ant-menu-submenu-title:hover .ant-menu-title-content {
+  color: #40a9ff;
+  text-shadow: 0 2px 4px rgba(64, 169, 255, 0.3);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .ant-layout-sider {
+    background: rgba(0, 21, 41, 0.95) !important;
+  }
+}
+
+/* Animation for menu expansion */
+.ant-menu-submenu .ant-menu-sub {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 8px;
+}
+
+/* Enhanced focus states */
+.ant-menu-item:focus,
+.ant-menu-submenu-title:focus {
+  background: rgba(255, 255, 255, 0.2) !important;
+  outline: 2px solid rgba(24, 144, 255, 0.5);
+  outline-offset: 2px;
 }

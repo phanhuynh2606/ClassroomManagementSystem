@@ -19,7 +19,7 @@ import UserManagement from '../pages/admin/components/UserManagement';
 import ClassroomManagement from '../pages/admin/components/ClassroomManagement';
 import AdminClassroomDetail from '../pages/admin/components/AdminClassroomDetail';
 import QuizManagement from '../pages/admin/components/QuizManagement';
-import QuestionManagement from '../pages/admin/components/QuestionManagement';
+import QuestionManagement from '../pages/admin/components/question/QuestionManagement';
 import NotificationManagement from '../pages/admin/components/NotificationManagement';
 import AdminRequestManagement from '../pages/admin/components/AdminRequestManagement';
 import AdminProfile from '../pages/admin/AdminProfile';
@@ -31,12 +31,19 @@ import TeacherClassroomDetail from '../pages/teacher/ClassroomDetail';
 import EditClassForm from '../pages/teacher/EditClassForm';
 import TeacherProfile from '../pages/teacher/TeacherProfile';
 import TeacherRequestManagement from '../pages/teacher/TeacherRequestManagement';
+import TeacherTodo from '../pages/teacher/TeacherTodo';
+import TeacherMaterials from '../pages/teacher/TeacherMaterials';
+import TeacherSettings from '../pages/teacher/TeacherSettings';
 
 // Student Pages
 import StudentProfile from '../pages/student/StudentProfile';
 import StudentClassroomManagement from '../pages/student/StudentClassroomManagement';
 import StudentDashboard from '../pages/student/StudentDashboard';
 import StudentClassroomDetail from '../pages/student/StudentClassroomDetail';
+import StudentAssignmentList from '../pages/student/StudentAssignmentList';
+import StudentAssignmentDetail from '../pages/student/StudentAssignmentDetail';
+import StudentQuizList from '../pages/student/StudentQuizList';
+import QuizPage from '../pages/student/QuizPage';
 // import MyClassess from '../pages/student/MyCourses';
 // import TakeQuiz from '../pages/student/TakeQuiz';
 // import MyGrades from '../pages/student/MyGrades';
@@ -115,20 +122,17 @@ const AppRouter = () => {
         <Route path="classroom/:classId" element={<TeacherClassroomDetail />} />
         <Route path="classroom/edit/:classId" element={<EditClassForm />} />
 
-        {/* Request Management */}
+        {/* Core Features */}
+        <Route path="todo" element={<TeacherTodo />} />
+        <Route path="materials" element={<TeacherMaterials />} />
+
+        {/* Management */}
         <Route path="requests" element={<TeacherRequestManagement />} />
-
-        {/* Profile */}
-        <Route path="profile" element={<TeacherProfile />} />
-
-        {/* Upcoming Features */}
-        <Route path="quizzes" element={<ComingSoon title="Quản lý Bài kiểm tra" />} />
-        <Route path="assignments" element={<ComingSoon title="Quản lý Bài tập" />} />
-        <Route path="grades" element={<ComingSoon title="Chấm điểm" />} />
-        <Route path="reports" element={<ComingSoon title="Báo cáo & Thống kê" />} />
-        <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
-        <Route path="students" element={<ComingSoon title="Quản lý Học sinh" />} />
         <Route path="notifications" element={<ComingSoon title="Thông báo" />} />
+
+        {/* Settings & Profile */}
+        <Route path="settings" element={<TeacherSettings />} />
+        <Route path="profile" element={<TeacherProfile />} />
       </Route>
 
       {/* Student Routes */}
@@ -146,7 +150,10 @@ const AppRouter = () => {
         <Route path="classrooms" element={<StudentClassroomManagement />} />
         <Route path="classroom/:classroomId" element={<StudentClassroomDetail />} />
         {/* Upcoming Student Features */}
-        <Route path="assignments" element={<ComingSoon title="Bài tập" />} />
+        <Route path="assignments" element={<StudentAssignmentList />} />
+        <Route path="assignments/:assignmentId" element={<StudentAssignmentDetail/>} />
+        <Route path="quizzes" element={<StudentQuizList/>} />
+        <Route path="quizzes/:quizId" element={<QuizPage/>} />
         <Route path="grades" element={<ComingSoon title="Điểm số" />} />
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
       </Route>

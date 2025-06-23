@@ -44,12 +44,12 @@ const StudentLayout = () => {
       label: 'My Classrooms',
       onClick: () => navigate('/student/classrooms'),
     },
-    {
-      key: 'assignments',
-      icon: <FileTextOutlined />,
-      label: 'Assignments',
-      onClick: () => navigate('/student/assignments'),
-    },
+    // {
+    //   key: 'assignments',
+    //   icon: <FileTextOutlined />,
+    //   label: 'Assignments',
+    //   onClick: () => navigate('/student/assignments'),
+    // },
     {
       key: 'grades',
       icon: <CheckSquareOutlined />,

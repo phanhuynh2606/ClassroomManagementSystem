@@ -7,13 +7,10 @@ import {
   TeamOutlined,
   FileTextOutlined,
   CheckSquareOutlined,
-  LineChartOutlined,
   LogoutOutlined,
-  UserOutlined,
-  CalendarOutlined,
   BellOutlined,
   BookOutlined,
-  BarChartOutlined
+  SettingOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -42,14 +39,11 @@ const TeacherLayout = () => {
     const path = location.pathname;
     if (path === '/teacher' || path === '/teacher/dashboard') return 'dashboard';
     if (path.startsWith('/teacher/classroom')) return 'classrooms';
-    if (path.startsWith('/teacher/quizzes')) return 'quizzes';
-    if (path.startsWith('/teacher/assignments')) return 'assignments';
-    if (path.startsWith('/teacher/grades')) return 'grades';
-    if (path.startsWith('/teacher/students')) return 'students';
-    if (path.startsWith('/teacher/reports')) return 'reports';
-    if (path.startsWith('/teacher/schedule')) return 'schedule';
+    if (path.startsWith('/teacher/todo')) return 'todo';
+    if (path.startsWith('/teacher/materials')) return 'materials';
     if (path.startsWith('/teacher/requests')) return 'requests';
     if (path.startsWith('/teacher/notifications')) return 'notifications';
+    if (path.startsWith('/teacher/settings')) return 'settings';
     if (path.startsWith('/teacher/profile')) return 'profile';
     return 'dashboard';
   };
@@ -65,33 +59,27 @@ const TeacherLayout = () => {
       type: 'divider',
     },
     {
-      key: 'teaching',
+      key: 'core',
       label: 'Giảng dạy',
       type: 'group',
     },
     {
       key: 'classrooms',
       icon: <TeamOutlined />,
-      label: 'Quản lý lớp học',
+      label: 'Lớp học',
       onClick: () => navigate('/teacher/classroom'),
     },
     {
-      key: 'assignments',
+      key: 'todo',
+      icon: <CheckSquareOutlined />,
+      label: 'Việc cần làm',
+      onClick: () => navigate('/teacher/todo'),
+    },
+    {
+      key: 'materials',
       icon: <BookOutlined />,
-      label: 'Bài tập',
-      onClick: () => navigate('/teacher/assignments'),
-    },
-    {
-      key: 'quizzes',
-      icon: <FileTextOutlined />,
-      label: 'Bài kiểm tra',
-      onClick: () => navigate('/teacher/quizzes'),
-    },
-    {
-      key: 'grades',
-      icon: <LineChartOutlined />,
-      label: 'Chấm điểm',
-      onClick: () => navigate('/teacher/grades'),
+      label: 'Thư viện tài liệu',
+      onClick: () => navigate('/teacher/materials'),
     },
     {
       type: 'divider',
@@ -102,37 +90,25 @@ const TeacherLayout = () => {
       type: 'group',
     },
     {
-      key: 'students',
-      icon: <UserOutlined />,
-      label: 'Học sinh',
-      onClick: () => navigate('/teacher/students'),
-    },
-    {
-      key: 'schedule',
-      icon: <CalendarOutlined />,
-      label: 'Lịch học',
-      onClick: () => navigate('/teacher/schedule'),
-    },
-    {
-      key: 'reports',
-      icon: <BarChartOutlined />,
-      label: 'Báo cáo',
-      onClick: () => navigate('/teacher/reports'),
-    },
-    {
       key: 'requests',
-      icon: <CheckSquareOutlined />,
-      label: 'Quản lý yêu cầu',
+      icon: <FileTextOutlined />,
+      label: 'Yêu cầu Admin',
       onClick: () => navigate('/teacher/requests'),
-    },
-    {
-      type: 'divider',
     },
     {
       key: 'notifications',
       icon: <BellOutlined />,
       label: 'Thông báo',
       onClick: () => navigate('/teacher/notifications'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: 'Cài đặt',
+      onClick: () => navigate('/teacher/settings'),
     },
   ];
 

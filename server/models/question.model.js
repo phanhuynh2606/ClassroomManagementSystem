@@ -130,7 +130,7 @@ questionSchema.index({ type: 1, difficulty: 1, isActive: 1 });
 questionSchema.index({ createdBy: 1, createdAt: -1 });
 questionSchema.index({ tags: 1 });
 
-questionSchema.methods.canBeUsedInClassroom = function(classroomId) {
+questionSchema.methods.canBeUsedInClassroom = function (classroomId) {
   if (this.usedInClassrooms.includes(classroomId)) {
     return false;
   }
@@ -145,7 +145,7 @@ questionSchema.methods.canBeUsedInClassroom = function(classroomId) {
   return true;
 };
 
-questionSchema.methods.addUsage = function(quizId, classroomId) {
+questionSchema.methods.addUsage = function (quizId, classroomId) {
   this.usageHistory.push({
     quiz: quizId,
     classroom: classroomId
@@ -156,7 +156,7 @@ questionSchema.methods.addUsage = function(quizId, classroomId) {
   return this.save();
 };
 
-questionSchema.methods.updateStatistics = function(isCorrect) {
+questionSchema.methods.updateStatistics = function (isCorrect) {
   this.statistics.totalAttempts += 1;
   if (isCorrect) {
     this.statistics.correctAttempts += 1;

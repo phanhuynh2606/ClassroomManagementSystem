@@ -165,8 +165,9 @@ const createMaterialUploadMiddleware = (folderPath = 'materials', maxCount = 1) 
 
 // Create different middleware instances for different use cases
 const profileUpload = createUploadMiddleware('profiles', 1);
-
+const questionImageUpload = createUploadMiddleware('questions', 1);
 module.exports = {
   profileUpload,
+  questionImageUpload,
   createUploadMiddleware // Export factory function for custom use cases
 };

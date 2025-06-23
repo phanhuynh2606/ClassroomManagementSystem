@@ -1,22 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  Tabs,
-  Button,
-  Table,
-  Input,
-  Space,
-  Typography,
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { 
+  Card, 
+  Tabs, 
+  Button, 
+  Table, 
+  Input, 
+  Space, 
+  Typography, 
   Badge,
   message,
   Tooltip,
   Modal,
   Spin,
   Alert,
+  Avatar,
+  Divider,
   Form,
-  Select,
+  Upload,
   Tag,
-  Switch
+  Empty,
+  Timeline,
+  Select,
+  Row,
+  Col,
+  Layout
 } from 'antd';
 import {
   EditOutlined,
@@ -27,30 +34,141 @@ import {
   ArrowLeftOutlined,
   ExclamationCircleOutlined,
   UserOutlined,
-  InboxOutlined,
-  UploadOutlined
+  SendOutlined,
+  PaperClipOutlined,
+  ClockCircleOutlined,
+  BookOutlined,
+  BellOutlined,
+  MessageOutlined,
+  FileTextOutlined,
+  CalendarOutlined,
+  VideoCameraOutlined,
+  LinkOutlined,
+  BoldOutlined,
+  ItalicOutlined,
+  UnderlineOutlined,
+  UnorderedListOutlined,
+  OrderedListOutlined,
+  FormatPainterOutlined,
+  MoreOutlined,
+  SettingOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import classroomAPI from '../../services/api/classroom.api';
 import './teacher.css';
-import Dragger from 'antd/es/upload/Dragger';
-import TextArea from 'antd/es/input/TextArea';
+
+// Import components
+import StreamHeader from './components/StreamHeader';
+import StreamSidebar from './components/StreamSidebar';
+import AnnouncementEditor from './components/AnnouncementEditor';
+import StreamItem from './components/StreamItem';
+import StreamEmptyState from './components/StreamEmptyState';
+import PeopleTab from './components/StudentList';
+import ClassworkTab from './components/AssignmentList';
+import GradesTab from './components/GradesTab';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
+const { TextArea } = Input;
+const { Option } = Select;
+const { Sider, Content } = Layout;
 
 const ClassroomDetail = () => {
   const { classId } = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('students');
+  const [activeTab, setActiveTab] = useState('stream');
   const [searchText, setSearchText] = useState('');
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [studentsLoading, setStudentsLoading] = useState(false);
-
+  const [postingAnnouncement, setPostingAnnouncement] = useState(false);
+  const [announcementForm] = Form.useForm();
+  const [richTextContent, setRichTextContent] = useState('');
+  const [targetAudience, setTargetAudience] = useState('all_students');
+  const [showEditor, setShowEditor] = useState(false);
+  const [editorFocused, setEditorFocused] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  
   const [classData, setClassData] = useState(null);
   const [studentsData, setStudentsData] = useState([]);
+  const [streamData, setStreamData] = useState([
+    {
+      id: '1',
+      type: 'announcement',
+      title: 'Welcome to the new semester!',
+      content: 'Dear students, welcome to our Programming Fundamentals class. Please check the syllabus and prepare for our first assignment.',
+      author: {
+        name: 'John Smith',
+        avatar: null,
+        role: 'Teacher'
+      },
+      createdAt: '2024-01-15T10:30:00Z',
+      attachments: [],
+      comments: [
+        {
+          id: 'c1',
+          author: 'Alice Johnson',
+          content: 'Thank you for the warm welcome!',
+          createdAt: '2024-01-15T11:00:00Z'
+        }
+      ]
+    },
+    {
+      id: '2',
+      type: 'assignment',
+      title: 'Assignment 1: Basic Programming Concepts',
+      content: 'Complete the exercises in Chapter 1-3. Due date: January 25th, 2024.',
+      author: {
+        name: 'John Smith',
+        avatar: null,
+        role: 'Teacher'
+      },
+      createdAt: '2024-01-16T14:20:00Z',
+      dueDate: '2024-01-25T23:59:00Z',
+      attachments: [
+        {
+          name: 'assignment1_template.pdf',
+          size: '245 KB'
+        }
+      ],
+      comments: []
+    },
+    {
+      id: '3',
+      type: 'material',
+      title: 'Lecture Slides - Week 1',
+      content: 'Here are the slides from our first week covering introduction to programming.',
+      author: {
+        name: 'John Smith',
+        avatar: null,
+        role: 'Teacher'
+      },
+      createdAt: '2024-01-14T09:15:00Z',
+      attachments: [
+        {
+          name: 'week1_slides.pptx',
+          size: '1.2 MB'
+        }
+      ],
+      comments: []
+    },
+    {
+      id: '4',
+      type: 'activity',
+      title: 'Student Alice Johnson joined the class',
+      content: '',
+      author: {
+        name: 'System',
+        avatar: null,
+        role: 'System'
+      },
+      createdAt: '2024-01-13T16:45:00Z',
+      attachments: [],
+      comments: []
+    }
+  ]);
 
   useEffect(() => {
     if (classId) {
@@ -93,22 +211,22 @@ const ClassroomDetail = () => {
     }
   };
 
-  const handleCopyClassCode = () => {
+  const handleCopyClassCode = useCallback(() => {
     if (classData?.code) {
       navigator.clipboard.writeText(classData.code);
       message.success('Class code copied to clipboard');
     }
-  };
+  }, [classData?.code]);
 
-  const handleEditClass = () => {
+  const handleEditClass = useCallback(() => {
     navigate(`/teacher/classroom/edit/${classId}`);
-  };
+  }, [navigate, classId]);
 
-  const handleDeleteClass = () => {
+  const handleDeleteClass = useCallback(() => {
     setDeleteModalVisible(true);
-  };
+  }, []);
 
-  const confirmDeleteClass = async () => {
+  const confirmDeleteClass = useCallback(async () => {
     setDeleting(true);
     try {
       await classroomAPI.deleteByTeacher(classId);
@@ -121,11 +239,60 @@ const ClassroomDetail = () => {
     } finally {
       setDeleting(false);
     }
-  };
+  }, [classId, navigate]);
 
-  const handleCancelDelete = () => {
+  const handleCancelDelete = useCallback(() => {
     setDeleteModalVisible(false);
-  };
+  }, []);
+
+  const handlePostAnnouncement = useCallback(async (values) => {
+    setPostingAnnouncement(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newAnnouncement = {
+        id: Date.now().toString(),
+        type: 'announcement',
+        title: values.title || 'Class Announcement',
+        content: richTextContent || values.content,
+        author: {
+          name: 'John Smith', // Should be current teacher's name
+          avatar: null,
+          role: 'Teacher'
+        },
+        createdAt: new Date().toISOString(),
+        attachments: attachments,
+        comments: []
+      };
+      
+      setStreamData(prev => [newAnnouncement, ...prev]);
+      announcementForm.resetFields();
+      setRichTextContent('');
+      setShowEditor(false);
+      setAttachments([]);
+      message.success('Announcement posted successfully!');
+    } catch (error) {
+      message.error('Failed to post announcement');
+    } finally {
+      setPostingAnnouncement(false);
+    }
+  }, [richTextContent, attachments, announcementForm]);
+
+  const formatTimeAgo = useCallback((dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
+  }, []);
 
   const getApprovalStatusBadge = (status) => {
     const statusConfig = {
@@ -142,688 +309,111 @@ const ClassroomDetail = () => {
     return <Badge status={config.status} text={config.text} />;
   };
 
-  const studentColumns = [
-    {
-      title: 'Student ID',
-      dataIndex: ['student', '_id'],
-      key: 'studentId',
-      width: 120,
-      render: (id) => id?.slice(-6)?.toUpperCase() || 'N/A',
-    },
-    {
-      title: 'Full Name',
-      dataIndex: ['student', 'fullName'],
-      key: 'fullName',
-      filteredValue: searchText ? [searchText] : null,
-      onFilter: (value, record) =>
-        record.student?.fullName?.toLowerCase().includes(value.toLowerCase()) || false,
-    },
-    {
-      title: 'Email',
-      dataIndex: ['student', 'email'],
-      key: 'email',
-    },
-    {
-      title: 'Average Score',
-      dataIndex: 'averageScore',
-      key: 'averageScore',
-      width: 140,
-      render: (score) => (
-        <Badge
-          color={score >= 80 ? 'green' : score >= 65 ? 'orange' : 'red'}
-          text={`${score}/100`}
-        />
-      ),
-    },
-    {
-      title: 'Submissions',
-      dataIndex: 'submissionCount',
-      key: 'submissionCount',
-      width: 130,
-    },
-    {
-      title: 'Joined Date',
-      dataIndex: 'joinedAt',
-      key: 'joinedAt',
-      width: 130,
-      render: (date) => new Date(date).toLocaleDateString(),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status) => (
-        <Badge
-          color={status === 'active' ? 'green' : 'red'}
-          text={status?.toUpperCase() || 'UNKNOWN'}
-        />
-      ),
-    },
-  ];
+  const StudentListComponent = useMemo(() => (
+    <PeopleTab 
+      studentsData={studentsData}
+      studentsLoading={studentsLoading}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      classData={classData}
+      handleCopyClassCode={handleCopyClassCode}
+    />
+  ), [studentsData, studentsLoading, searchText, classData, handleCopyClassCode]);
 
-  const StudentList = () => (
+  const AssignmentListComponent = useMemo(() => (
+    <ClassworkTab />
+  ), []);
+
+  const StreamTab = useMemo(() => (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <Search
-          placeholder="Search students..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          onSearch={setSearchText}
-          style={{ width: 300 }}
-          prefix={<SearchOutlined />}
-        />
-        <div className="flex items-center gap-4">
-          <Text type="secondary">
-            Total: {studentsData.length} students
-          </Text>
-          {classData?.code && (
-            <Button
-              icon={<CopyOutlined />}
-              onClick={handleCopyClassCode}
-            >
-              Copy Class Code: {classData.code}
-            </Button>
-          )}
-        </div>
-      </div>
+      <StreamHeader classData={classData} />
 
-      <Table
-        columns={studentColumns}
-        dataSource={studentsData}
-        rowKey={(record) => record.student?._id || record._id}
-        loading={studentsLoading}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) =>
-            `${range[0]}-${range[1]} of ${total} students`,
-        }}
-        locale={{
-          emptyText: studentsLoading ? 'Loading...' : 'No students enrolled yet'
-        }}
-      />
-    </div>
-  );
-
-  const AssignmentList = () => (
-    <div className="text-center py-12">
-      <Text type="secondary" className="text-lg">
-        Assignment management feature is under development
-      </Text>
-    </div>
-  );
-  const MaterialList = () => {
-    const [materialsData, setMaterialsData] = useState([]);
-    const [materialsLoading, setMaterialsLoading] = useState(false);
-    const [materialSearchText, setMaterialSearchText] = useState('');
-    const [materialDeleteModalVisible, setMaterialDeleteModalVisible] = useState(false);
-    const [selectedMaterial, setSelectedMaterial] = useState(null);
-    const [deletingMaterial, setDeletingMaterial] = useState(false);
-
-    // Create/Edit Modal States
-    const [createEditModalVisible, setCreateEditModalVisible] = useState(false);
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [materialForm] = Form.useForm();
-    const [submittingMaterial, setSubmittingMaterial] = useState(false);
-    const [fileList, setFileList] = useState([]);
-    const [tags, setTags] = useState([]);
-    const [inputTag, setInputTag] = useState('');
-
-    useEffect(() => {
-      fetchMaterialsData();
-    }, []);
-
-    const fetchMaterialsData = async () => {
-      setMaterialsLoading(true);
-      try {
-        // const response = await classroomAPI.getMaterials(classId);
-        // Mock data for demonstration
-        const mockMaterials = [
-          {
-            _id: '1',
-            title: 'Introduction to React Hooks',
-            description: 'Comprehensive guide to React Hooks',
-            type: 'pdf',
-            fileSize: 2500000,
-            fileType: 'application/pdf',
-            downloadCount: 45,
-            viewCount: 128,
-            isPublic: true,
-            tags: ['react', 'hooks', 'javascript'],
-            createdAt: new Date('2024-01-15'),
-            isActive: true
-          },
-          {
-            _id: '2',
-            title: 'JavaScript ES6 Features',
-            description: 'Modern JavaScript features and syntax',
-            type: 'slide',
-            fileSize: 1800000,
-            fileType: 'application/vnd.ms-powerpoint',
-            downloadCount: 32,
-            viewCount: 89,
-            isPublic: false,
-            tags: ['javascript', 'es6', 'modern'],
-            createdAt: new Date('2024-01-20'),
-            isActive: true
-          },
-          {
-            _id: '3',
-            title: 'Web Development Tutorial',
-            description: 'Complete web development course',
-            type: 'video',
-            fileSize: 125000000,
-            fileType: 'video/mp4',
-            downloadCount: 78,
-            viewCount: 245,
-            isPublic: true,
-            tags: ['web', 'tutorial', 'fullstack'],
-            createdAt: new Date('2024-01-25'),
-            isActive: true
-          }
-        ];
-        setMaterialsData(mockMaterials);
-      } catch (error) {
-        console.error('Error fetching materials:', error);
-        message.error('Failed to fetch materials');
-      } finally {
-        setMaterialsLoading(false);
-      }
-    };
-
-    const formatFileSize = (bytes) => {
-      if (bytes === 0) return '0 Bytes';
-      const k = 1024;
-      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
-
-    const getTypeIcon = (type) => {
-      const icons = {
-        pdf: '📄',
-        slide: '📊',
-        video: '🎥',
-        other: '📁'
-      };
-      return icons[type] || '📁';
-    };
-
-    const getTypeBadgeColor = (type) => {
-      const colors = {
-        pdf: 'red',
-        slide: 'blue',
-        video: 'green',
-        other: 'default'
-      };
-      return colors[type] || 'default';
-    };
-
-    const handleCreateMaterial = () => {
-      setIsEditMode(false);
-      setSelectedMaterial(null);
-      setTags([]);
-      setFileList([]);
-      materialForm.resetFields();
-      setCreateEditModalVisible(true);
-    };
-
-    const handleEditMaterial = (material) => {
-      setIsEditMode(true);
-      setSelectedMaterial(material);
-      setTags(material.tags || []);
-      setFileList([]);
-      materialForm.setFieldsValue({
-        title: material.title,
-        description: material.description,
-        type: material.type,
-        isPublic: material.isPublic
-      });
-      setCreateEditModalVisible(true);
-    };
-
-    const handleDeleteMaterial = (material) => {
-      setSelectedMaterial(material);
-      setMaterialDeleteModalVisible(true);
-    };
-
-    const confirmDeleteMaterial = async () => {
-      setDeletingMaterial(true);
-      try {
-        // await classroomAPI.deleteMaterial(selectedMaterial._id);
-        message.success('Material deleted successfully');
-        setMaterialDeleteModalVisible(false);
-        setSelectedMaterial(null);
-        fetchMaterialsData(); // Refresh data
-      } catch (error) {
-        message.error('Failed to delete material');
-      } finally {
-        setDeletingMaterial(false);
-      }
-    };
-
-    const handleDownloadMaterial = async (material) => {
-      try {
-        // await classroomAPI.downloadMaterial(material._id);
-        message.success('Download started');
-        // Update download count
-        setMaterialsData(prev =>
-          prev.map(m =>
-            m._id === material._id
-              ? { ...m, downloadCount: m.downloadCount + 1 }
-              : m
-          )
-        );
-      } catch (error) {
-        message.error('Download failed');
-      }
-    };
-
-    const handleSubmitMaterial = async (values) => {
-      if (!isEditMode && fileList.length === 0) {
-        message.error('Please upload a file');
-        return;
-      }
-
-      setSubmittingMaterial(true);
-      try {
-        const formData = new FormData();
-        formData.append('title', values.title);
-        formData.append('description', values.description || '');
-        formData.append('type', values.type);
-        formData.append('isPublic', values.isPublic);
-        formData.append('tags', JSON.stringify(tags));
-        formData.append('classroom', classId);
-
-        if (fileList.length > 0) {
-          formData.append('file', fileList[0].originFileObj);
-        }
-
-        if (isEditMode) {
-          // await classroomAPI.updateMaterial(selectedMaterial._id, formData);
-          message.success('Material updated successfully');
-        } else {
-          // await classroomAPI.createMaterial(formData);
-          message.success('Material uploaded successfully');
-        }
-
-        setCreateEditModalVisible(false);
-        fetchMaterialsData(); // Refresh data
-      } catch (error) {
-        message.error(isEditMode ? 'Failed to update material' : 'Failed to upload material');
-      } finally {
-        setSubmittingMaterial(false);
-      }
-    };
-
-    const handleCancelCreateEdit = () => {
-      setCreateEditModalVisible(false);
-      setSelectedMaterial(null);
-      setTags([]);
-      setFileList([]);
-      materialForm.resetFields();
-    };
-
-    const handleTagAdd = () => {
-      if (inputTag && !tags.includes(inputTag)) {
-        setTags([...tags, inputTag]);
-        setInputTag('');
-      }
-    };
-
-    const handleTagRemove = (tagToRemove) => {
-      setTags(tags.filter(tag => tag !== tagToRemove));
-    };
-
-    const uploadProps = {
-      name: 'file',
-      multiple: false,
-      fileList: fileList,
-      beforeUpload: (file) => {
-        setFileList([file]);
-        return false; // Prevent auto upload
-      },
-      onRemove: () => {
-        setFileList([]);
-      }
-    };
-
-    const materialColumns = [
-      {
-        title: 'Title',
-        dataIndex: 'title',
-        key: 'title',
-        filteredValue: materialSearchText ? [materialSearchText] : null,
-        onFilter: (value, record) =>
-          record.title?.toLowerCase().includes(value.toLowerCase()) ||
-          record.description?.toLowerCase().includes(value.toLowerCase()) ||
-          record.tags?.some(tag => tag.toLowerCase().includes(value.toLowerCase())),
-        render: (title, record) => (
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{getTypeIcon(record.type)}</span>
-            <div>
-              <div className="font-medium">{title}</div>
-              {record.description && (
-                <div className="text-gray-500 text-sm">{record.description}</div>
-              )}
-            </div>
-          </div>
-        ),
-      },
-      {
-        title: 'Type',
-        dataIndex: 'type',
-        key: 'type',
-        width: 100,
-        render: (type) => (
-          <Badge
-            color={getTypeBadgeColor(type)}
-            text={type.toUpperCase()}
+      <Row gutter={24}>
+        {/* Left Sidebar */}
+        <Col xs={24} lg={6}>
+          <StreamSidebar 
+            classData={classData} 
+            handleCopyClassCode={handleCopyClassCode} 
           />
-        ),
-      },
-      {
-        title: 'File Size',
-        dataIndex: 'fileSize',
-        key: 'fileSize',
-        width: 100,
-        render: (size) => formatFileSize(size),
-      },
-      {
-        title: 'Downloads',
-        dataIndex: 'downloadCount',
-        key: 'downloadCount',
-        width: 100,
-        sorter: (a, b) => a.downloadCount - b.downloadCount,
-        render: (count) => (
-          <span className="text-blue-600 font-medium">{count}</span>
-        ),
-      },
-      {
-        title: 'Views',
-        dataIndex: 'viewCount',
-        key: 'viewCount',
-        width: 100,
-        sorter: (a, b) => a.viewCount - b.viewCount,
-        render: (count) => (
-          <span className="text-green-600 font-medium">{count}</span>
-        ),
-      },
-      {
-        title: 'Visibility',
-        dataIndex: 'isPublic',
-        key: 'isPublic',
-        width: 100,
-        render: (isPublic) => (
-          <Badge
-            color={isPublic ? 'green' : 'orange'}
-            text={isPublic ? 'Public' : 'Private'}
-          />
-        ),
-      },
-      {
-        title: 'Tags',
-        dataIndex: 'tags',
-        key: 'tags',
-        width: 150,
-        render: (tags) => (
-          <div className="flex flex-wrap gap-1">
-            {tags?.slice(0, 2).map(tag => (
-              <Badge key={tag} color="blue" text={tag} />
-            ))}
-            {tags?.length > 2 && (
-              <Tooltip title={tags.slice(2).join(', ')}>
-                <Badge color="gray" text={`+${tags.length - 2}`} />
-              </Tooltip>
-            )}
-          </div>
-        ),
-      },
-      {
-        title: 'Created',
-        dataIndex: 'createdAt',
-        key: 'createdAt',
-        width: 120,
-        sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
-        render: (date) => new Date(date).toLocaleDateString(),
-      },
-      {
-        title: 'Actions',
-        key: 'actions',
-        width: 120,
-        render: (_, record) => (
-          <Space>
-            <Tooltip title="Download">
-              <Button
-                size="small"
-                icon={<CopyOutlined />}
-                onClick={() => handleDownloadMaterial(record)}
-              />
-            </Tooltip>
-            <Tooltip title="Edit">
-              <Button
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => handleEditMaterial(record)}
-              />
-            </Tooltip>
-            <Tooltip title="Delete">
-              <Button
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handleDeleteMaterial(record)}
-              />
-            </Tooltip>
-          </Space>
-        ),
-      },
-    ];
+        </Col>
 
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <Search
-            placeholder="Search materials, descriptions, tags..."
-            value={materialSearchText}
-            onChange={(e) => setMaterialSearchText(e.target.value)}
-            onSearch={setMaterialSearchText}
-            style={{ width: 400 }}
-            prefix={<SearchOutlined />}
-          />
-          <div className="flex items-center gap-4">
-            <Text type="secondary">
-              Total: {materialsData.length} materials
-            </Text>
-            {classData?.status === 'active' && (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreateMaterial}
-              >
-                Upload Material
-              </Button>
-            )}
-          </div>
-        </div>
+        {/* Main Content */}
+        <Col xs={24} lg={18}>
+          <div className="space-y-6">
+            {/* Announcement Editor */}
+            <AnnouncementEditor
+              showEditor={showEditor}
+              setShowEditor={setShowEditor}
+              richTextContent={richTextContent}
+              setRichTextContent={setRichTextContent}
+              targetAudience={targetAudience}
+              setTargetAudience={setTargetAudience}
+              attachments={attachments}
+              setAttachments={setAttachments}
+              handlePostAnnouncement={handlePostAnnouncement}
+              postingAnnouncement={postingAnnouncement}
+              announcementForm={announcementForm}
+            />
 
-        <Table
-          columns={materialColumns}
-          dataSource={materialsData}
-          rowKey="_id"
-          loading={materialsLoading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} of ${total} materials`,
-          }}
-          locale={{
-            emptyText: materialsLoading ? 'Loading...' : 'No materials uploaded yet'
-          }}
-        />
-
-        {/* Create/Edit Material Modal */}
-        <Modal
-          title={isEditMode ? 'Edit Material' : 'Upload New Material'}
-          open={createEditModalVisible}
-          onCancel={handleCancelCreateEdit}
-          footer={null}
-          width={600}
-        >
-          <Form
-            form={materialForm}
-            layout="vertical"
-            onFinish={handleSubmitMaterial}
-            initialValues={{ isPublic: false, type: 'pdf' }}
-          >
-            <Form.Item
-              name="title"
-              label="Title"
-              rules={[{ required: true, message: 'Please enter material title' }]}
-            >
-              <Input placeholder="Enter material title" />
-            </Form.Item>
-
-            <Form.Item
-              name="description"
-              label="Description"
-            >
-              <TextArea
-                rows={3}
-                placeholder="Enter material description (optional)"
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="type"
-              label="Material Type"
-              rules={[{ required: true, message: 'Please select material type' }]}
-            >
-              <Select placeholder="Select material type">
-                <Option value="pdf">PDF Document</Option>
-                <Option value="slide">Presentation Slides</Option>
-                <Option value="video">Video</Option>
-                <Option value="other">Other</Option>
-              </Select>
-            </Form.Item>
-
-            {!isEditMode && (
-              <Form.Item
-                label="Upload File"
-                required
-              >
-                <Dragger {...uploadProps}>
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined />
-                  </p>
-                  <p className="ant-upload-text">Click or drag file to this area to upload</p>
-                  <p className="ant-upload-hint">
-                    Support for PDF, PowerPoint, Videos and other document formats
-                  </p>
-                </Dragger>
-              </Form.Item>
-            )}
-
-            <Form.Item label="Tags">
-              <div className="mb-2">
-                <Input
-                  placeholder="Add tag"
-                  value={inputTag}
-                  onChange={(e) => setInputTag(e.target.value)}
-                  onPressEnter={handleTagAdd}
-                  style={{ width: 'calc(100% - 80px)', marginRight: 8 }}
+            {/* Stream Items */}
+            {streamData.length === 0 ? (
+              <StreamEmptyState />
+            ) : (
+              streamData.map((item) => (
+                <StreamItem 
+                  key={item.id} 
+                  item={item} 
+                  formatTimeAgo={formatTimeAgo} 
                 />
-                <Button onClick={handleTagAdd}>Add</Button>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {tags.map(tag => (
-                  <Tag
-                    key={tag}
-                    closable
-                    onClose={() => handleTagRemove(tag)}
-                  >
-                    {tag}
-                  </Tag>
-                ))}
-              </div>
-            </Form.Item>
-
-            <Form.Item
-              name="isPublic"
-              label="Visibility"
-              valuePropName="checked"
-            >
-              <Switch
-                checkedChildren="Public"
-                unCheckedChildren="Private"
-              />
-            </Form.Item>
-
-            <Form.Item className="mb-0 text-right">
-              <Space>
-                <Button onClick={handleCancelCreateEdit}>
-                  Cancel
-                </Button>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={submittingMaterial}
-                  icon={<UploadOutlined />}
-                >
-                  {isEditMode ? 'Update Material' : 'Upload Material'}
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        </Modal>
-
-        {/* Delete Confirmation Modal */}
-        <Modal
-          title="Delete Material"
-          open={materialDeleteModalVisible}
-          onOk={confirmDeleteMaterial}
-          onCancel={() => {
-            setMaterialDeleteModalVisible(false);
-            setSelectedMaterial(null);
-          }}
-          confirmLoading={deletingMaterial}
-          okText="Delete"
-          cancelText="Cancel"
-          okButtonProps={{ danger: true }}
-        >
-          <div className="py-4">
-            <ExclamationCircleOutlined className="text-orange-500 mr-2" />
-            <Text>
-              Are you sure you want to delete "{selectedMaterial?.title}"?
-              This action cannot be undone.
-            </Text>
+              ))
+            )}
           </div>
-        </Modal>
-      </div>
-    );
-  };
+        </Col>
+      </Row>
+    </div>
+  ), [classData, handleCopyClassCode, showEditor, richTextContent, targetAudience, attachments, handlePostAnnouncement, postingAnnouncement, announcementForm, streamData, formatTimeAgo]);
 
-  const tabItems = [
+  const ClassworkTabComponent = useMemo(() => (
+    <ClassworkTab />
+  ), []);
+
+  const PeopleTabComponent = useMemo(() => (
+    <PeopleTab 
+      studentsData={studentsData}
+      studentsLoading={studentsLoading}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      classData={classData}
+      handleCopyClassCode={handleCopyClassCode}
+    />
+  ), [studentsData, studentsLoading, searchText, classData, handleCopyClassCode]);
+
+  const GradesTabComponent = useMemo(() => (
+    <GradesTab />
+  ), []);
+
+  const tabItems = useMemo(() => [
     {
-      key: 'students',
-      label: `Students (${studentsData.length})`,
-      children: <StudentList />
+      key: 'stream',
+      label: 'Stream',
+      children: StreamTab
     },
     {
-      key: 'assignments',
-      label: 'Assignments',
-      children: <AssignmentList />
+      key: 'classwork',
+      label: 'Classwork',
+      children: ClassworkTabComponent
     },
     {
-      key: 'materials',
-      label: 'Materials',
-      children: <MaterialList />
+      key: 'people',
+      label: 'People',
+      children: PeopleTabComponent
+    },
+    {
+      key: 'grades',
+      label: 'Grades',
+      children: GradesTabComponent
     }
-  ];
+  ], [StreamTab, ClassworkTabComponent, PeopleTabComponent, GradesTabComponent]);
 
   if (loading) {
     return (
