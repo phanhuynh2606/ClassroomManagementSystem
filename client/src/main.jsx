@@ -8,7 +8,7 @@ import './index.css';
 import { store, persistor } from './store';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
@@ -16,5 +16,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </PersistGate>
       </Provider>
     </GoogleOAuthProvider>
-  </React.StrictMode>,
 );
