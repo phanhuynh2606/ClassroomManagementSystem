@@ -10,7 +10,8 @@ import {
   LogoutOutlined,
   BellOutlined,
   BookOutlined,
-  SettingOutlined
+  SettingOutlined,
+  TrophyOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -45,6 +46,7 @@ const TeacherLayout = () => {
     if (path.startsWith('/teacher/notifications')) return 'notifications';
     if (path.startsWith('/teacher/settings')) return 'settings';
     if (path.startsWith('/teacher/profile')) return 'profile';
+    if (path.startsWith('/teacher/grading-demo')) return 'grading-demo';
     return 'dashboard';
   };
 
@@ -109,6 +111,15 @@ const TeacherLayout = () => {
       icon: <SettingOutlined />,
       label: 'Cài đặt',
       onClick: () => navigate('/teacher/settings'),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'grading-demo',
+      icon: <TrophyOutlined />,
+      label: 'Demo Chấm điểm',
+      onClick: () => navigate('/teacher/grading-demo'),
     },
   ];
 
