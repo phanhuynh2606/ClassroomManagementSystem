@@ -181,6 +181,69 @@ const TeacherDashboard = () => {
     }
   };
 
+  // Export functions
+  const handleExportExcel = () => {
+    message.loading('Đang tạo file Excel...', 1);
+    setTimeout(() => {
+      message.success('Tải xuống thành công! File đã được lưu tại Downloads.');
+    }, 1500);
+  };
+
+  const handleExportPDF = () => {
+    message.loading('Đang tạo báo cáo PDF...', 1);
+    setTimeout(() => {
+      message.success('Báo cáo PDF đã được tạo và tải xuống!');
+    }, 1500);
+  };
+
+  const handlePrintReport = () => {
+    window.print();
+  };
+
+  const handleDetailedReport = () => {
+    setReportModalVisible(true);
+  };
+
+  // Report menu items
+  const reportMenuItems = [
+    {
+      key: 'analytics',
+      label: 'Xem thống kê nhanh',
+      icon: <BarChartOutlined />,
+      onClick: scrollToAnalytics
+    },
+    {
+      type: 'divider'
+    },
+    {
+      key: 'excel',
+      label: 'Xuất Excel',
+      icon: <FileExcelOutlined />,
+      onClick: handleExportExcel
+    },
+    {
+      key: 'pdf',
+      label: 'Báo cáo PDF',
+      icon: <FilePdfOutlined />,
+      onClick: handleExportPDF
+    },
+    {
+      key: 'print',
+      label: 'In báo cáo',
+      icon: <PrinterOutlined />,
+      onClick: handlePrintReport
+    },
+    {
+      type: 'divider'
+    },
+    {
+      key: 'detailed',
+      label: 'Báo cáo chi tiết',
+      icon: <MoreOutlined />,
+      onClick: handleDetailedReport
+    }
+  ];
+
   const QuickActions = () => (
     <Card 
       title="Hành động nhanh" 
@@ -368,69 +431,6 @@ const TeacherDashboard = () => {
       </div>
     </Card>
   );
-
-  // Export functions
-  const handleExportExcel = () => {
-    message.loading('Đang tạo file Excel...', 1);
-    setTimeout(() => {
-      message.success('Tải xuống thành công! File đã được lưu tại Downloads.');
-    }, 1500);
-  };
-
-  const handleExportPDF = () => {
-    message.loading('Đang tạo báo cáo PDF...', 1);
-    setTimeout(() => {
-      message.success('Báo cáo PDF đã được tạo và tải xuống!');
-    }, 1500);
-  };
-
-  const handlePrintReport = () => {
-    window.print();
-  };
-
-  const handleDetailedReport = () => {
-    setReportModalVisible(true);
-  };
-
-  // Report menu items
-  const reportMenuItems = [
-    {
-      key: 'analytics',
-      label: 'Xem thống kê nhanh',
-      icon: <BarChartOutlined />,
-      onClick: scrollToAnalytics
-    },
-    {
-      type: 'divider'
-    },
-    {
-      key: 'excel',
-      label: 'Xuất Excel',
-      icon: <FileExcelOutlined />,
-      onClick: handleExportExcel
-    },
-    {
-      key: 'pdf',
-      label: 'Báo cáo PDF',
-      icon: <FilePdfOutlined />,
-      onClick: handleExportPDF
-    },
-    {
-      key: 'print',
-      label: 'In báo cáo',
-      icon: <PrinterOutlined />,
-      onClick: handlePrintReport
-    },
-    {
-      type: 'divider'
-    },
-    {
-      key: 'detailed',
-      label: 'Báo cáo chi tiết',
-      icon: <MoreOutlined />,
-      onClick: handleDetailedReport
-    }
-  ];
 
   const AnalyticsDashboard = () => {
     const classColumns = [
