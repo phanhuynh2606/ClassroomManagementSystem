@@ -67,6 +67,7 @@ import StreamEmptyState from './components/StreamEmptyState';
 import PeopleTab from './components/StudentList';
 import ClassworkTab from './components/AssignmentList';
 import GradesTab from './components/GradesTab';
+import MaterialList from './components/MaterialList';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -391,12 +392,18 @@ const ClassroomDetail = () => {
   const GradesTabComponent = useMemo(() => (
     <GradesTab />
   ), []);
+ 
 
   const tabItems = useMemo(() => [
     {
       key: 'stream',
       label: 'Stream',
       children: StreamTab
+    },
+    {
+      key: 'materials',
+      label: 'Materials', 
+      children: <MaterialList classId={classId} classData={classData} />
     },
     {
       key: 'classwork',

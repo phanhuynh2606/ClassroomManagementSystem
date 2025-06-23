@@ -1465,7 +1465,7 @@ const getClassroomMaterials = async (req, res) => {
     const materials = [
       {
         id: 1,
-        title: 'Course Syllabus',
+        title: 'Introduction to React Hooks',
         type: 'document',
         fileUrl: '/files/syllabus.pdf',
         fileSize: '2.3 MB',
@@ -1483,7 +1483,7 @@ const getClassroomMaterials = async (req, res) => {
       },
       {
         id: 3,
-        title: 'Reference Links',
+        title: 'Web Development Tutorial',
         type: 'link',
         links: [
           { title: 'Official Documentation', url: 'https://example.com/docs' },
