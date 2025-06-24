@@ -1324,6 +1324,7 @@ const getClassroomDetail = async (req, res) => {
       name: classroom.name,
       code: classroom.code,
       description: classroom.description,
+      appearance: classroom.appearance,
       category: classroom.category,
       level: classroom.level,
       maxStudents: classroom.maxStudents,

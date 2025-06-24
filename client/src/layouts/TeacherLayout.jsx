@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, theme } from 'antd';
+import { Layout, Menu, Button, theme, Avatar } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -11,7 +11,8 @@ import {
   BellOutlined,
   BookOutlined,
   SettingOutlined,
-  TrophyOutlined
+  TrophyOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -178,16 +179,21 @@ const TeacherLayout = () => {
             }}
           />
           <div style={{ marginRight: 16, display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Avatar 
+              size={40}
+              icon={<UserOutlined />}
+              style={{ backgroundColor: '#1565C0' }}
+              src={user?.image}
+            />
             <span 
               style={{ 
-                marginRight: 16, 
                 cursor: 'pointer',
                 color: '#1565C0',
                 fontWeight: '500'
               }} 
               onClick={() => navigate('/teacher/profile')}
             >
-              👨‍🏫 {user?.fullName || 'Giáo viên'}
+             {user?.fullName || 'Giáo viên'}
             </span>
             <Button
               type="text"

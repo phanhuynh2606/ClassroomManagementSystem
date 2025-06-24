@@ -57,7 +57,6 @@ const ClassworkTab = () => {
   
   // New modal states
   const [assignmentCreateVisible, setAssignmentCreateVisible] = useState(false);
-  const [quizCreateVisible, setQuizCreateVisible] = useState(false);
   const [gradingModalVisible, setGradingModalVisible] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -85,19 +84,6 @@ const ClassworkTab = () => {
     },
     {
       id: '2',
-      type: 'quiz',
-      title: 'Chapter 1-3 Quiz',
-      description: 'Multiple choice quiz covering the first three chapters',
-      dueDate: '2024-01-20T15:00:00Z',
-      totalPoints: 50,
-      status: 'published',
-      submissionsCount: 22,
-      totalStudents: 25,
-      attachments: [],
-      createdAt: '2024-01-10T14:00:00Z'
-    },
-    {
-      id: '3',
       type: 'material',
       title: 'Course Syllabus',
       description: 'Complete course syllabus and schedule',
@@ -161,14 +147,6 @@ const ClassworkTab = () => {
       icon: <BookOutlined />,
       onClick: () => {
         setAssignmentCreateVisible(true);
-      }
-    },
-    {
-      key: 'quiz',
-      label: 'Quiz assignment',
-      icon: <QuestionCircleOutlined />,
-      onClick: () => {
-        setQuizCreateVisible(true);
       }
     },
     {
@@ -288,40 +266,6 @@ const ClassworkTab = () => {
     } catch (error) {
       message.error('Failed to create assignment');
       console.error('Error creating assignment:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuizCreate = async (quizData) => {
-    try {
-      setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newQuiz = {
-        id: Date.now().toString(),
-        type: 'quiz',
-        title: quizData.title,
-        description: quizData.description,
-        dueDate: quizData.dueDate,
-        totalPoints: quizData.totalPoints || 50,
-        status: 'published',
-        submissionsCount: 0,
-        totalStudents: 25,
-        attachments: [],
-        createdAt: new Date().toISOString(),
-        duration: quizData.duration,
-        questionsCount: quizData.questions?.length || 0
-      };
-
-      setClassworkItems(prev => [newQuiz, ...prev]);
-      setQuizCreateVisible(false);
-      message.success('Quiz created successfully!');
-    } catch (error) {
-      message.error('Failed to create quiz');
-      console.error('Error creating quiz:', error);
     } finally {
       setLoading(false);
     }
@@ -589,15 +533,6 @@ const ClassworkTab = () => {
         visible={assignmentCreateVisible}
         onCancel={() => setAssignmentCreateVisible(false)}
         onOk={handleAssignmentCreate}
-        loading={loading}
-        mode="create"
-      />
-
-      {/* Quiz Create Modal */}
-      <QuizCreateModal
-        visible={quizCreateVisible}
-        onCancel={() => setQuizCreateVisible(false)}
-        onOk={handleQuizCreate}
         loading={loading}
         mode="create"
       />

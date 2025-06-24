@@ -30,6 +30,39 @@ const classroomAPI = {
   getById: (id) => axiosClient.get(`/classrooms/${id}`),
   getDetail: (id) => axiosClient.get(`/classrooms/${id}/detail`),
   getMaterials: (id) => axiosClient.get(`/classrooms/${id}/materials`),
+
+  // Appearance/background management methods
+  
+  // Update classroom appearance  teacher
+  updateAppearance: (id, appearanceData) => {
+    return axiosClient.post(`/classrooms/teacher/${id}/appearance`, appearanceData);
+  },
+
+  // Get available themes teacher
+  getAvailableThemes: () => {
+    return axiosClient.get('/classrooms/teacher/themes');
+  },
+
+  // Reset classroom appearance to default teacher
+  resetAppearance: (id) => {
+    return axiosClient.post(`/classrooms/teacher/${id}/appearance/reset`);
+  },
+
+  // Upload background image teacher
+  uploadBackgroundImage: (file) => {
+    const formData = new FormData();
+    formData.append('background', file);
+    return axiosClient.post('/classrooms/teacher/background/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  // Get classroom appearance only teacher
+  getAppearance: (id) => {
+    return axiosClient.get(`/classrooms/teacher/${id}/appearance`);
+  }
 };
 
 export default classroomAPI;

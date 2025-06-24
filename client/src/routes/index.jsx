@@ -36,6 +36,7 @@ import TeacherMaterials from '../pages/teacher/TeacherMaterials';
 import TeacherSettings from '../pages/teacher/TeacherSettings';
 import AssignmentDetail from '../pages/teacher/AssignmentDetail';
 import GradingSystemDemo from '../pages/teacher/GradingSystemDemo';
+import BackgroundDemo from '../pages/teacher/BackgroundDemo';
 
 // Student Pages
 import StudentProfile from '../pages/student/StudentProfile';
@@ -139,6 +140,7 @@ const AppRouter = () => {
         
         {/* Demo & Help */}
         <Route path="grading-demo" element={<GradingSystemDemo />} />
+        <Route path="background-demo" element={<BackgroundDemo />} />
       </Route>
 
       {/* Student Routes */}

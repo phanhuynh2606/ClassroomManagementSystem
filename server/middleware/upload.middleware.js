@@ -19,6 +19,7 @@ const createUploadMiddleware = (folderPath = 'messages', maxCount = 5) => {
         { width: 1200, crop: 'limit' },
         { quality: 'auto', fetch_format: 'auto' }
       ],
+      
       // Add custom public_id for better organization
       public_id: (req, file) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -163,11 +164,63 @@ const createMaterialUploadMiddleware = (folderPath = 'materials', maxCount = 1) 
   return upload;
 };
 
+// Create specialized background upload middleware
+const createBackgroundUploadMiddleware = () => {
+  // Configure Cloudinary storage specifically for backgrounds
+  const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'classmanagement/backgrounds',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+      transformation: [
+        { width: 1920, height: 1080, crop: 'limit' }, // HD resolution for backgrounds
+        { quality: 'auto:good', fetch_format: 'auto' } // Higher quality for backgrounds
+      ],
+      // Custom public_id for backgrounds
+      public_id: (req, file) => {
+        const timestamp = Date.now();
+        const randomSuffix = Math.round(Math.random() * 1E9);
+        return `bg_classroom_${timestamp}_${randomSuffix}`;
+      }
+    }
+  });
+
+  // File filter specifically for background images
+  const fileFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed for backgrounds!'), false);
+    }
+  };
+
+  // Configure multer with higher limits for backgrounds
+  const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit for background images
+      files: 1 // Only single background image
+    }
+  });
+
+  return upload;
+};
+
+// Helper function to get file size limit based on file type
+function getFileSizeLimit() {
+  // Return a reasonable default (20MB for materials, 5MB for images)
+  return 20 * 1024 * 1024; // 20MB
+}
+
 // Create different middleware instances for different use cases
 const profileUpload = createUploadMiddleware('profiles', 1);
 const questionImageUpload = createUploadMiddleware('questions', 1);
+const backgroundImageUpload = createBackgroundUploadMiddleware();
 module.exports = {
   profileUpload,
   questionImageUpload,
-  createUploadMiddleware // Export factory function for custom use cases
+  backgroundImageUpload,
+  createUploadMiddleware, // Export factory function for custom use cases
+  createMaterialUploadMiddleware
 };

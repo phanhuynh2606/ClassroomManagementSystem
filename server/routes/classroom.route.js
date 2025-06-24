@@ -1,6 +1,8 @@
 const express = require('express');
 const { protect, authorize } = require('../middleware/auth.middleware');
+const { backgroundImageUpload } = require('../middleware/upload.middleware');
 const ctrls = require('../controllers/classroom.controller');
+const ctrlsTeacher = require('../controllers/teacher.classroom.controller');
 const router = express.Router();
 
 // Admin routes
@@ -23,6 +25,13 @@ router.delete('/teacher/:classroomId', protect, authorize('teacher'), ctrls.dele
 router.post('/teacher/', protect, authorize('teacher'), ctrls.createClassroom);
 router.put('/teacher/:classroomId', protect, authorize('teacher'), ctrls.updateClassroom);
 router.get('/teacher/:classroomId/students', protect, authorize('teacher'), ctrls.getClassroomStudents);
+
+// Teacher classroom appearance routes
+router.get('/teacher/:classroomId/appearance', protect, authorize('teacher'), ctrlsTeacher.getClassroomAppearance);
+router.post('/teacher/:classroomId/appearance', protect, authorize('teacher'), ctrlsTeacher.updateClassroomAppearance);
+router.post('/teacher/:classroomId/appearance/reset', protect, authorize('teacher'), ctrlsTeacher.resetClassroomAppearance);
+router.get('/teacher/themes', protect, authorize('teacher'), ctrlsTeacher.getAvailableThemes);
+router.post('/teacher/background/upload', protect, authorize('teacher'), backgroundImageUpload.single('background'), ctrlsTeacher.uploadBackgroundImage);
 
 // Student routes
 router.get('/student', protect, authorize('student'), ctrls.getStudentClassrooms);

@@ -146,6 +146,90 @@
   letter-spacing: 0.5px;
 }
 
+/* Background Customizer Styles */
+.background-customizer .theme-card {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.background-customizer .theme-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.background-customizer .theme-card.selected {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.background-customizer .preview-header {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.background-customizer .preview-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  z-index: 1;
+}
+
+.background-customizer .preview-header > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Popular gradients grid */
+.background-customizer .gradient-preview {
+  height: 48px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid #e8e8e8;
+  transition: all 0.2s ease;
+}
+
+.background-customizer .gradient-preview:hover {
+  border-color: #1890ff;
+  transform: scale(1.05);
+}
+
+/* Upload area styling */
+.background-customizer .ant-upload-select {
+  border: 2px dashed #d9d9d9 !important;
+  border-radius: 8px !important;
+  background-color: #fafafa !important;
+  transition: all 0.3s ease;
+}
+
+.background-customizer .ant-upload-select:hover {
+  border-color: #1890ff !important;
+  background-color: #f0f8ff !important;
+}
+
+/* Modal adjustments */
+.background-customizer .ant-modal-content {
+  border-radius: 12px;
+}
+
+.background-customizer .ant-tabs-content {
+  padding-top: 16px;
+}
+
+/* Color picker adjustments */
+.background-customizer .ant-color-picker {
+  border-radius: 6px;
+}
+
+/* Switch and form controls */
+.background-customizer .ant-switch {
+  margin-left: 8px;
+}
+
 /* Teacher responsive adjustments */
 @media (max-width: 768px) {
   .teacher-dashboard-content {
@@ -160,5 +244,15 @@
   .classroom-management-tabs .ant-tabs-tab {
     padding: 6px 12px;
     font-size: 14px;
+  }
+
+  /* Background customizer responsive */
+  .background-customizer .ant-modal {
+    width: 95% !important;
+    margin: 16px !important;
+  }
+  
+  .background-customizer .theme-card {
+    margin-bottom: 12px;
   }
 } 
