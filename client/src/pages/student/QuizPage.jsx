@@ -11,7 +11,7 @@ import {
   Modal,
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
-
+import { useParams } from 'react-router-dom';
 const { Title, Text } = Typography;
 
 const quizQuestions = [
@@ -40,6 +40,7 @@ const QuizPage = () => {
   const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState({});
+  const { classroomId } = useParams();
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(1800); 
 
@@ -67,7 +68,7 @@ const QuizPage = () => {
     if (submitted) return;
     setSubmitted(true);
     message.success('Quiz submitted!');
-    navigate('/student/quizzes');
+    navigate(`/student/classroom/${classroomId}#quizzes`);
   };
 
   const showConfirmSubmit = () => {
@@ -112,7 +113,7 @@ const QuizPage = () => {
       </div>
 
       <div className="w-full md:w-3/4">
-        <Card className="shadow" bordered>
+        <Card className="shadow" variant="outlined">
           <Title level={4} className="text-red-500">Question {current + 1}</Title>
           <Divider />
           <Text strong>{quizQuestions[current].question}</Text>
