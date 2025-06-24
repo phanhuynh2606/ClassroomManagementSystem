@@ -309,13 +309,13 @@ const AdminClassroomDetail = () => {
                 Approve Deletion Request
               </Button>
             )}
-            <Button
+            {/* <Button
               icon={<EditOutlined />}
               onClick={() => navigate(`/admin/classrooms/edit/${classroomId}`)}
               block
             >
               Edit Classroom
-            </Button>
+            </Button> */}
             <Popconfirm
               title="Are you sure to delete this classroom?"
               onConfirm={handleDelete}

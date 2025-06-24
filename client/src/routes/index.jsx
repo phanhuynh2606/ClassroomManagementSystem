@@ -158,10 +158,9 @@ const AppRouter = () => {
         <Route path="classrooms" element={<StudentClassroomManagement />} />
         <Route path="classroom/:classroomId" element={<StudentClassroomDetail />} />
         {/* Upcoming Student Features */}
-        <Route path="assignments" element={<StudentAssignmentList />} />
-        <Route path="assignments/:assignmentId" element={<StudentAssignmentDetail/>} />
-        <Route path="quizzes" element={<StudentQuizList/>} />
-        <Route path="quizzes/:quizId" element={<QuizPage/>} />
+        
+        <Route path="classrooms/:classroomId/assignments/:assignmentId" element={<StudentAssignmentDetail />} />
+        <Route path="classrooms/:classroomId/quizzes/:quizId" element={<QuizPage/>} />
         <Route path="grades" element={<ComingSoon title="Điểm số" />} />
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
       </Route>

@@ -5,3 +5,8 @@
 .ant-table-thead > tr > th {
   border-bottom: 2px solid #bfbfbf !important;
 }
+
+.google-class-card:hover {
+  transform: translateY(-4px);
+  transition: transform 0.2s;
+}

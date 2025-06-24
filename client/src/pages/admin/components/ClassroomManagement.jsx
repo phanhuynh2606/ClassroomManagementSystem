@@ -177,7 +177,7 @@ const ClassroomManagement = () => {
       width: 120,
       render: (_, record) => (
         <Space size="small">
-          <Button
+          {/* <Button
             type="primary"
             size="small"
             icon={<EditOutlined />}
@@ -187,7 +187,7 @@ const ClassroomManagement = () => {
             }}
           >
             Edit
-          </Button>
+          </Button> */}
           <Popconfirm
             title="Are you sure you want to delete this classroom?"
             onConfirm={(e) => {
@@ -198,9 +198,7 @@ const ClassroomManagement = () => {
             cancelText="No"
           >
             <Button
-              type="primary"
               danger
-              size="small"
               icon={<DeleteOutlined />}
               onClick={(e) => e.stopPropagation()}
             >
@@ -222,13 +220,13 @@ const ClassroomManagement = () => {
           onChange={(e) => setSearchText(e.target.value)}
           style={{ width: 300 }}
         />
-        <Button
+        {/* <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleAdd}
         >
           Add Classroom
-        </Button>
+        </Button> */}
       </div>
 
       <Table

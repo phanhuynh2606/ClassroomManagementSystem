@@ -8,7 +8,7 @@ import {
   message,
 } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload;
@@ -16,8 +16,8 @@ const { TextArea } = Input;
 
 const StudentAssignmentDetail = () => {
   const navigate = useNavigate();
+  const { classroomId, assignmentId } = useParams();
 
-  const assignmentId = 'computer-project';
   const textKey = `text-${assignmentId}`;
   const fileKey = `filelist-${assignmentId}`;
 
@@ -33,7 +33,6 @@ const StudentAssignmentDetail = () => {
     setTimeout(() => onSuccess('ok'), 1000);
   };
 
-
   const handleSave = () => {
     localStorage.setItem(`submitted-${assignmentId}`, 'true');
     localStorage.setItem(textKey, textContent);
@@ -45,7 +44,7 @@ const StudentAssignmentDetail = () => {
     setSubmitted(true);
     setIsEditing(false);
     message.success('Submission saved!');
-    navigate('/student/assignments');
+    navigate(`/student/classroom/${classroomId}#assignments`)
   };
 
   const handleCancel = () => {
@@ -63,9 +62,8 @@ const StudentAssignmentDetail = () => {
 
   return (
     <div className="p-6">
-      <Title level={3}>Computer project</Title>
+      <Title level={3}>Assignment: {assignmentId}</Title>
 
-      {/* Assignment description */}
       <Card className="mb-6">
         <Paragraph>
           For this project, you will be required to collaborate in groups and present your findings to the class during the final week of the semester.
