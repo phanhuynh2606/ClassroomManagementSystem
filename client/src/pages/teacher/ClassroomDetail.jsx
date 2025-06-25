@@ -24,8 +24,11 @@ import {
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import classroomAPI from "../../services/api/classroom.api";
-import "./teacher.css";
+import streamAPI from "../../services/api/stream.api";
+import useClassroomPermissions from "../../hooks/useClassroomPermissions";
+import "./style/teacher.css";
 
 // Import components
 import StreamHeader from "./components/StreamHeader";
@@ -39,11 +42,13 @@ import GradesTab from "./components/GradesTab";
 import MaterialList from "./components/MaterialList";
 import QuizManagement from "./components/QuizManagement";
 import BackgroundCustomizer from "./components/BackgroundCustomizer";
+import EditPostModal from "./components/EditPostModal";
 
 const { Title, Text } = Typography;
 const ClassroomDetail = () => {
   const { classId } = useParams();
   const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState("stream");
   const [searchText, setSearchText] = useState("");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -62,92 +67,23 @@ const ClassroomDetail = () => {
     useState(false);
   const [savingAppearance, setSavingAppearance] = useState(false);
 
+  // Edit post state
+  const [editPostModalVisible, setEditPostModalVisible] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
+  const [savingPost, setSavingPost] = useState(false);
+
   const [classData, setClassData] = useState(null);
   const [studentsData, setStudentsData] = useState([]);
-  const [streamData, setStreamData] = useState([
-    {
-      id: "1",
-      type: "announcement",
-      title: "Welcome to the new semester!",
-      content:
-        "Dear students, welcome to our Programming Fundamentals class. Please check the syllabus and prepare for our first assignment.",
-      author: {
-        name: "John Smith",
-        avatar: null,
-        role: "Teacher",
-      },
-      createdAt: "2024-01-15T10:30:00Z",
-      attachments: [],
-      comments: [
-        {
-          id: "c1",
-          author: "Alice Johnson",
-          content: "Thank you for the warm welcome!",
-          createdAt: "2024-01-15T11:00:00Z",
-        },
-      ],
-    },
-    {
-      id: "2",
-      type: "assignment",
-      title: "Assignment 1: Basic Programming Concepts",
-      content:
-        "Complete the exercises in Chapter 1-3. Due date: January 25th, 2024.",
-      author: {
-        name: "John Smith",
-        avatar: null,
-        role: "Teacher",
-      },
-      createdAt: "2024-01-16T14:20:00Z",
-      dueDate: "2024-01-25T23:59:00Z",
-      attachments: [
-        {
-          name: "assignment1_template.pdf",
-          size: "245 KB",
-        },
-      ],
-      comments: [],
-    },
-    {
-      id: "3",
-      type: "material",
-      title: "Lecture Slides - Week 1",
-      content:
-        "Here are the slides from our first week covering introduction to programming.",
-      author: {
-        name: "John Smith",
-        avatar: null,
-        role: "Teacher",
-      },
-      createdAt: "2024-01-14T09:15:00Z",
-      attachments: [
-        {
-          name: "week1_slides.pptx",
-          size: "1.2 MB",
-        },
-      ],
-      comments: [],
-    },
-    {
-      id: "4",
-      type: "activity",
-      title: "Student Alice Johnson joined the class",
-      content: "",
-      author: {
-        name: "System",
-        avatar: null,
-        role: "System",
-      },
-      createdAt: "2024-01-13T16:45:00Z",
-      attachments: [],
-      comments: [],
-    },
-  ]);
+  const [streamData, setStreamData] = useState([]);
+
+  // Get classroom permissions
+  const permissions = useClassroomPermissions(classData);
 
   useEffect(() => {
     if (classId) {
       fetchClassroomData();
       fetchStudentsData();
+      fetchStreamData();
     }
   }, [classId]);
 
@@ -184,6 +120,23 @@ const ClassroomDetail = () => {
       // Don't show error message as this might be expected for new classrooms
     } finally {
       setStudentsLoading(false);
+    }
+  };
+
+  const fetchStreamData = async () => {
+    try {
+      const response = await streamAPI.getClassroomStream(classId, {
+        page: 1,
+        limit: 20,
+      });
+
+      if (response.success) {
+        setStreamData(response.data.items || []);
+        console.log("streamData", streamData);
+      }
+    } catch (error) {
+      console.error("Error fetching stream data:", error);
+      // Don't show error message for stream data as it might be empty for new classrooms
     }
   };
 
@@ -267,38 +220,229 @@ const ClassroomDetail = () => {
     async (values) => {
       setPostingAnnouncement(true);
       try {
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const newAnnouncement = {
-          id: Date.now().toString(),
-          type: "announcement",
+        const announcementData = {
           title: values.title || "Class Announcement",
-          content: richTextContent || values.content,
-          author: {
-            name: "John Smith", // Should be current teacher's name
-            avatar: null,
-            role: "Teacher",
-          },
-          createdAt: new Date().toISOString(),
-          attachments: attachments,
-          comments: [],
+          content: richTextContent || values.content || "",
+          attachments: attachments.map((att) => {
+            const baseAttachment = {
+              name: att.name,
+              url: att.url,
+              type: att.type || 'file',
+              size: att.size,
+              title: att.title,
+            };
+
+            // Add YouTube-specific fields if it's a YouTube video
+            if (att.type === 'video/youtube') {
+              return {
+                ...baseAttachment,
+                videoId: att.videoId,
+                thumbnail: att.thumbnail,
+                duration: att.duration,
+                channel: att.channel,
+                channelThumbnail: att.channelThumbnail,
+                viewCount: att.viewCount,
+                description: att.description,
+                metadata: att.metadata,
+              };
+            }
+
+            // Add link-specific fields if it's a link
+            if (att.type === 'link') {
+              return {
+                ...baseAttachment,
+                favicon: att.favicon,
+                metadata: att.metadata,
+              };
+            }
+
+            // Regular file attachment
+            return {
+              ...baseAttachment,
+              fileType: att.fileType,
+              fileSize: att.fileSize,
+            };
+          }),
+          targetAudience: targetAudience,
+          targetStudents: targetAudience === "specific" ? [] : undefined,
         };
 
-        setStreamData((prev) => [newAnnouncement, ...prev]);
-        announcementForm.resetFields();
-        setRichTextContent("");
-        setShowEditor(false);
-        setAttachments([]);
-        message.success("Announcement posted successfully!");
+        const response = await streamAPI.createAnnouncement(
+          classId,
+          announcementData
+        );
+
+        if (response.success) {
+          // Add new announcement to stream
+          setStreamData((prev) => [response.data, ...prev]);
+
+          // Reset form
+          announcementForm.resetFields();
+          setRichTextContent("");
+          setShowEditor(false);
+          setAttachments([]);
+          setTargetAudience("all_students");
+
+          message.success("Announcement posted successfully!");
+        } else {
+          message.error(response.message || "Failed to post announcement");
+        }
       } catch (error) {
-        message.error("Failed to post announcement");
+        console.error("Error posting announcement:", error);
+        message.error(
+          error.response?.data?.message || "Failed to post announcement"
+        );
       } finally {
         setPostingAnnouncement(false);
       }
     },
-    [richTextContent, attachments, announcementForm]
+    [classId, richTextContent, attachments, targetAudience, announcementForm]
   );
+
+  // Stream item handlers
+  const handlePinPost = useCallback(async (streamId) => {
+    try {
+      const response = await streamAPI.togglePinStreamItem(streamId);
+      if (response.success) {
+        // Update stream data
+        setStreamData((prev) =>
+          prev.map((item) => (item._id === streamId ? response.data : item))
+        );
+        message.success(response.message);
+      }
+    } catch (error) {
+      console.error("Error toggling pin:", error);
+      message.error("Failed to update pin status");
+    }
+  }, []);
+
+  const handleEditPost = useCallback(
+    async (streamId) => {
+      const postToEdit = streamData.find((item) => item._id === streamId);
+      if (postToEdit) {
+        setEditingPost(postToEdit);
+        setEditPostModalVisible(true);
+      }
+    },
+    [streamData]
+  );
+
+  const handleSaveEditPost = useCallback(
+    async (postData) => {
+      if (!editingPost) return;
+
+      setSavingPost(true);
+      try {
+        const response = await streamAPI.updateStreamItem(
+          editingPost._id,
+          postData
+        );
+        if (response.success) {
+          // Update stream data
+          setStreamData((prev) =>
+            prev.map((item) =>
+              item._id === editingPost._id ? response.data : item
+            )
+          );
+          message.success("Post updated successfully");
+        }
+      } catch (error) {
+        console.error("Error updating post:", error);
+        message.error("Failed to update post");
+        throw error;
+      } finally {
+        setSavingPost(false);
+      }
+    },
+    [editingPost]
+  );
+
+  const handleCloseEditModal = useCallback(() => {
+    setEditPostModalVisible(false);
+    setEditingPost(null);
+  }, []);
+
+  const handleDeletePost = useCallback(async (streamId) => {
+    Modal.confirm({
+      title: "Delete Post",
+      content:
+        "Are you sure you want to delete this post? This action cannot be undone.",
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      onOk: async () => {
+        try {
+          const response = await streamAPI.deleteStreamItem(streamId);
+          if (response.success) {
+            // Remove from stream data
+            setStreamData((prev) =>
+              prev.filter((item) => item._id !== streamId)
+            );
+            message.success("Post deleted successfully");
+          }
+        } catch (error) {
+          console.error("Error deleting post:", error);
+          message.error("Failed to delete post");
+        }
+      },
+    });
+  }, []);
+
+  const handleAddComment = useCallback(async (streamId, content) => {
+    try {
+      const response = await streamAPI.addComment(streamId, content);
+      if (response.success) {
+        // Update stream data with new comment
+        setStreamData((prev) =>
+          prev.map((item) => {
+            if (item._id === streamId) {
+              return {
+                ...item,
+                comments: [...(item.comments || []), response.data],
+                commentsCount: (item.commentsCount || 0) + 1,
+              };
+            }
+            return item;
+          })
+        );
+        return response.data;
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      throw error;
+    }
+  }, []);
+
+  const handleDeleteComment = useCallback(async (streamId, commentId) => {
+    try {
+      const response = await streamAPI.deleteComment(streamId, commentId);
+      if (response.success) {
+        // Update stream data by removing the comment
+        setStreamData((prev) =>
+          prev.map((item) => {
+            if (item._id === streamId) {
+              return {
+                ...item,
+                comments: (item.comments || []).filter(
+                  (comment) => (comment._id || comment.id) !== commentId
+                ),
+                commentsCount: Math.max(0, (item.commentsCount || 0) - 1),
+              };
+            }
+            return item;
+          })
+        );
+        return true;
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      throw error;
+    }
+  }, []);
 
   const formatTimeAgo = useCallback((dateString) => {
     const date = new Date(dateString);
@@ -379,6 +523,8 @@ const ClassroomDetail = () => {
                 handlePostAnnouncement={handlePostAnnouncement}
                 postingAnnouncement={postingAnnouncement}
                 announcementForm={announcementForm}
+                userRole={user?.role}
+                classroomPermissions={permissions}
               />
 
               {/* Stream Items */}
@@ -387,9 +533,16 @@ const ClassroomDetail = () => {
               ) : (
                 streamData.map((item) => (
                   <StreamItem
-                    key={item.id}
+                    key={item._id || item.id}
                     item={item}
                     formatTimeAgo={formatTimeAgo}
+                    onPin={handlePinPost}
+                    onEdit={handleEditPost}
+                    onDelete={handleDeletePost}
+                    onAddComment={handleAddComment}
+                    onDeleteComment={handleDeleteComment}
+                    userRole={user?.role}
+                    currentUserId={user?._id}
                   />
                 ))
               )}
@@ -411,6 +564,12 @@ const ClassroomDetail = () => {
       announcementForm,
       streamData,
       formatTimeAgo,
+      handlePinPost,
+      handleEditPost,
+      handleDeletePost,
+      handleAddComment,
+      user?.role,
+      user?._id,
     ]
   );
 
@@ -509,21 +668,8 @@ const ClassroomDetail = () => {
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-start mb-4">
-          <div>
-            <Title level={2} className="mb-2">
-              {classData.name}
-            </Title>
-            <Text type="secondary" className="text-lg">
-              {classData.subject}
-            </Text>
-            {classData.description && (
-              <div className="mt-2">
-                <Text className="text-gray-600">{classData.description}</Text>
-              </div>
-            )}
-          </div>
+          <Space>{getApprovalStatusBadge(classData.status)}</Space>
           <Space direction="vertical" align="end">
-            {getApprovalStatusBadge(classData.status)}
             <Space>
               {classData.status === "active" && (
                 <Button
@@ -531,7 +677,7 @@ const ClassroomDetail = () => {
                   onClick={handleEditClass}
                   className="flex items-center hover:text-white hover:bg-blue-600"
                 >
-                  Edit
+                  Edit Class & Settings
                 </Button>
               )}
               {classData.status === "active" && (
@@ -658,6 +804,16 @@ const ClassroomDetail = () => {
         onSave={handleSaveAppearance}
         classroomData={classData}
         loading={savingAppearance}
+      />
+
+      {/* Edit Post Modal */}
+      <EditPostModal
+        visible={editPostModalVisible}
+        onCancel={handleCloseEditModal}
+        onSave={handleSaveEditPost}
+        loading={savingPost}
+        initialData={editingPost}
+        userRole={user?.role}
       />
     </div>
   );

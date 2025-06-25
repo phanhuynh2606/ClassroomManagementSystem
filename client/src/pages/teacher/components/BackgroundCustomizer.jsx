@@ -181,9 +181,9 @@ const BackgroundCustomizer = ({
     try {
       let finalBackgroundSettings = { ...backgroundSettings };
       
-      // If there's a selected image file, upload it first
+      // Case 1: Upload new image file (only when new file is selected)
       if (selectedImageFile && previewImageUrl) {
-        message.loading('Uploading image...', 0);
+        message.loading('Uploading new image to Cloudinary...', 0);
         
         try {
           const uploadResponse = await classroomAPI.uploadBackgroundImage(selectedImageFile);
@@ -192,18 +192,31 @@ const BackgroundCustomizer = ({
             // Replace preview URL with actual Cloudinary URL
             finalBackgroundSettings.image.url = uploadResponse.data.url;
             message.destroy();
-            message.success('Image uploaded successfully');
+            message.success('New image uploaded to Cloudinary successfully');
           } else {
             message.destroy();
-            message.error('Failed to upload image');
+            message.error('Failed to upload new image to Cloudinary');
             return;
           }
         } catch (uploadError) {
           message.destroy();
-          message.error('Failed to upload image');
+          message.error('Failed to upload new image to Cloudinary');
           console.error('Upload error:', uploadError);
           return;
         }
+      } 
+      // Case 2: Update settings only (position, size, or other background types)
+      else if (backgroundSettings.type === 'image' && backgroundSettings.image.url) {
+        console.log('🔄 Updating image position/size settings only - NO Cloudinary upload');
+        message.loading('Updating image settings...', 0);
+        setTimeout(() => {
+          message.destroy();
+          message.success('Image settings updated (no re-upload needed)');
+        }, 500);
+      }
+      // Case 3: Other background types (gradient, color, theme)
+      else {
+        console.log('🎨 Updating background style - NO Cloudinary upload');
       }
       
       const appearance = {
@@ -211,6 +224,7 @@ const BackgroundCustomizer = ({
         header: headerSettings
       };
       
+      // Always call updateAppearance API (not upload API)
       onSave(appearance);
     } catch (error) {
       message.error('Failed to save appearance');
@@ -443,58 +457,58 @@ const BackgroundCustomizer = ({
             )}
           </div>
           
-          {backgroundSettings.image.url && (
-            <>
-              <div>
-                <Text strong>Image URL:</Text>
-                <Input
-                  value={backgroundSettings.image.url}
-                  onChange={(e) => setBackgroundSettings(prev => ({
-                    ...prev,
-                    type: 'image',
-                    image: { ...prev.image, url: e.target.value }
-                  }))}
-                  className="mt-1"
-                />
-              </div>
-              
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Text strong>Position:</Text>
-                  <Select
-                    value={backgroundSettings.image.position}
-                    onChange={(value) => setBackgroundSettings(prev => ({
+                      {backgroundSettings.image.url && (
+              <>
+                <div className='hidden'>
+                  <Text strong>Image URL:</Text>
+                  <Input
+                    value={backgroundSettings.image.url}
+                    onChange={(e) => setBackgroundSettings(prev => ({
                       ...prev,
-                      image: { ...prev.image, position: value }
+                      type: 'image',
+                      image: { ...prev.image, url: e.target.value }
                     }))}
-                    className="w-full mt-1"
-                  >
-                    <Option value="center">Center</Option>
-                    <Option value="top">Top</Option>
-                    <Option value="bottom">Bottom</Option>
-                    <Option value="left">Left</Option>
-                    <Option value="right">Right</Option>
-                  </Select>
-                </Col>
-                <Col span={12}>
-                  <Text strong>Size:</Text>
-                  <Select
-                    value={backgroundSettings.image.size}
-                    onChange={(value) => setBackgroundSettings(prev => ({
-                      ...prev,
-                      image: { ...prev.image, size: value }
-                    }))}
-                    className="w-full mt-1"
-                  >
-                    <Option value="cover">Cover</Option>
-                    <Option value="contain">Contain</Option>
-                    <Option value="auto">Auto</Option>
-                    <Option value="100% 100%">Stretch</Option>
-                  </Select>
-                </Col>
-              </Row>
-            </>
-          )}
+                    className="mt-1"
+                  />
+                </div>
+                
+                <Row gutter={16} className="mt-3">
+                  <Col span={12}>
+                    <Text strong>Position:</Text>
+                    <Select
+                      value={backgroundSettings.image.position}
+                      onChange={(value) => setBackgroundSettings(prev => ({
+                        ...prev,
+                        image: { ...prev.image, position: value }
+                      }))}
+                      className="w-full mt-1"
+                    >
+                      <Option value="center">Center</Option>
+                      <Option value="top">Top</Option>
+                      <Option value="bottom">Bottom</Option>
+                      <Option value="left">Left</Option>
+                      <Option value="right">Right</Option>
+                    </Select>
+                  </Col>
+                  <Col span={12}>
+                    <Text strong>Size:</Text>
+                    <Select
+                      value={backgroundSettings.image.size}
+                      onChange={(value) => setBackgroundSettings(prev => ({
+                        ...prev,
+                        image: { ...prev.image, size: value }
+                      }))}
+                      className="w-full mt-1"
+                    >
+                      <Option value="cover">Cover</Option>
+                      <Option value="contain">Contain</Option>
+                      <Option value="auto">Auto</Option>
+                      <Option value="100% 100%">Stretch</Option>
+                    </Select>
+                  </Col>
+                </Row>
+              </>
+            )}
         </div>
       )
     }

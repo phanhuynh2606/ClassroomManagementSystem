@@ -21,7 +21,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import CreateClassForm from './CreateClassForm';
 import classroomAPI from '../../services/api/classroom.api';
-import './teacher.css';
+import './style/teacher.css';
 
 const { Title, Text } = Typography;
 

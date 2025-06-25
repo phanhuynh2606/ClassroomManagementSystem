@@ -1,5 +1,5 @@
-import React, { memo } from 'react';
-import { Card, Avatar, Typography, Tag, Space, Input } from 'antd';
+import React, { memo, useState, useCallback } from 'react';
+import { Card, Avatar, Typography, Tag, Space, Input, Button, Dropdown, message, Modal } from 'antd';
 import { 
   UserOutlined, 
   CalendarOutlined, 
@@ -9,9 +9,17 @@ import {
   BookOutlined,
   FileTextOutlined,
   ClockCircleOutlined,
-  MessageOutlined
+  MessageOutlined,
+  MoreOutlined,
+  PushpinOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CommentOutlined,
+  LinkOutlined
 } from '@ant-design/icons';
+import { useSelector } from 'react-redux';
 import 'react-quill/dist/quill.snow.css';
+import CommentInput from './CommentInput';
 
 const { Text, Title } = Typography;
 
@@ -73,15 +81,6 @@ const htmlContentStyles = `
   .html-content li[data-list="ordered"]:before {
     content: none !important;
   }
-  
-  // /* For regular ul/ol tags */
-  // .html-content ul li {
-  //   list-style-type: disc !important;
-  // }
-  
-  // .html-content ol li {
-  //   list-style-type: decimal !important;
-  // }
   
   .html-content a {
     color: #1890ff !important;
@@ -158,9 +157,172 @@ const htmlContentStyles = `
   .html-content .ql-bg-yellow {
     background-color: #fff9c4 !important;
   }
+
+  /* Google Classroom style comment input */
+  .comment-input .ant-input {
+    border: none !important;
+    border-bottom: 1px solid #dadce0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 8px 0 !important;
+    font-size: 14px !important;
+  }
+  
+  .comment-input .ant-input:focus {
+    border-bottom: 2px solid #4285f4 !important;
+    box-shadow: none !important;
+  }
+  
+  .comment-input .ant-input::placeholder {
+    color: #5f6368 !important;
+  }
+
+  /* Comment bubble styling */
+  .comment-bubble {
+    background: #f8f9fa !important;
+    border-radius: 18px !important;
+    padding: 12px 16px !important;
+    position: relative !important;
+    transition: background-color 0.2s ease !important;
+  }
+  
+  .comment-bubble:hover {
+    background: #f1f3f4 !important;
+  }
+
+  /* Comment actions styling */
+  .comment-actions {
+    opacity: 0 !important;
+    transition: opacity 0.2s ease !important;
+  }
+  
+  .comment-item:hover .comment-actions {
+    opacity: 1 !important;
+  }
+  
+  /* Line clamp utility */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  /* Aspect ratio utility for older browsers */
+  .aspect-video {
+    aspect-ratio: 16 / 9;
+  }
+  
+  @supports not (aspect-ratio: 16 / 9) {
+    .aspect-video {
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 */
+      height: 0;
+    }
+    .aspect-video > * {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  }
 `;
 
-const StreamItem = ({ item, formatTimeAgo }) => {
+const StreamItem = ({ 
+  item, 
+  formatTimeAgo,
+  onPin,
+  onEdit,
+  onDelete,
+  onAddComment,
+  onDeleteComment,
+  userRole = 'teacher',
+  currentUserId 
+}) => {
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const { user } = useSelector((state) => state.auth);
+  console.log(item.attachments)
+  // Check if current user can edit/delete this post
+  const canEditDelete = useCallback(() => {
+    return user?.role === 'admin' || 
+           user?._id === item.author._id || 
+           (user?.role === 'teacher' && (item.type === 'announcement' || item.type === 'student_post'));
+  }, [user, item]);
+
+  // Check if current user can pin posts
+  const canPin = useCallback(() => {
+    return user?.role === 'teacher' || user?.role === 'admin';
+  }, [user]);
+
+  const handleCommentSubmit = useCallback(async (content) => {
+    setSubmittingComment(true);
+    try {
+      await onAddComment(item._id, content);
+      message.success('Comment added successfully');
+    } catch (error) {
+      message.error('Failed to add comment');
+    } finally {
+      setSubmittingComment(false);
+    }
+  }, [onAddComment, item._id]);
+
+  const handleReplyComment = useCallback((commentId) => {
+    // TODO: Implement reply functionality
+    message.info('Reply functionality will be available soon');
+  }, []);
+
+  const handleEditComment = useCallback((commentId, currentContent) => {
+    // TODO: Implement edit comment functionality
+    message.info('Edit comment functionality will be available soon');
+  }, []);
+
+  const handleDeleteComment = useCallback((commentId) => {
+    Modal.confirm({
+      title: 'Delete Comment',
+      content: 'Are you sure you want to delete this comment?',
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          // Call delete comment API
+          if (onDeleteComment) {
+            await onDeleteComment(item._id, commentId);
+            message.success('Comment deleted successfully');
+          }
+        } catch (error) {
+          console.error('Error deleting comment:', error);
+          message.error('Failed to delete comment');
+        }
+      }
+    });
+  }, [item._id, onDeleteComment]);
+
+  // Action menu items
+  const actionMenuItems = [
+    ...(canPin() ? [{
+      key: 'pin',
+      icon: <PushpinOutlined />,
+      label: item.pinned ? 'Unpin' : 'Pin',
+      onClick: () => onPin(item._id)
+    }] : []),
+    ...(canEditDelete() ? [{
+      key: 'edit',
+      icon: <EditOutlined />,
+      label: 'Edit',
+      onClick: () => onEdit(item._id)
+    }] : []),
+    ...(canEditDelete() ? [{
+      key: 'delete',
+      icon: <DeleteOutlined />,
+      label: 'Delete',
+      danger: true,
+      onClick: () => onDelete(item._id)
+    }] : [])
+  ];
+
   const getTypeIcon = (type) => {
     switch (type) {
       case 'announcement':
@@ -171,6 +333,8 @@ const StreamItem = ({ item, formatTimeAgo }) => {
         return <FileTextOutlined className="text-green-500" />;
       case 'activity':
         return <ClockCircleOutlined className="text-gray-500" />;
+      case 'student_post':
+        return <MessageOutlined className="text-green-600" />;
       default:
         return <MessageOutlined className="text-blue-500" />;
     }
@@ -186,18 +350,20 @@ const StreamItem = ({ item, formatTimeAgo }) => {
         return 'green';
       case 'activity':
         return 'default';
+      case 'student_post':
+        return 'green';
       default:
         return 'blue';
     }
   };
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
+    <Card className={`shadow-sm hover:shadow-md transition-shadow ${item.pinned ? 'border-l-4 border-l-yellow-400 bg-yellow-50' : ''}`}>
       <style>{htmlContentStyles}</style>
       <div className="flex gap-4">
         <Avatar 
-          icon={item.author.avatar ? undefined : <UserOutlined />}
-          src={item.author.avatar}
+          icon={item.author.image ? undefined : <UserOutlined />}
+          src={item.author.image}
           size={40}
         />
         
@@ -206,18 +372,35 @@ const StreamItem = ({ item, formatTimeAgo }) => {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <Space>
+                {item.pinned && <PushpinOutlined className="text-yellow-500" />}
                 {getTypeIcon(item.type)}
                 <Text strong className="text-gray-800">
-                  {item.author.name}
+                  {item.author.fullName || "Anonymous"}
                 </Text>
                 <Tag color={getTypeColor(item.type)} className="capitalize">
                   {item.type}
                 </Tag>
               </Space>
             </div>
-            <Text type="secondary" className="text-sm">
-              {formatTimeAgo(item.createdAt)}
-            </Text>
+            <div className="flex items-center gap-2">
+              <Text type="secondary" className="text-sm">
+                {formatTimeAgo(item.createdAt)}
+              </Text>
+              {actionMenuItems.length > 0 && (
+                <Dropdown
+                  menu={{ items: actionMenuItems }}
+                  trigger={['click']}
+                  placement="bottomRight"
+                >
+                  <Button 
+                    type="text" 
+                    icon={<MoreOutlined />} 
+                    size="small"
+                    className="hover:bg-gray-100"
+                  />
+                </Dropdown>
+              )}
+            </div>
           </div>
 
           {/* Content */}
@@ -252,71 +435,183 @@ const StreamItem = ({ item, formatTimeAgo }) => {
             )}
           </div>
 
-          {/* Attachments */}
+          {/* Attachments - Google Classroom Style */}
           {item.attachments && item.attachments.length > 0 && (
             <div className="mb-4">
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {item.attachments.map((attachment, index) => (
                   <div 
                     key={index}
-                    className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border cursor-pointer hover:bg-gray-100"
+                    className="relative bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => window.open(attachment.url, '_blank')}
                   >
-                    <PaperClipOutlined className="text-gray-500" />
-                    <div>
-                      <Text className="text-sm font-medium">
-                        {attachment.name}
-                      </Text>
-                      <br />
-                      <Text type="secondary" className="text-xs">
-                        {attachment.size}
-                      </Text>
-                    </div>
+                    {attachment.type === "video/youtube" ? (
+                      <>
+                        {/* YouTube Video Card */}
+                        <div className="relative aspect-video bg-black">
+                          <img
+                            src={attachment.thumbnail}
+                            alt="Video thumbnail"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-1.5 py-0.5 rounded">
+                            {attachment.duration}
+                          </div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
+                              <div className="w-0 h-0 border-l-[8px] border-l-white border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent ml-1"></div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-3">
+                          <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
+                            {attachment.name}
+                          </Text>
+                          <Text type="secondary" className="text-xs mt-1 block">
+                            YouTube video • {attachment.duration}
+                          </Text>
+                        </div>
+                      </>
+                    ) : attachment.type === "link" ? (
+                      <>
+                        {/* Link Card */}
+                        <div className="aspect-video bg-gray-100 flex items-center justify-center border-b">
+                          <div className="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <LinkOutlined className="text-white text-2xl" />
+                          </div>
+                        </div>
+                        <div className="p-3">
+                          <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
+                            {attachment.title || attachment.name || "Link"}
+                          </Text>
+                          <Text type="secondary" className="text-xs mt-1 block truncate">
+                            {attachment.url}
+                          </Text>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* File Card */}
+                        <div className="aspect-video bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center border-b">
+                          <div className="text-center">
+                            <PaperClipOutlined className="text-white text-3xl mb-2" />
+                            <div className="text-white text-xs font-medium uppercase tracking-wide">
+                              {attachment.name?.split('.').pop() || 'FILE'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-3">
+                          <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
+                            {attachment.name}
+                          </Text>
+                          <Text type="secondary" className="text-xs mt-1 block">
+                            {attachment.size}
+                          </Text>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Comments */}
-          {item.comments && item.comments.length > 0 && (
-            <div className="border-t pt-4">
-              <Text type="secondary" className="text-sm mb-3 block">
-                {item.comments.length} comment{item.comments.length > 1 ? 's' : ''}
+          {/* Comments Section */}
+          <div className="mt-4">
+            {/* Comments count */}
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+              <CommentOutlined className="text-gray-600 text-base" />
+              <Text className="text-sm font-medium text-gray-700">
+                {item.commentsCount || 0} class comment{(item.commentsCount || 0) !== 1 ? 's' : ''}
               </Text>
-              
-              <div className="space-y-3">
+            </div>
+
+            {/* Existing Comments */}
+            {item.comments && item.comments.length > 0 && (
+              <div className="space-y-4 mb-4">
                 {item.comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-3">
-                    <Avatar size="small" icon={<UserOutlined />} />
-                    <div className="flex-1">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <Text strong className="text-sm">
-                          {comment.author}
-                        </Text>
-                        <br />
-                        <Text className="text-sm">
-                          {comment.content}
-                        </Text>
+                  <div key={comment.id || comment._id} className="flex gap-3 comment-item">
+                    <Avatar 
+                      size="default" 
+                      icon={<UserOutlined />}
+                      src={comment.author?.image || comment.authorImage}
+                      className="mt-1"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="comment-bubble">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Text strong className="text-sm font-medium text-gray-900">
+                            {comment.author?.fullName || comment.authorName || "Anonymous"}
+                          </Text>
+                          <Text type="secondary" className="text-xs text-gray-500">
+                            {formatTimeAgo(comment.createdAt)}
+                          </Text>
+                        </div>
+                        <div 
+                          className="text-sm text-gray-800 leading-relaxed html-content"
+                          dangerouslySetInnerHTML={{ __html: comment.content }}
+                        />
                       </div>
-                      <Text type="secondary" className="text-xs mt-1">
-                        {formatTimeAgo(comment.createdAt)}
-                      </Text>
+                      
+                                             {/* Comment actions - show on hover */}
+                       <div className="flex items-center gap-4 mt-2 ml-4 comment-actions">
+                         <Button 
+                           type="text" 
+                           size="small"
+                           className="text-xs font-medium text-gray-500 hover:text-blue-600 p-0 h-auto border-0 shadow-none"
+                           onClick={() => handleReplyComment(comment.id || comment._id)}
+                         >
+                           Reply
+                         </Button>
+                         {(user?._id === comment.author?._id || user?.role === 'admin') && (
+                           <>
+                             <Button 
+                               type="text" 
+                               size="small"
+                               className="text-xs font-medium text-gray-500 hover:text-blue-600 p-0 h-auto border-0 shadow-none"
+                               onClick={() => handleEditComment(comment.id || comment._id, comment.content)}
+                             >
+                               Edit
+                             </Button>
+                             <Button 
+                               type="text" 
+                               size="small"
+                               className="text-xs font-medium text-gray-500 hover:text-red-600 p-0 h-auto border-0 shadow-none"
+                               onClick={() => handleDeleteComment(comment.id || comment._id)}
+                             >
+                               Delete
+                             </Button>
+                           </>
+                         )}
+                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              
-              {/* Add comment */}
-              <div className="flex gap-3 mt-4">
-                <Avatar size="small" icon={<UserOutlined />} />
-                <Input 
-                  placeholder="Add a comment..."
-                  className="flex-1"
-                  suffix={<SendOutlined className="text-gray-400 cursor-pointer hover:text-blue-500" />}
-                />
+            )}
+
+            {/* Show more comments if needed */}
+            {item.commentsCount > (item.comments?.length || 0) && (
+              <div className="mt-4 text-center">
+                <Button 
+                  type="text" 
+                  size="small"
+                  className="text-blue-600 hover:text-blue-800 font-medium border-0 shadow-none"
+                >
+                  View {item.commentsCount - (item.comments?.length || 0)} more comment{item.commentsCount - (item.comments?.length || 0) > 1 ? 's' : ''}
+                </Button>
               </div>
+            )}
+
+            {/* Add comment form - always visible */}
+            <div className="mt-4">
+              <CommentInput
+                onSubmit={handleCommentSubmit}
+                loading={submittingComment}
+                placeholder="Add a class comment..."
+              />
             </div>
-          )}
+          </div>
         </div>
       </div>
     </Card>

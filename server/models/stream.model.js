@@ -14,7 +14,7 @@ const streamSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['announcement', 'assignment', 'material', 'activity', 'quiz'],
+      enum: ['announcement', 'assignment', 'material', 'activity', 'quiz', 'student_post'],
       required: true,
       index: true
     },
@@ -55,12 +55,31 @@ const streamSchema = new mongoose.Schema(
         type: String,
         required: true
       },
+      type: {
+        type: String,
+        enum: ['file', 'link', 'video/youtube'],
+        default: 'file'
+      },
       fileType: String,
       fileSize: Number, // in bytes
+      size: String, // Human readable size (e.g., "2.5 MB")
       uploadedAt: {
         type: Date,
         default: Date.now
-      }
+      },
+      // YouTube video specific fields
+      videoId: String, // YouTube video ID
+      thumbnail: String, // YouTube thumbnail URL
+      duration: String, // Video duration (e.g., "4:13")
+      channel: String, // YouTube channel name
+      channelThumbnail: String, // Channel avatar URL
+      viewCount: String, // View count (e.g., "1.2M views")
+      description: String, // Video description
+      // Link specific fields
+      title: String, // Link title or video title
+      favicon: String, // Website favicon URL
+      // Additional metadata
+      metadata: mongoose.Schema.Types.Mixed
     }],
     // For assignments and quizzes
     dueDate: {
@@ -191,8 +210,28 @@ streamSchema.virtual('resource', {
   justOne: true
 });
 
+// Virtual for recent comments
+streamSchema.virtual('comments', {
+  ref: 'Comment',
+  localField: '_id',
+  foreignField: 'streamItem',
+  options: {
+    match: { status: 'active', isActive: true },
+    sort: { createdAt: 1 },
+    limit: 5,
+    populate: {
+      path: 'author',
+      select: 'fullName email image role'
+    }
+  }
+});
+
+// Ensure virtual fields are serialized
+streamSchema.set('toObject', { virtuals: true });
+streamSchema.set('toJSON', { virtuals: true });
+
 // Static methods
-streamSchema.statics.getClassroomStream = function(classroomId, options = {}) {
+streamSchema.statics.getClassroomStream = async function(classroomId, options = {}) {
   const {
     page = 1,
     limit = 20,
@@ -212,12 +251,21 @@ streamSchema.statics.getClassroomStream = function(classroomId, options = {}) {
     query.type = type;
   }
 
-  return this.find(query)
-    .populate('author', 'fullName email avatar role')
+  const streamItems = await this.find(query)
+    .populate('author', 'fullName email image role')
     .populate('resource')
+    .populate({
+      path: 'comments',
+      populate: {
+        path: 'author',
+        select: 'fullName email image role'
+      }
+    })
     .sort({ pinned: -1, publishAt: -1 })
     .skip(skip)
     .limit(limit);
+
+  return streamItems;
 };
 
 streamSchema.statics.createAnnouncement = function(data) {

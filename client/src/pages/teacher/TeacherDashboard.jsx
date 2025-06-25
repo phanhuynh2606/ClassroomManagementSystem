@@ -41,7 +41,7 @@ import {
   TrophyOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import './teacher.css';
+import './style/teacher.css';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;

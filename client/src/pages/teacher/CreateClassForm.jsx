@@ -13,7 +13,7 @@ import {
 } from 'antd';
 import { InfoCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import classroomAPI from '../../services/api/classroom.api';
-import './teacher.css';
+import './style/teacher.css';
 
 const { TextArea } = Input;
 const { Option } = Select;

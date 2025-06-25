@@ -33,22 +33,22 @@ const classroomAPI = {
 
   // Appearance/background management methods
   
-  // Update classroom appearance  teacher
+  // Update classroom appearance (NO file upload - just settings)
   updateAppearance: (id, appearanceData) => {
     return axiosClient.post(`/classrooms/teacher/${id}/appearance`, appearanceData);
   },
 
-  // Get available themes teacher
+  // Get available themes
   getAvailableThemes: () => {
     return axiosClient.get('/classrooms/teacher/themes');
   },
 
-  // Reset classroom appearance to default teacher
+  // Reset classroom appearance to default
   resetAppearance: (id) => {
     return axiosClient.post(`/classrooms/teacher/${id}/appearance/reset`);
   },
 
-  // Upload background image teacher
+  // Upload NEW background image to Cloudinary (ONLY when uploading new file)
   uploadBackgroundImage: (file) => {
     const formData = new FormData();
     formData.append('background', file);
@@ -59,7 +59,7 @@ const classroomAPI = {
     });
   },
 
-  // Get classroom appearance only teacher
+  // Get classroom appearance settings
   getAppearance: (id) => {
     return axiosClient.get(`/classrooms/teacher/${id}/appearance`);
   }

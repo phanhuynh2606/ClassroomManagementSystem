@@ -213,14 +213,108 @@ function getFileSizeLimit() {
   return 20 * 1024 * 1024; // 20MB
 }
 
+// Create attachment upload middleware for announcements
+const createAttachmentUploadMiddleware = () => {
+  // Configure Cloudinary storage for attachments
+  const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: (req, file) => {
+      const isVideo = file.mimetype.startsWith('video/');
+      const isImage = file.mimetype.startsWith('image/');
+      const customFolder = req.body.customFolder || 'classmanagement';
+      const folderStructure = `${customFolder}/attachments`;
+
+      const baseParams = {
+        folder: folderStructure,
+        public_id: () => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const fileNameWithoutExt = file.originalname.split('.')[0]
+            .replace(/[^a-zA-Z0-9]/g, '_');
+          return `attachment_${fileNameWithoutExt}_${uniqueSuffix}`;
+        }
+      };
+
+      if (isVideo) {
+        return {
+          ...baseParams,
+          resource_type: 'video',
+          allowed_formats: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'],
+          transformation: [{ quality: 'auto' }]
+        };
+      } else if (isImage) {
+        return {
+          ...baseParams,
+          resource_type: 'image',
+          allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+          transformation: [
+            { width: 1200, crop: 'limit' },
+            { quality: 'auto', fetch_format: 'auto' }
+          ]
+        };
+      } else {
+        return {
+          ...baseParams,
+          resource_type: 'raw',
+          allowed_formats: [
+            'pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 
+            'xls', 'xlsx', 'csv', 'zip', 'rar', '7z'
+          ]
+        };
+      }
+    }
+  });
+
+  const fileFilter = (req, file, cb) => {
+    const allowedMimeTypes = [
+      // Images
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      // Documents
+      'application/pdf', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      // Presentations
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      // Spreadsheets
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv',
+      // Videos
+      'video/mp4', 'video/avi', 'video/quicktime', 'video/webm',
+      // Archives
+      'application/zip', 'application/x-rar-compressed'
+    ];
+
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type ${file.mimetype} is not supported for attachments`), false);
+    }
+  };
+
+  const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+      fileSize: 15 * 1024 * 1024, // 15MB limit for attachments
+      files: 1
+    }
+  });
+
+  return upload;
+};
+
 // Create different middleware instances for different use cases
 const profileUpload = createUploadMiddleware('profiles', 1);
 const questionImageUpload = createUploadMiddleware('questions', 1);
 const backgroundImageUpload = createBackgroundUploadMiddleware();
+const attachmentUpload = createAttachmentUploadMiddleware();
+
 module.exports = {
   profileUpload,
   questionImageUpload,
   backgroundImageUpload,
+  attachmentUpload,
   createUploadMiddleware, // Export factory function for custom use cases
   createMaterialUploadMiddleware
 };

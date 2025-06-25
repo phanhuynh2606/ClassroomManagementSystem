@@ -192,7 +192,7 @@ const StudentClassroomDetail = () => {
                       <div className="space-y-4 mt-4">
                         {streamPosts.map((item) => (
                           <StreamItem
-                            key={item._id}
+                            key={item._id || item.id}
                             item={item}
                             formatTimeAgo={formatTimeAgo}
                           />

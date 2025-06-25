@@ -15,7 +15,7 @@ import {
 import { InfoCircleOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import classroomAPI from '../../services/api/classroom.api';
-import './teacher.css';
+import './style/teacher.css';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -125,9 +125,9 @@ const EditClassForm = () => {
         <div className="max-w-2xl w-full">
           <Card>
             <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Edit Class</h2>
+              <h2 className="text-xl font-semibold mb-2">Edit Class & Settings</h2>
               <p className="text-gray-600">
-                Update class information. Changes will need admin approval.
+                Update class information and student permissions. Changes will need admin approval.
               </p>
             </div>
 
@@ -210,11 +210,18 @@ const EditClassForm = () => {
               </Form.Item>
 
               <div className="border-t pt-4">
-                <h3 className="text-lg font-medium mb-4">Class Settings</h3>
+                <div className="mb-4">
+                  <h3 className="text-lg font-medium mb-2">Student Permissions</h3>
+                  <p className="text-gray-600 text-sm">
+                    Control what students can do in this classroom
+                  </p>
+                </div>
+                
                 <Form.Item
                   label="Allow Students to Invite Others"
                   name={['settings', 'allowStudentInvite']}
                   valuePropName="checked"
+                  extra="Students can invite other students to join the classroom"
                 >
                   <Switch />
                 </Form.Item>
@@ -223,6 +230,7 @@ const EditClassForm = () => {
                   label="Allow Students to Create Posts"
                   name={['settings', 'allowStudentPost']}
                   valuePropName="checked"
+                  extra="Students can share content and create posts in the classroom stream"
                 >
                   <Switch />
                 </Form.Item>
@@ -231,6 +239,7 @@ const EditClassForm = () => {
                   label="Allow Students to Comment"
                   name={['settings', 'allowStudentComment']}
                   valuePropName="checked"
+                  extra="Students can comment on posts and participate in discussions"
                 >
                   <Switch />
                 </Form.Item>

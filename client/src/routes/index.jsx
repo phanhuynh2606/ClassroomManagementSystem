@@ -34,6 +34,7 @@ import TeacherRequestManagement from '../pages/teacher/TeacherRequestManagement'
 import TeacherTodo from '../pages/teacher/TeacherTodo';
 import TeacherMaterials from '../pages/teacher/TeacherMaterials';
 import TeacherSettings from '../pages/teacher/TeacherSettings';
+import TeacherNotifications from '../pages/teacher/TeacherNotifications';
 import AssignmentDetail from '../pages/teacher/AssignmentDetail';
 import GradingSystemDemo from '../pages/teacher/GradingSystemDemo';
 import BackgroundDemo from '../pages/teacher/BackgroundDemo';
@@ -132,7 +133,7 @@ const AppRouter = () => {
 
         {/* Management */}
         <Route path="requests" element={<TeacherRequestManagement />} />
-        <Route path="notifications" element={<ComingSoon title="Thông báo" />} />
+        <Route path="notifications" element={<TeacherNotifications />} />
 
         {/* Settings & Profile */}
         <Route path="settings" element={<TeacherSettings />} />

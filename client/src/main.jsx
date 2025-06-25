@@ -6,6 +6,10 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import App from './App.jsx';
 import './index.css';
 import { store, persistor } from './store';
+import suppressReactQuillWarnings from './utils/suppressConsoleWarnings';
+
+// Suppress ReactQuill warnings early
+suppressReactQuillWarnings();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
 
