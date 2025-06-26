@@ -20,6 +20,7 @@ import {
 import { useSelector } from 'react-redux';
 import 'react-quill/dist/quill.snow.css';
 import CommentInput from './CommentInput';
+import dayjs from 'dayjs';
 
 const { Text, Title } = Typography;
 
@@ -369,7 +370,7 @@ const StreamItem = ({
         
         <div className="flex-1">
           {/* Header */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-0">
             <div className="flex items-center gap-3">
               <Space>
                 {item.pinned && <PushpinOutlined className="text-yellow-500" />}
@@ -405,8 +406,17 @@ const StreamItem = ({
 
           {/* Content */}
           <div className="mb-4">
+
+              {item.createdAt &&(
+              <div className="flex items-center gap-2 mr-3">
+                  <Text type="secondary" className="text-sm" style={{marginRight: '2px',marginTop: '3px'}}>
+                    <ClockCircleOutlined className="mr-1" />
+                  {dayjs(item.createdAt).format('DD/MM/YYYY HH:mm')}
+                </Text>
+              </div>
+              )}
             {item.title && (
-              <Title level={4} className="mb-2 text-gray-800">
+              <Title level={4} className="mb-1 mt-1 text-gray-800" style={{marginBottom: '2px',marginTop: '3px'}}>
                 {item.title}
               </Title>
             )}
