@@ -49,7 +49,7 @@ import {
   SyncOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
-import AssignmentGradingModal from './AssignmentGradingModal';
+import { AssignmentGradingModal } from '../grading';
 
 const { Title, Text } = Typography;
 const { Search } = Input;

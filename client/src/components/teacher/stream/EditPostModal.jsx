@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Form, Input, Button, message, Select } from 'antd';
-import CustomQuillEditor from '../../../components/CustomQuillEditor';
+import CustomQuillEditor from '../../CustomQuillEditor';
 
 const { Option } = Select;
 

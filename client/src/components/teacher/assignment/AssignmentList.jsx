@@ -39,10 +39,8 @@ import moment from 'moment';
 import { useNavigate } from 'react-router-dom';
 
 // Import the new modal components
-import AssignmentCreateModal from './AssignmentCreateModal';
-import QuizCreateModal from './QuizCreateModal';
-import AssignmentGradingModal from './AssignmentGradingModal';
-import SubmissionManagement from './SubmissionManagement';
+import { AssignmentCreateModal, SubmissionManagement } from '../assignment';
+import { AssignmentGradingModal } from '../grading';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;

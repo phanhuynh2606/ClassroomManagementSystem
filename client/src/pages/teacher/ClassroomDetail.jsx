@@ -30,19 +30,36 @@ import streamAPI from "../../services/api/stream.api";
 import useClassroomPermissions from "../../hooks/useClassroomPermissions";
 import "./style/teacher.css";
 
-// Import components
-import StreamHeader from "./components/StreamHeader";
-import StreamSidebar from "./components/StreamSidebar";
-import AnnouncementEditor from "./components/AnnouncementEditor";
-import StreamItem from "./components/StreamItem";
-import StreamEmptyState from "./components/StreamEmptyState";
-import PeopleTab from "./components/StudentList";
-import ClassworkTab from "./components/AssignmentList";
-import GradesTab from "./components/GradesTab";
-import MaterialList from "./components/MaterialList";
-import QuizManagement from "./components/QuizManagement";
-import BackgroundCustomizer from "./components/BackgroundCustomizer";
-import EditPostModal from "./components/EditPostModal";
+// Import components from new organized structure
+import {
+  StreamHeader,
+  StreamSidebar,
+  AnnouncementEditor,
+  StreamItem,
+  StreamEmptyState,
+  EditPostModal,
+} from "../../components/teacher/stream";
+
+import {
+  AssignmentList as ClassworkTab,
+} from "../../components/teacher/assignment";
+
+import {
+  QuizManagement,
+} from "../../components/teacher/quiz";
+
+import {
+  GradesTab,
+} from "../../components/teacher/grading";
+
+import {
+  MaterialList,
+} from "../../components/teacher/material";
+
+import {
+  StudentList as PeopleTab,
+  BackgroundCustomizer,
+} from "../../components/teacher/classroom";
 
 const { Title, Text } = Typography;
 const ClassroomDetail = () => {

@@ -47,6 +47,13 @@ router.post('/attachments/upload',
   streamController.uploadAttachment
 );
 
+// Save YouTube video info after upload
+router.post('/save-youtube-video', 
+  protect, 
+  authorize('teacher', 'student', 'admin'), 
+  streamController.saveYouTubeVideo
+);
+
 // Stream item management (general routes for all types)
 router.put('/items/:streamId', 
   protect, 

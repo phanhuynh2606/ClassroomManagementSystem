@@ -6,6 +6,7 @@ import questionAPI from './question.api';
 import notificationAPI from './notification.api';
 import requestAPI from './request.api';
 import streamAPI from './stream.api';
+import youtubeAPI from './youtube.api';
 
 export {
   authAPI,
@@ -15,5 +16,6 @@ export {
   questionAPI,
   notificationAPI,
   requestAPI,
-  streamAPI
+  streamAPI,
+  youtubeAPI
 }; 

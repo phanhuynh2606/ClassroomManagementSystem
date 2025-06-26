@@ -38,6 +38,14 @@ const streamAPI = {
     });
   },
 
+  // Save YouTube video info after upload
+  saveYouTubeVideo: (classroomId, videoInfo) => {
+    return axiosClient.post('/stream/save-youtube-video', {
+      classroomId,
+      videoInfo
+    });
+  },
+
   // Comment functionality
   addComment: (streamId, content) => {
     return axiosClient.post(`/stream/items/${streamId}/comments`, { content });

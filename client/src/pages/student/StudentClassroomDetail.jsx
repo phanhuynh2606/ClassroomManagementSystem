@@ -39,15 +39,17 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import classroomAPI from '../../services/api/classroom.api';
 import StudentAssignmentList from '../student/StudentAssignmentList';
 import StudentQuizList from '../student/StudentQuizList';
-import StreamHeader from '../teacher/components/StreamHeader';
-import StreamItem from '../teacher/components/StreamItem';
-import StreamSidebar from '../teacher/components/StreamSidebar';
-import StreamEmptyState from '../teacher/components/StreamEmptyState';
-import AnnouncementEditor from '../teacher/components/AnnouncementEditor';
+import {
+  StreamHeader,
+  StreamItem,
+  StreamSidebar,
+  StreamEmptyState,
+  AnnouncementEditor,
+} from '../../components/teacher/stream';
 
 const { Title, Text } = Typography;
 
-const StudentClassroomDetail = () => {
+const StudentClassroomDetail = () => {  
   const { classroomId } = useParams();
   const navigate = useNavigate();
   const [classroom, setClassroom] = useState(null);

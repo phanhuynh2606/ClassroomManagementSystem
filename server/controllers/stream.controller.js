@@ -771,6 +771,101 @@ const togglePinStreamItem = async (req, res) => {
   }
 };
 
+// Save YouTube video info after upload
+const saveYouTubeVideo = async (req, res) => {
+  try {
+    const { classroomId, videoInfo } = req.body;
+    const userId = req.user._id;
+
+    // Validate required fields
+    if (!classroomId || !videoInfo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Classroom ID and video info are required'
+      });
+    }
+
+    // Verify classroom exists and user has permission
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        message: 'Classroom not found'
+      });
+    }
+
+    // Check permissions
+    const userRole = req.user.role;
+    let hasPermission = false;
+    
+    if (userRole === 'admin') {
+      hasPermission = true;
+    } else if (userRole === 'teacher' && classroom.teacher.toString() === userId.toString()) {
+      hasPermission = true;
+    } else if (userRole === 'student') {
+      const isEnrolled = classroom.students.some(s => 
+        s.student && s.student.toString() === userId.toString() && s.status === 'active'
+      );
+      hasPermission = isEnrolled && classroom.settings?.allowStudentPost;
+    }
+
+    if (!hasPermission) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to upload videos in this classroom'
+      });
+    }
+
+    // Create stream item for uploaded video
+    const postData = {
+      title: `Video: ${videoInfo.title}`,
+      content: `<p>Uploaded a new video to the classroom.</p>`,
+      type: userRole === 'student' ? 'student_post' : 'announcement',
+      classroom: classroomId,
+      author: userId,
+      attachments: [{
+        name: videoInfo.title,
+        url: videoInfo.url,
+        type: 'video/youtube',
+        videoId: videoInfo.id,
+        thumbnail: videoInfo.thumbnail,
+        duration: videoInfo.duration,
+        channel: videoInfo.channel,
+        viewCount: videoInfo.viewCount,
+        description: videoInfo.description,
+        metadata: {
+          uploadedByUser: true,
+          publishedAt: videoInfo.publishedAt,
+          embedUrl: videoInfo.embedUrl,
+          status: videoInfo.status,
+          uploadDate: new Date().toISOString()
+        }
+      }],
+      status: 'published',
+      publishAt: new Date()
+    };
+
+    const post = await Stream.create(postData);
+    await post.populate('author', 'fullName email image role');
+
+    res.status(201).json({
+      success: true,
+      message: 'YouTube video saved successfully',
+      data: {
+        post: post,
+        videoInfo: videoInfo
+      }
+    });
+
+  } catch (error) {
+    console.error('Error saving YouTube video:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while saving video info'
+    });
+  }
+};
+
 module.exports = {
   createAnnouncement,
   getClassroomStream,
@@ -784,5 +879,6 @@ module.exports = {
   deleteComment,
   updateStreamItem,
   deleteStreamItem,
-  togglePinStreamItem
+  togglePinStreamItem,
+  saveYouTubeVideo
 }; 

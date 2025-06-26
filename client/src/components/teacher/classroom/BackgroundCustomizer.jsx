@@ -25,7 +25,7 @@ import {
   SaveOutlined,
   UploadOutlined
 } from '@ant-design/icons';
-import classroomAPI from '../../../services/api/classroom.api';
+import classroomAPI from "../../../services/api/classroom.api";
 
 const { Title, Text } = Typography;
 const { Option } = Select;

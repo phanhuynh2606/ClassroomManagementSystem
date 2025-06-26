@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Card, Button, Space, Typography, Row, Col, message } from 'antd';
 import { FormatPainterOutlined, SettingOutlined } from '@ant-design/icons';
-import StreamHeader from './components/StreamHeader';
-import BackgroundCustomizer from './components/BackgroundCustomizer';
+import { StreamHeader } from '../../components/teacher/stream';
+import { BackgroundCustomizer } from '../../components/teacher/classroom';
 
 const { Title, Text } = Typography;
 

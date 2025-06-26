@@ -38,7 +38,7 @@ import {
 } from '@ant-design/icons';
 
 // Import the PDF viewer component
-import PDFViewerModal from './components/PDFViewerModal';
+import { PDFViewerModal } from '../../components/teacher/common';
 
 const { Title, Text, Paragraph } = Typography;
 const { Step } = Steps;

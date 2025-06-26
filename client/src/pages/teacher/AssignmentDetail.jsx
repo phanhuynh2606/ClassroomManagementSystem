@@ -40,8 +40,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import moment from 'moment';
 
 // Import components
-import AssignmentGradingModal from './components/AssignmentGradingModal';
-import SubmissionManagement from './components/SubmissionManagement';
+import { AssignmentGradingModal } from '../../components/teacher/grading';
+import { SubmissionManagement } from '../../components/teacher/assignment';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
