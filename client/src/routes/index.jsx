@@ -48,9 +48,9 @@ import StudentAssignmentList from '../pages/student/StudentAssignmentList';
 import StudentAssignmentDetail from '../pages/student/StudentAssignmentDetail';
 import StudentQuizList from '../pages/student/StudentQuizList';
 import QuizPage from '../pages/student/QuizPage';
+import StudentGrades from '../pages/student/StudentGrades';
 // import MyClassess from '../pages/student/MyCourses';
 // import TakeQuiz from '../pages/student/TakeQuiz';
-// import MyGrades from '../pages/student/MyGrades';
 // import MyProgress from '../pages/student/MyProgress';
 
 // Protected Route Component
@@ -162,7 +162,7 @@ const AppRouter = () => {
         
         <Route path="classrooms/:classroomId/assignments/:assignmentId" element={<StudentAssignmentDetail />} />
         <Route path="classrooms/:classroomId/quizzes/:quizId" element={<QuizPage/>} />
-        <Route path="grades" element={<ComingSoon title="Điểm số" />} />
+        <Route path="grades" element={<StudentGrades />} />
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
       </Route>
 

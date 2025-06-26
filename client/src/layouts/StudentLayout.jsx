@@ -56,12 +56,12 @@ const StudentLayout = () => {
       label: 'My Grades',
       onClick: () => navigate('/student/grades'),
     },
-    {
-      key: 'schedule',
-      icon: <LineChartOutlined />,
-      label: 'Schedule',
-      onClick: () => navigate('/student/schedule'),
-    },
+    // {
+    //   key: 'schedule',
+    //   icon: <LineChartOutlined />,
+    //   label: 'Schedule',
+    //   onClick: () => navigate('/student/schedule'),
+    // },
   ];
 
   return (
