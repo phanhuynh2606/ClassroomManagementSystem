@@ -33,7 +33,7 @@ const VideoUploadModal = ({
       return false;
     }
 
-    // Check file size (200MB limit for YouTube)
+    // Check file size (200MB limit for YouTube free accounts)
     const maxSize = 200 * 1024 * 1024; // 200MB
     if (file.size > maxSize) {
       message.error('Video file size must be less than 200MB');
@@ -130,12 +130,16 @@ const VideoUploadModal = ({
       message.destroy();
       
       let errorMessage = 'Failed to upload video to YouTube';
-      if (error.message.includes('sign in')) {
-        errorMessage = 'Please sign in to YouTube to upload videos';
+      if (error.message.includes('sign in') || error.message.includes('Authentication failed')) {
+        errorMessage = 'Authentication failed. Please try signing in again.';
+      } else if (error.message.includes('access_denied') || error.message.includes('access denied')) {
+        errorMessage = '🔒 Access Denied: This app is in development mode. Only authorized test users can upload videos. Please contact the administrator to add your email to the test user list, or use an authorized Google account.';
       } else if (error.message.includes('size')) {
         errorMessage = 'Video file is too large. Please use a file smaller than 200MB';
       } else if (error.message.includes('quota')) {
         errorMessage = 'YouTube upload quota exceeded. Please try again later';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Authentication timeout. Please try again and complete the sign-in process more quickly.';
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -164,7 +168,9 @@ const VideoUploadModal = ({
           </div>
           <div>
             <div className="text-lg font-semibold">Upload Video to YouTube</div>
-            <div className="text-sm text-gray-500">Share videos with your students</div>
+            <div className="text-sm text-gray-500">
+              Share videos with your students. You can use any Google account with YouTube access.
+            </div>
           </div>
         </div>
       }
@@ -273,8 +279,9 @@ const VideoUploadModal = ({
                   name="privacy"
                   label="Privacy Setting"
                   initialValue="unlisted"
+                  className="mb-6"
                 >
-                  <Select>
+                  <Select className="w-full h-fit">
                     <Select.Option value="unlisted">
                       <div>
                         <div className="font-medium">Unlisted</div>
@@ -303,6 +310,22 @@ const VideoUploadModal = ({
                 </Form.Item>
               </>
             )}
+
+            {/* Authentication Notice */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <div className="text-amber-600 text-lg">⚠️</div>
+                <div>
+                  <div className="font-medium text-amber-800 mb-1">Authentication & App Verification</div>
+                  <div className="text-sm text-amber-700 space-y-1">
+                    <p>• You'll be asked to sign in with a Google account</p>
+                    <p>• <strong>Important:</strong> This app is in development mode</p>
+                    <p>• Only authorized test users can upload videos</p>
+                    <p>• If you get "access_denied" error, contact admin to add your email to test users</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Action buttons */}
             <div className="flex justify-between pt-4 border-t">
