@@ -38,9 +38,11 @@ import {
   PrinterOutlined,
   MoreOutlined,
   LineChartOutlined,
-  TrophyOutlined
+  TrophyOutlined,
+  PlayCircleOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { VideoPlayerDemo } from '../../components/teacher/stream';
 import './style/teacher.css';
 
 const { Title, Text } = Typography;
@@ -51,6 +53,7 @@ const { RangePicker } = DatePicker;
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [videoPlayerDemoVisible, setVideoPlayerDemoVisible] = useState(false);
 
   // Mock data - thay thế bằng API calls trong thực tế
   const [stats, setStats] = useState({
@@ -298,6 +301,14 @@ const TeacherDashboard = () => {
           className="h-12 text-left flex items-center bg-gradient-to-r from-purple-500 to-blue-600 text-white border-none hover:from-purple-600 hover:to-blue-700"
         >
           🎯 Demo Hệ thống Chấm điểm
+        </Button>
+        <Button 
+          block 
+          icon={<PlayCircleOutlined />}
+          onClick={() => setVideoPlayerDemoVisible(true)}
+          className="h-12 text-left flex items-center bg-gradient-to-r from-red-500 to-pink-600 text-white border-none hover:from-red-600 hover:to-pink-700"
+        >
+          🎬 Demo Video Player
         </Button>
       </div>
     </Card>
@@ -831,6 +842,23 @@ const TeacherDashboard = () => {
             Báo cáo được tạo vào {new Date().toLocaleDateString('vi-VN')} lúc {new Date().toLocaleTimeString('vi-VN')}
           </Text>
         </div>
+      </Modal>
+
+      {/* Video Player Demo Modal */}
+      <Modal
+        title="🎬 Enhanced Video Player Demo"
+        open={videoPlayerDemoVisible}
+        onCancel={() => setVideoPlayerDemoVisible(false)}
+        width="95vw"
+        style={{ maxWidth: '1400px' }}
+        footer={null}
+        bodyStyle={{ 
+          padding: 0,
+          height: '80vh',
+          overflow: 'auto'
+        }}
+      >
+        <VideoPlayerDemo />
       </Modal>
     </div>
   );

@@ -83,8 +83,9 @@ const createAnnouncement = async (req, res) => {
       processedAttachments = attachments.map(attachment => ({
         name: attachment.name,
         url: attachment.url || attachment.file, // Handle both URL and file
-        fileType: attachment.type,
-        fileSize: attachment.size,
+        fileType: attachment.fileType || attachment.type,
+        fileSize: attachment.fileSize, // Use fileSize field for bytes number
+        size: attachment.size, // Keep size field for human-readable string
         thumbnail: attachment.thumbnail,
         duration: attachment.duration,
         viewCount: attachment.viewCount,
@@ -93,6 +94,7 @@ const createAnnouncement = async (req, res) => {
         videoId: attachment.videoId,
         metadata: attachment.metadata,
         description: attachment.description,
+        title: attachment.title,
         type: attachment.type
       }));
     }
@@ -159,7 +161,7 @@ const getClassroomStream = async (req, res) => {
       hasAccess = true;
     } else if (userRole === 'teacher' && classroom.teacher.toString() === userId.toString()) {
       hasAccess = true;
-    } else if (userRole === 'student' && classroom.students.includes(userId)) {
+    } else if (userRole === 'student' && classroom.students.some(s => s.student.toString() === userId.toString())) {
       hasAccess = true;
     }
 
@@ -240,8 +242,19 @@ const updateAnnouncement = async (req, res) => {
       announcement.attachments = attachments.map(attachment => ({
         name: attachment.name,
         url: attachment.url,
-        fileType: attachment.type,
-        fileSize: attachment.size
+        fileType: attachment.fileType || attachment.type,
+        fileSize: attachment.fileSize, // Use fileSize field for bytes number
+        size: attachment.size, // Keep size field for human-readable string
+        thumbnail: attachment.thumbnail,
+        duration: attachment.duration,
+        viewCount: attachment.viewCount,
+        channel: attachment.channel,
+        channelThumbnail: attachment.channelThumbnail,
+        videoId: attachment.videoId,
+        metadata: attachment.metadata,
+        description: attachment.description,
+        title: attachment.title,
+        type: attachment.type
       }));
     }
 

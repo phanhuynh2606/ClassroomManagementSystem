@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { Spin } from 'antd';
 
 // Layouts
 import AdminLayout from '../layouts/AdminLayout';
 import TeacherLayout from '../layouts/TeacherLayout';
 import StudentLayout from '../layouts/StudentLayout';
+import MainLayout from '../layouts/MainLayout';
 
 // Auth Pages
 import Login from '../pages/auth/Login';
@@ -38,6 +40,7 @@ import TeacherNotifications from '../pages/teacher/TeacherNotifications';
 import AssignmentDetail from '../pages/teacher/AssignmentDetail';
 import GradingSystemDemo from '../pages/teacher/GradingSystemDemo';
 import BackgroundDemo from '../pages/teacher/BackgroundDemo';
+import CreateClassForm from '../pages/teacher/CreateClassForm';
 
 // Student Pages
 import StudentProfile from '../pages/student/StudentProfile';
@@ -49,9 +52,9 @@ import StudentAssignmentDetail from '../pages/student/StudentAssignmentDetail';
 import StudentQuizList from '../pages/student/StudentQuizList';
 import QuizPage from '../pages/student/QuizPage';
 import StudentGrades from '../pages/student/StudentGrades';
-// import MyClassess from '../pages/student/MyCourses';
-// import TakeQuiz from '../pages/student/TakeQuiz';
-// import MyProgress from '../pages/student/MyProgress';
+
+// Demo Components
+import { VideoPlayerDemo } from '../components/teacher/stream';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -77,129 +80,145 @@ const ComingSoon = ({ title }) => (
   </div>
 );
 
+// Loading component
+const Loading = () => (
+  <div className="flex justify-center items-center h-64">
+    <Spin size="large" />
+  </div>
+);
+
 const AppRouter = () => {
   const { user } = useSelector((state) => state.auth);
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
+    <Suspense fallback={<Loading />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-      {/* Admin Routes */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<AdminDashboard />} />
-        <Route path="profile" element={<AdminProfile />} />
-        <Route path="users" element={<UserManagement />} />
-        <Route path="classrooms" element={<ClassroomManagement />} />
-        <Route path="classrooms/:classroomId" element={<AdminClassroomDetail />} />
-        <Route path="quizzes" element={<QuizManagement />} />
-        <Route path="questions" element={<QuestionManagement />} />
-        <Route path="notifications" element={<NotificationManagement />} />
-        <Route path="requests" element={<AdminRequestManagement />} />
-      </Route>
+        {/* Main layout for public pages */}
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Navigate to="/login" replace />} />
+        </Route>
 
-      {/* Teacher Routes */}
-      <Route
-        path="/teacher"
-        element={
-          <ProtectedRoute allowedRoles={['teacher']}>
-            <TeacherLayout />
-          </ProtectedRoute>
-        }
-      >
-        {/* Dashboard */}
-        <Route index element={<TeacherDashboard />} />
-        <Route path="dashboard" element={<TeacherDashboard />} />
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="profile" element={<AdminProfile />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="classrooms" element={<ClassroomManagement />} />
+          <Route path="classrooms/:classroomId" element={<AdminClassroomDetail />} />
+          <Route path="quizzes" element={<QuizManagement />} />
+          <Route path="questions" element={<QuestionManagement />} />
+          <Route path="notifications" element={<NotificationManagement />} />
+          <Route path="requests" element={<AdminRequestManagement />} />
+        </Route>
 
-        {/* Classroom Management */}
-        <Route path="classroom" element={<TeacherClassroomManagement />} />
-        <Route path="classroom/:classId" element={<TeacherClassroomDetail />} />
-        <Route path="classroom/edit/:classId" element={<EditClassForm />} />
-        <Route path="classroom/:classId/assignment/:assignmentId" element={<AssignmentDetail />} />
+        {/* Teacher Routes */}
+        <Route
+          path="/teacher"
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <TeacherLayout />
+            </ProtectedRoute>
+          }
+        >
+          {/* Dashboard */}
+          <Route index element={<TeacherDashboard />} />
+          <Route path="dashboard" element={<TeacherDashboard />} />
 
-        {/* Core Features */}
-        <Route path="todo" element={<TeacherTodo />} />
-        <Route path="materials" element={<TeacherMaterials />} />
+          {/* Classroom Management */}
+          <Route path="classroom" element={<TeacherClassroomManagement />} />
+          <Route path="classroom/create" element={<CreateClassForm />} />
+          <Route path="classroom/:classId" element={<TeacherClassroomDetail />} />
+          <Route path="classroom/edit/:classId" element={<EditClassForm />} />
+          <Route path="classroom/:classId/assignment/:assignmentId" element={<AssignmentDetail />} />
 
-        {/* Management */}
-        <Route path="requests" element={<TeacherRequestManagement />} />
-        <Route path="notifications" element={<TeacherNotifications />} />
+          {/* Core Features */}
+          <Route path="todo" element={<TeacherTodo />} />
+          <Route path="materials" element={<TeacherMaterials />} />
 
-        {/* Settings & Profile */}
-        <Route path="settings" element={<TeacherSettings />} />
-        <Route path="profile" element={<TeacherProfile />} />
-        
-        {/* Demo & Help */}
-        <Route path="grading-demo" element={<GradingSystemDemo />} />
-        <Route path="background-demo" element={<BackgroundDemo />} />
-      </Route>
+          {/* Management */}
+          <Route path="requests" element={<TeacherRequestManagement />} />
+          <Route path="notifications" element={<TeacherNotifications />} />
 
-      {/* Student Routes */}
-      <Route
-        path="/student"
-        element={
-          <ProtectedRoute allowedRoles={['student']}>
-            <StudentLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<StudentDashboard />} />
-        <Route path="dashboard" element={<StudentDashboard />} />
-        <Route path="profile" element={<StudentProfile />} />
-        <Route path="classrooms" element={<StudentClassroomManagement />} />
-        <Route path="classroom/:classroomId" element={<StudentClassroomDetail />} />
-        {/* Upcoming Student Features */}
-        
-        <Route path="classrooms/:classroomId/assignments/:assignmentId" element={<StudentAssignmentDetail />} />
-        <Route path="classrooms/:classroomId/quizzes/:quizId" element={<QuizPage/>} />
-        <Route path="grades" element={<StudentGrades />} />
-        <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
-      </Route>
+          {/* Settings & Profile */}
+          <Route path="settings" element={<TeacherSettings />} />
+          <Route path="profile" element={<TeacherProfile />} />
+          
+          {/* Demo & Help */}
+          <Route path="grading-demo" element={<GradingSystemDemo />} />
+          <Route path="background-demo" element={<BackgroundDemo />} />
+          <Route path="video-demo" element={<VideoPlayerDemo />} />
+        </Route>
 
-      {/* Default Route - Redirect based on user role */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            {user?.role === 'admin' ? (
-              <Navigate to="/admin" />
-            ) : user?.role === 'teacher' ? (
-              <Navigate to="/teacher" />
-            ) : (
-              <Navigate to="/student" />
-            )}
-          </ProtectedRoute>
-        }
-      />
+        {/* Student Routes */}
+        <Route
+          path="/student"
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <StudentLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<StudentDashboard />} />
+          <Route path="dashboard" element={<StudentDashboard />} />
+          <Route path="profile" element={<StudentProfile />} />
+          <Route path="classrooms" element={<StudentClassroomManagement />} />
+          <Route path="classroom/:classroomId" element={<StudentClassroomDetail />} />
+          {/* Upcoming Student Features */}
+          
+          <Route path="classrooms/:classroomId/assignments/:assignmentId" element={<StudentAssignmentDetail />} />
+          <Route path="classrooms/:classroomId/quizzes/:quizId" element={<QuizPage/>} />
+          <Route path="grades" element={<StudentGrades />} />
+          <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
+        </Route>
 
-      {/* 404 Route */}
-      <Route 
-        path="*" 
-        element={
-          <div className="flex flex-col items-center justify-center h-screen text-center">
-            <div className="text-9xl text-gray-300 mb-4">404</div>
-            <h1 className="text-4xl font-bold text-gray-600 mb-2">Trang không tìm thấy</h1>
-            <p className="text-gray-500 mb-6">Trang bạn đang tìm kiếm không tồn tại</p>
-            <button 
-              onClick={() => window.history.back()}
-              className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Quay lại
-            </button>
-          </div>
-        } 
-      />
-    </Routes>
+        {/* Default Route - Redirect based on user role */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              {user?.role === 'admin' ? (
+                <Navigate to="/admin" />
+              ) : user?.role === 'teacher' ? (
+                <Navigate to="/teacher" />
+              ) : (
+                <Navigate to="/student" />
+              )}
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 404 Route */}
+        <Route 
+          path="*" 
+          element={
+            <div className="flex flex-col items-center justify-center h-screen text-center">
+              <div className="text-9xl text-gray-300 mb-4">404</div>
+              <h1 className="text-4xl font-bold text-gray-600 mb-2">Trang không tìm thấy</h1>
+              <p className="text-gray-500 mb-6">Trang bạn đang tìm kiếm không tồn tại</p>
+              <button 
+                onClick={() => window.history.back()}
+                className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Quay lại
+              </button>
+            </div>
+          } 
+        />
+      </Routes>
+    </Suspense>
   );
 };
 

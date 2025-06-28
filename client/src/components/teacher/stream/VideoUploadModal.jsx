@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Modal,
   Form,
@@ -8,9 +8,11 @@ import {
   Progress,
   Select,
   message,
+  Tooltip,
 } from 'antd';
 import {
   CloudUploadOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import { youtubeAPI } from '../../../services/api';
 
@@ -25,6 +27,26 @@ const VideoUploadModal = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [videoFile, setVideoFile] = useState(null);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadCompleted, setUploadCompleted] = useState(false);
+
+  // Prevent browser tab/window close during upload
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (uploadingVideo) {
+        e.preventDefault();
+        e.returnValue = 'Video upload is in progress. Are you sure you want to leave?';
+        return 'Video upload is in progress. Are you sure you want to leave?';
+      }
+    };
+
+    if (uploadingVideo) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [uploadingVideo]);
 
   const handleVideoFileSelect = useCallback((file) => {
     // Validate video file
@@ -87,29 +109,64 @@ const VideoUploadModal = ({
       message.destroy();
 
       if (uploadResult && uploadResult.id) {
-        // Get video info
+        // Show processing message
+        message.loading('Processing video information and extracting duration...', 0);
+        
+        // Get video info with retry logic - this will get duration properly
         const videoInfo = await youtubeAPI.getVideoInfo(uploadResult.id);
+        console.log("Video Info with Duration:", videoInfo);
+        message.destroy();
+        
+        // Check duration status and show appropriate message
+        if (!videoInfo.duration || videoInfo.duration === "Processing...") {
+          message.warning({
+            content: (
+              <div>
+                <div className="font-medium">Video uploaded successfully!</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Duration is still being processed by YouTube. This usually takes 1-5 minutes.
+                  {videoInfo._debug && (
+                    <div className="text-xs mt-1">
+                      Debug info: Raw duration = "{videoInfo._debug.rawDuration || 'null'}", 
+                      Upload status = "{videoInfo._debug.uploadStatus || 'unknown'}"
+                    </div>
+                  )}
+                </div>
+              </div>
+            ),
+            duration: 8
+          });
+        } else {
+          message.success(`Video "${videoInfo.title}" uploaded successfully! Duration: ${videoInfo.duration}`);
+        }
         
         // Create attachment
         const videoAttachment = {
           id: Date.now().toString(),
           name: videoInfo.title,
-          type: "video/youtube",
+          type: "video", // Changed from "video/youtube" to "video" for uploaded files
           url: videoInfo.url,
           title: videoInfo.title,
+          fileType: videoFile.type,
+          fileSize: videoFile.size,
+          size: `${(videoFile.size / (1024 * 1024)).toFixed(2)} MB`,
           videoId: videoInfo.id,
           thumbnail: videoInfo.thumbnail,
-          duration: videoInfo.duration,
+          duration: videoInfo.duration || "0:00", // Ensure duration is always set
           channel: videoInfo.channel,
           viewCount: videoInfo.viewCount,
           description: videoInfo.description,
           status: videoInfo.status,
           uploadedByUser: true,
+          embedUrl: videoInfo.embedUrl, // Add embedUrl at top level for easy access
           metadata: {
             publishedAt: videoInfo.publishedAt,
             embedUrl: videoInfo.embedUrl,
             originalFilename: videoFile.name,
-            uploadDate: new Date().toISOString()
+            uploadDate: new Date().toISOString(),
+            youtubeVideoId: videoInfo.id, // Keep YouTube ID for reference
+            durationRaw: videoInfo.duration, // Keep raw duration
+            processed: true
           }
         };
 
@@ -117,10 +174,13 @@ const VideoUploadModal = ({
           onSuccess(videoAttachment);
         }
         
-        // Reset form
-        handleCancel();
+        // Mark upload as completed
+        setUploadCompleted(true);
         
-        message.success(`Video "${videoInfo.title}" uploaded successfully to YouTube!`);
+        // Show success message and auto-close after delay
+        setTimeout(() => {
+          handleCancel();
+        }, 3000); // Auto close after 3 seconds to let user see the success message
       } else {
         throw new Error('No video ID returned from upload');
       }
@@ -147,17 +207,50 @@ const VideoUploadModal = ({
       message.error(errorMessage);
     } finally {
       setUploadingVideo(false);
+      setUploadCompleted(false);
       if (setLoading) setLoading(false);
     }
   }, [videoFile, uploadForm, onSuccess, setLoading]);
 
   const handleCancel = useCallback(() => {
+    // Prevent closing during upload
+    if (uploadingVideo) {
+      Modal.confirm({
+        title: 'Cancel Upload?',
+        content: (
+          <div>
+            <div className="mb-2">⚠️ Your video is still uploading to YouTube.</div>
+            <div className="text-sm text-gray-600">
+              Closing now will cancel the upload process and you'll need to start over.
+              Are you sure you want to cancel?
+            </div>
+          </div>
+        ),
+        okText: 'Yes, Cancel Upload',
+        okType: 'danger',
+        cancelText: 'Continue Upload',
+        onOk: () => {
+                     // Force reset everything
+           setVideoFile(null);
+           setUploadProgress(0);
+           setUploadingVideo(false);
+           setUploadCompleted(false);
+           uploadForm.resetFields();
+           if (setLoading) setLoading(false);
+           if (onCancel) onCancel();
+        }
+      });
+      return;
+    }
+
+    // Normal cancel when not uploading
     setVideoFile(null);
     setUploadProgress(0);
     setUploadingVideo(false);
+    setUploadCompleted(false);
     uploadForm.resetFields();
     if (onCancel) onCancel();
-  }, [uploadForm, onCancel]);
+  }, [uploadForm, onCancel, uploadingVideo, setLoading]);
 
   return (
     <Modal
@@ -169,7 +262,13 @@ const VideoUploadModal = ({
           <div>
             <div className="text-lg font-semibold">Upload Video to YouTube</div>
             <div className="text-sm text-gray-500">
-              Share videos with your students. You can use any Google account with YouTube access.
+              {uploadingVideo ? (
+                <span className="text-orange-600">
+                  ⚠️ Upload in progress - Do not close this window
+                </span>
+              ) : (
+                "Share videos with your students. You can use any Google account with YouTube access."
+              )}
             </div>
           </div>
         </div>
@@ -179,7 +278,11 @@ const VideoUploadModal = ({
       footer={null}
       width={600}
       centered
-      destroyOnClose
+      destroyOnHidden={false}
+      closable={!uploadingVideo}
+      maskClosable={!uploadingVideo}
+      keyboard={!uploadingVideo}
+      className={uploadingVideo ? 'upload-in-progress' : ''}
     >
       <div className="pt-4">
         {!uploadingVideo ? (
@@ -277,30 +380,46 @@ const VideoUploadModal = ({
 
                 <Form.Item
                   name="privacy"
-                  label="Privacy Setting"
+                  label={
+                    <div className="flex items-center gap-2">
+                      <span>Privacy Setting</span>
+                      <Tooltip 
+                        title={
+                          <div className="text-sm space-y-2">
+                            <div><strong>🔐 Private:</strong> Share with specific Google accounts (max 50 people)</div>
+                            <div><strong>🔒 Unlisted:</strong> Anyone with link can view (recommended for classrooms)</div>
+                            <div><strong>🌐 Public:</strong> Searchable by everyone on YouTube</div>
+                          </div>
+                        }
+                        placement="top"
+                      >
+                        <InfoCircleOutlined className="text-gray-400 cursor-help" />
+                      </Tooltip>
+                    </div>
+                  }
                   initialValue="unlisted"
                   className="mb-6"
                 >
                   <Select className="w-full h-fit">
                     <Select.Option value="unlisted">
                       <div>
-                        <div className="font-medium">Unlisted</div>
+                        <div className="font-medium">🔒 Unlisted</div>
                         <div className="text-xs text-gray-500">
-                          Only people with the link can see this video
+                          Anyone with the link can view • Best for classrooms
                         </div>
                       </div>
                     </Select.Option>
                     <Select.Option value="private">
                       <div>
-                        <div className="font-medium">Private</div>
+                        <div className="font-medium">🔐 Private</div>
                         <div className="text-xs text-gray-500">
-                          Only you can see this video
+                          Only you + up to 50 invited people can view
                         </div>
                       </div>
                     </Select.Option>
                     <Select.Option value="public">
                       <div>
-                        <div className="font-medium">Public</div>
+                        <div className="font-medium">🌐 Public</div>
                         <div className="text-xs text-gray-500">
                           Anyone can search for and view this video
                         </div>
@@ -311,31 +430,39 @@ const VideoUploadModal = ({
               </>
             )}
 
-            {/* Authentication Notice */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-              <div className="flex items-start gap-3">
-                <div className="text-amber-600 text-lg">⚠️</div>
-                <div>
-                  <div className="font-medium text-amber-800 mb-1">Authentication & App Verification</div>
-                  <div className="text-sm text-amber-700 space-y-1">
-                    <p>• You'll be asked to sign in with a Google account</p>
-                    <p>• <strong>Important:</strong> This app is in development mode</p>
-                    <p>• Only authorized test users can upload videos</p>
-                    <p>• If you get "access_denied" error, contact admin to add your email to test users</p>
+          
+          
+
+            {/* Upload warning */}
+            {uploadingVideo && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="text-orange-600 text-lg">⚠️</div>
+                  <div>
+                    <div className="font-medium text-orange-800 mb-1">Upload in Progress</div>
+                    <div className="text-sm text-orange-700 space-y-1">
+                      <p>• Please keep this window open until upload completes</p>
+                      <p>• Closing the window will cancel the upload</p>
+                      <p>• Do not navigate away from this page</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+                              </div>
+              )}
 
             {/* Action buttons */}
             <div className="flex justify-between pt-4 border-t">
-              <Button onClick={handleCancel}>
-                Cancel
+              <Button 
+                onClick={handleCancel}
+                disabled={uploadingVideo}
+                className={uploadingVideo ? 'opacity-50 cursor-not-allowed' : ''}
+              >
+                {uploadingVideo ? 'Uploading...' : 'Cancel'}
               </Button>
               <Button 
                 type="primary" 
                 htmlType="submit"
-                disabled={!videoFile}
+                disabled={!videoFile || uploadingVideo}
                 className="bg-red-600 hover:bg-red-700 border-red-600"
               >
                 Upload to YouTube
@@ -350,7 +477,7 @@ const VideoUploadModal = ({
             </div>
             
             <div className="text-xl font-semibold text-gray-900 mb-2">
-              Uploading to YouTube...
+              {uploadCompleted ? "Upload Completed! ✅" : "Uploading to YouTube..."}
             </div>
             
             <div className="text-gray-600 mb-6">
@@ -371,19 +498,73 @@ const VideoUploadModal = ({
             </div>
 
             <div className="text-sm text-gray-500">
-              {uploadProgress < 100 ? (
+              {uploadCompleted ? (
+                'Video successfully uploaded! Window will close automatically...'
+              ) : uploadProgress < 100 ? (
                 `Uploading... ${uploadProgress}%`
               ) : (
                 'Processing video... This may take a few minutes.'
               )}
             </div>
 
-            <div className="text-xs text-gray-400 mt-4">
-              Please don't close this window during upload
+            <div className="text-xs text-gray-400 mt-4 flex items-center justify-center gap-2">
+              {uploadCompleted ? (
+                <>
+                  <span>✅</span>
+                  <span>Upload completed successfully!</span>
+                </>
+              ) : (
+                <>
+                  <span className="animate-pulse">🔒</span>
+                  <span>Window is locked during upload to prevent interruption</span>
+                </>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      {/* Custom styles for upload in progress */}
+      <style jsx>{`
+        .upload-in-progress .ant-modal-header {
+          background: linear-gradient(90deg, #fff2e8 0%, #fff7ed 100%);
+          border-bottom: 2px solid #fed7aa;
+        }
+        
+        .upload-in-progress .ant-modal-close {
+          display: none !important;
+        }
+        
+        .upload-in-progress::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #f59e0b, #f97316, #f59e0b);
+          background-size: 200% 100%;
+          animation: uploadProgress 2s linear infinite;
+          z-index: 1001;
+        }
+        
+        @keyframes uploadProgress {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        
+        .upload-warning-banner {
+          position: sticky;
+          top: 0;
+          z-index: 1000;
+          background: #fed7aa;
+          padding: 8px 16px;
+          text-align: center;
+          font-weight: 500;
+          color: #9a3412;
+          border-bottom: 1px solid #fdba74;
+        }
+      `}</style>
     </Modal>
   );
 };
