@@ -541,9 +541,18 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
   return (
     <Modal
       title={
-        <div className="flex items-center gap-2">
-          <TrophyOutlined />
-          <span>Quản lý submissions - {assignment.title}</span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <TrophyOutlined />
+            <span>Quản lý submissions</span>
+          </div>
+          <div className="text-sm text-gray-500 font-normal">
+            <span className="cursor-pointer hover:text-blue-600" onClick={onBack}>
+              ← Back to Assignment
+            </span>
+            <span className="mx-2">•</span>
+            <span>{assignment.title}</span>
+          </div>
         </div>
       }
       open={visible}

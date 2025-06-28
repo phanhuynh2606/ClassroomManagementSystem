@@ -66,7 +66,6 @@ const UserManagement = () => {
 
   const handleVerifyTeacher = async (userId, verify) => {
     try {
-      console.log(userId, verify);
       await adminAPI.verifyTeacher(userId, verify);
       setUsers(
         users.map((user) =>

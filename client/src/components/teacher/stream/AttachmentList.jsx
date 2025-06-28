@@ -30,9 +30,9 @@ const AttachmentList = ({
             key={attachment.id}
             className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group"
           >
-            {attachment.type === "video/youtube" ? (
+            {(attachment.type === "video/youtube" || attachment.type === "video") ? (
               <>
-                {/* YouTube Video Thumbnail */}
+                {/* Video Thumbnail */}
                 <div className="relative w-16 h-12 bg-black rounded overflow-hidden flex-shrink-0">
                   <img
                     src={attachment.thumbnail}
@@ -53,12 +53,24 @@ const AttachmentList = ({
                     {attachment.name}
                   </div>
                   <div className="text-xs text-gray-500">
-                    YouTube video • {attachment.duration}
-                    {attachment.viewCount && ` • ${attachment.viewCount} views`}
-                    {attachment.uploadedByUser && (
-                      <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
-                        Uploaded
-                      </span>
+                    {attachment.type === "video" ? (
+                      <>
+                        Video file • {attachment.duration}
+                        {attachment.size && ` • ${attachment.size}`}
+                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                          Uploaded
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        YouTube video • {attachment.duration}
+                        {attachment.viewCount && ` • ${attachment.viewCount} views`}
+                        {attachment.uploadedByUser && (
+                          <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">
+                            Uploaded
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

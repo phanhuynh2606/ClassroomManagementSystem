@@ -5,6 +5,7 @@ const genderAIRoute = require('./generateAI.route.js');
 const classroomRoutes = require('./classroom.route.js');
 const requestRoutes = require('./request.route.js');
 const streamRoutes = require('./stream.route.js');
+const videoWatchRoutes = require('./videoWatch.route.js');
 
 const initRoutes = (app) => {
   app.use('/api/auth', authRoutes);
@@ -14,6 +15,7 @@ const initRoutes = (app) => {
   app.use('/api/classrooms', classroomRoutes);
   app.use('/api/requests', requestRoutes);
   app.use('/api/stream', streamRoutes);
+  app.use('/api/video-watch', videoWatchRoutes);
 };
 
 module.exports = initRoutes;

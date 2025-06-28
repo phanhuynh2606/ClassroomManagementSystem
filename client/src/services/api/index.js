@@ -7,6 +7,7 @@ import notificationAPI from './notification.api';
 import requestAPI from './request.api';
 import streamAPI from './stream.api';
 import youtubeAPI from './youtube.api';
+import videoWatchAPI from './videoWatch.api';
 
 export {
   authAPI,
@@ -17,5 +18,6 @@ export {
   notificationAPI,
   requestAPI,
   streamAPI,
-  youtubeAPI
+  youtubeAPI,
+  videoWatchAPI
 }; 

@@ -207,7 +207,6 @@ const BackgroundCustomizer = ({
       } 
       // Case 2: Update settings only (position, size, or other background types)
       else if (backgroundSettings.type === 'image' && backgroundSettings.image.url) {
-        console.log('🔄 Updating image position/size settings only - NO Cloudinary upload');
         message.loading('Updating image settings...', 0);
         setTimeout(() => {
           message.destroy();

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Tabs, 
-  Button, 
-  Typography, 
+import {
+  Card,
+  Tabs,
+  Button,
+  Typography,
   Space,
   Row,
   Col,
@@ -17,7 +17,8 @@ import {
   Table,
   Tooltip,
   Modal,
-  message
+  message,
+  Breadcrumb
 } from 'antd';
 import { 
   ArrowLeftOutlined,
@@ -558,20 +559,30 @@ Thank you!`,
   ];
 
   return (
-    <div className="p-6" style={{ minHeight: 'calc(100vh - 64px)' }}>
+    <div className="p-6" style={{ minHeight: 'calc(100vh)' }}>
+      {/* Breadcrumb */}
+      <Breadcrumb className="mb-4" items={[
+        {
+          title: <span onClick={() => navigate(`/teacher/classroom/${classId}`)} className="cursor-pointer hover:text-blue-600">{assignmentData.classroom.name}</span>
+        },
+        {
+          title: <span onClick={() => navigate(`/teacher/classroom/${classId}#classwork`)} className="cursor-pointer hover:text-blue-600">Classwork</span>
+        },
+        {
+          title: assignmentData.title
+        }
+      ]} />
+
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-6 mt-6">
         <Button
           icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(`/teacher/classroom/${classId}`)}
+          onClick={() => navigate(`/teacher/classroom/${classId}#classwork`)}
         >
-          Quay lại lớp học
+          Quay lại Classwork
         </Button>
         
-        <div>
-          <Title level={2} className="mb-0">{assignmentData.title}</Title>
-          <Text type="secondary">{assignmentData.classroom.name}</Text>
-        </div>
+      
 
         <div className="ml-auto">
           <Space>
@@ -591,7 +602,10 @@ Thank you!`,
           </Space>
         </div>
       </div>
-
+      <div>
+          <Title level={2} className="mb-0 mt-0" style={{ marginBottom: '0px' }}>{assignmentData.title}</Title>
+          <Text type="secondary mt-0 mb-4">{assignmentData.classroom.name}</Text>
+        </div>
       {/* Status Alert */}
       {moment().isAfter(assignmentData.dueDate) && (
         <Alert
@@ -599,7 +613,7 @@ Thank you!`,
           description={`Hạn nộp: ${moment(assignmentData.dueDate).format('DD/MM/YYYY HH:mm')}`}
           type="warning"
           showIcon
-          className="mb-6"
+          className="mb-6 mt-3"
         />
       )}
 

@@ -9,7 +9,7 @@ import {
 
 const { Text } = Typography;
 
-const StreamSidebar = ({ classData, handleCopyClassCode }) => {
+const StreamSidebar = ({ classData, handleCopyClassCode, userRole = 'teacher' }) => {
   return (
     <div className="space-y-4">
       {/* Meet Integration */}
@@ -17,23 +17,33 @@ const StreamSidebar = ({ classData, handleCopyClassCode }) => {
         <div className="flex items-center gap-3 mb-3">
           <VideoCameraOutlined className="text-blue-500" />
           <Text strong>Meet</Text>
-          <Button type="text" size="small" icon={<MoreOutlined />} />
+          {userRole === 'teacher' && (
+            <Button type="text" size="small" icon={<MoreOutlined />} />
+          )}
         </div>
-        <Button 
-          type="primary" 
-          block 
-          className="mb-2"
-          icon={<LinkOutlined />}
-        >
-          Generate link
-        </Button>
+        {userRole === 'teacher' ? (
+          <Button 
+            type="primary" 
+            block 
+            className="mb-2"
+            icon={<LinkOutlined />}
+          >
+            Generate link
+          </Button>
+        ) : (
+          <Text type="secondary" className="text-sm">
+            Your teacher will share the meeting link when it's available
+          </Text>
+        )}
       </Card>
 
       {/* Class Code */}
       <Card size="small">
         <div className="flex items-center justify-between mb-2">
           <Text strong>Class code</Text>
-          <Button type="text" size="small" icon={<MoreOutlined />} />
+          {userRole === 'teacher' && (
+            <Button type="text" size="small" icon={<MoreOutlined />} />
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Text 

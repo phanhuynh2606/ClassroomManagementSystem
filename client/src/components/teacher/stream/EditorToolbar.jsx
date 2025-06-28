@@ -3,6 +3,7 @@ import {
   Upload,
   Button,
   message,
+  Tooltip,
 } from 'antd';
 import {
   PaperClipOutlined,
@@ -10,7 +11,10 @@ import {
   CalendarOutlined,
   LinkOutlined,
   CloudUploadOutlined,
+  LockOutlined,
 } from '@ant-design/icons';
+import { FaYoutube } from 'react-icons/fa';
+import { useVideoPermissions } from './VideoPermissionGuard';
 
 const EditorToolbar = ({
   onFileUpload,
@@ -18,6 +22,11 @@ const EditorToolbar = ({
   onUploadVideo,
   onAddLink,
 }) => {
+  const { 
+    canUploadVideo, 
+    canAddYouTubeVideo, 
+    userRole 
+  } = useVideoPermissions();
   const handleFileUpload = useCallback(
     async (file) => {
       // Validate file size (15MB limit)
@@ -81,25 +90,30 @@ const EditorToolbar = ({
         </Button>
       </Upload>
       
-      {/* Video Options */}
+      {/* Video Options - Permission Based */}
       <div className="flex items-center">
-        <Button
-          type="text"
-          icon={<VideoCameraOutlined />}
-          className="hover:bg-gray-100"
-          onClick={onAddVideo}
-        >
-          Add Video
-        </Button>
-        <Button
-          type="text"
-          icon={<CloudUploadOutlined />}
-          className="hover:bg-gray-100"
-          onClick={onUploadVideo}
-          title="Upload video to YouTube"
-        >
-          Upload Video
-        </Button>
+        {canAddYouTubeVideo() && userRole === 'teacher' && (
+          <Button
+            type="text"
+            icon={<FaYoutube className="text-red-600" color='red' />}
+            className="hover:bg-gray-100"
+            onClick={onAddVideo}
+          >
+            Add Video
+          </Button>
+        )}
+        
+        {canUploadVideo() && userRole === 'teacher' && (
+          <Button
+            type="text"
+            icon={<CloudUploadOutlined />}
+            className="hover:bg-gray-100"
+            onClick={onUploadVideo}
+            title="Upload video to YouTube"
+          >
+            Upload Video
+          </Button>
+        )}
       </div>
 
       <Button
@@ -110,13 +124,15 @@ const EditorToolbar = ({
       >
         Add Link
       </Button>
-      <Button
-        type="text"
-        icon={<CalendarOutlined />}
-        className="hover:bg-gray-100"
-      >
-        Schedule
-      </Button>
+      {userRole === 'teacher' && (
+        <Button
+          type="text"
+          icon={<CalendarOutlined />}
+          className="hover:bg-gray-100"
+        >
+          Schedule
+        </Button>
+      )}
     </div>
   );
 };

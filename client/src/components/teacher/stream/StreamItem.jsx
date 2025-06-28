@@ -20,6 +20,8 @@ import {
 import { useSelector } from 'react-redux';
 import 'react-quill/dist/quill.snow.css';
 import CommentInput from './CommentInput';
+import VideoPlayerModal from './VideoPlayerModal';
+import VideoRefreshButton from './VideoRefreshButton';
 import dayjs from 'dayjs';
 
 const { Text, Title } = Typography;
@@ -240,11 +242,17 @@ const StreamItem = ({
   onAddComment,
   onDeleteComment,
   userRole = 'teacher',
-  currentUserId 
+  currentUserId,
+  classroomSettings = {},
+  // New props for video tracking
+  classroomId,
+  streamItemId
 }) => {
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [videoModalVisible, setVideoModalVisible] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [updatedAttachments, setUpdatedAttachments] = useState(null);
   const { user } = useSelector((state) => state.auth);
-  console.log(item.attachments)
   // Check if current user can edit/delete this post
   const canEditDelete = useCallback(() => {
     return user?.role === 'admin' || 
@@ -257,7 +265,35 @@ const StreamItem = ({
     return user?.role === 'teacher' || user?.role === 'admin';
   }, [user]);
 
+
+  const getType = useCallback(() => {
+    if (item.type === 'announcement') {
+      return 'Announcement';
+    } else if (item.type === 'student_post') {
+      return 'Student Post';
+    } else if (item.type === 'assignment') {
+      return 'Assignment';
+    } else if (item.type === 'material') {
+      return 'Material';
+    } else if (item.type === 'activity') {
+      return 'Activity';
+    }
+    return 'Post';
+  }, [item]);
+
   const handleCommentSubmit = useCallback(async (content) => {
+    // Check if commenting is allowed for students
+    if (userRole === 'student' && classroomSettings.allowStudentComment === false) {
+      message.warning('Comments are disabled by the teacher for this classroom');
+      return;
+    }
+
+    // Check if onAddComment is null (means commenting not allowed)
+    if (!onAddComment) {
+      message.warning('You do not have permission to comment on this post');
+      return;
+    }
+
     setSubmittingComment(true);
     try {
       await onAddComment(item._id, content);
@@ -267,7 +303,7 @@ const StreamItem = ({
     } finally {
       setSubmittingComment(false);
     }
-  }, [onAddComment, item._id]);
+  }, [onAddComment, item._id, userRole, classroomSettings]);
 
   const handleReplyComment = useCallback((commentId) => {
     // TODO: Implement reply functionality
@@ -300,6 +336,49 @@ const StreamItem = ({
       }
     });
   }, [item._id, onDeleteComment]);
+
+  // Video modal handlers
+  const handleVideoClick = useCallback((attachment) => {
+    if (attachment.type === "video/youtube" || attachment.type === "video") {
+      setSelectedVideo({
+        title: attachment.name || attachment.title,
+        embedUrl: attachment.metadata?.embedUrl || attachment.embedUrl,
+        url: attachment.url,
+        duration: attachment.duration,
+        channel: attachment.channel,
+        viewCount: attachment.viewCount,
+        thumbnail: attachment.thumbnail,
+        type: attachment.type, // Pass type to modal
+        uploadedByUser: attachment.uploadedByUser,
+        metadata: attachment.metadata
+      });
+      setVideoModalVisible(true);
+    } else {
+      // For non-video attachments, open normally
+      window.open(attachment.url, '_blank');
+    }
+  }, []);
+
+  const handleVideoModalClose = useCallback(() => {
+    setVideoModalVisible(false);
+    setSelectedVideo(null);
+  }, []);
+
+  // Handle duration update from refresh
+  const handleDurationUpdate = useCallback((attachmentId, updatedVideoInfo) => {
+    setUpdatedAttachments(prev => ({
+      ...prev,
+      [attachmentId]: {
+        ...updatedVideoInfo,
+        duration: updatedVideoInfo.duration,
+        thumbnail: updatedVideoInfo.thumbnail,
+        // Keep original attachment properties
+        id: attachmentId,
+        type: "video"
+      }
+    }));
+    message.success(`Duration updated: ${updatedVideoInfo.duration}`);
+  }, []);
 
   // Action menu items
   const actionMenuItems = [
@@ -363,8 +442,8 @@ const StreamItem = ({
       <style>{htmlContentStyles}</style>
       <div className="flex gap-4">
         <Avatar 
-          icon={item.author.image ? undefined : <UserOutlined />}
-          src={item.author.image}
+          icon={item.author?.image ? undefined : <UserOutlined />}
+          src={item?.author?.image}
           size={40}
         />
         
@@ -379,7 +458,7 @@ const StreamItem = ({
                   {item.author.fullName || "Anonymous"}
                 </Text>
                 <Tag color={getTypeColor(item.type)} className="capitalize">
-                  {item.type}
+                  {getType(item.type)}
                 </Tag>
               </Space>
             </div>
@@ -449,40 +528,88 @@ const StreamItem = ({
           {item.attachments && item.attachments.length > 0 && (
             <div className="mb-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {item.attachments.map((attachment, index) => (
+                {item.attachments.map((attachment, index) => {
+                  // Use updated attachment data if available
+                  const attachmentData = updatedAttachments?.[attachment.id] || attachment;
+                  
+                  return (
                   <div 
                     key={index}
                     className="relative bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => window.open(attachment.url, '_blank')}
+                    onClick={() => handleVideoClick(attachmentData)}
                   >
-                    {attachment.type === "video/youtube" ? (
+                    {attachmentData.type === "video/youtube" || attachmentData.type === "video" ? (
                       <>
                         {/* YouTube Video Card */}
                         <div className="relative aspect-video bg-black">
                           <img
-                            src={attachment.thumbnail}
+                            src={attachmentData.thumbnail}
                             alt="Video thumbnail"
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-1.5 py-0.5 rounded">
-                            {attachment.duration}
+                            {attachmentData.duration}
                           </div>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center">
-                              <div className="w-0 h-0 border-l-[8px] border-l-white border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent ml-1"></div>
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                              attachmentData.type === "video/youtube" 
+                                ? "bg-red-600" 
+                                : "bg-blue-600"
+                            }`}>
+                              {attachmentData.type === "video/youtube" ? (
+                                <div className="w-0 h-0 border-l-[8px] border-l-white border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent ml-1"></div>
+                              ) : (
+                                <span className="text-white text-xl">🎬</span>
+                              )}
                             </div>
+                          </div>
+                          
+                          {/* Video type badge */}
+                          <div className="absolute top-2 left-2">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              attachmentData.type === "video/youtube"
+                                ? "bg-red-500 text-white"
+                                : "bg-blue-500 text-white"
+                            }`}>
+                              {attachmentData.type === "video/youtube" ? "YouTube" : "Upload"}
+                            </span>
                           </div>
                         </div>
                         <div className="p-3">
-                          <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
-                            {attachment.name}
-                          </Text>
-                          <Text type="secondary" className="text-xs mt-1 block">
-                            YouTube video • {attachment.duration}
-                          </Text>
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
+                                {attachmentData.name}
+                              </Text>
+                              <Text type="secondary" className="text-xs mt-1 block">
+                                {attachmentData.type === "video/youtube" ? (
+                                  <>
+                                    <span className="text-red-500">📺</span> YouTube video • {attachmentData.duration}
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="text-blue-500">🎬</span> Uploaded video • {attachmentData.duration}
+                                    {attachmentData.duration === "Processing..." && (
+                                      <span className="text-orange-500"> (Processing...)</span>
+                                    )}
+                                  </>
+                                )}
+                              </Text>
+                            </div>
+                            {/* Show refresh button only for uploaded videos that are processing */}
+                            {attachmentData.type === "video" && 
+                             attachmentData.duration === "Processing..." && 
+                             attachmentData.metadata?.youtubeVideoId && (
+                              <VideoRefreshButton
+                                videoId={attachmentData.metadata.youtubeVideoId}
+                                onDurationUpdate={(updatedInfo) => handleDurationUpdate(attachmentData.id, updatedInfo)}
+                                size="small"
+                              />
+                            )}
+                          </div>
                         </div>
                       </>
-                    ) : attachment.type === "link" ? (
+                    ) : attachmentData.type === "link" ? (
                       <>
                         {/* Link Card */}
                         <div className="aspect-video bg-gray-100 flex items-center justify-center border-b">
@@ -492,10 +619,10 @@ const StreamItem = ({
                         </div>
                         <div className="p-3">
                           <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
-                            {attachment.title || attachment.name || "Link"}
+                            {attachmentData.title || attachmentData.name || "Link"}
                           </Text>
                           <Text type="secondary" className="text-xs mt-1 block truncate">
-                            {attachment.url}
+                            {attachmentData.url}
                           </Text>
                         </div>
                       </>
@@ -506,22 +633,23 @@ const StreamItem = ({
                           <div className="text-center">
                             <PaperClipOutlined className="text-white text-3xl mb-2" />
                             <div className="text-white text-xs font-medium uppercase tracking-wide">
-                              {attachment.name?.split('.').pop() || 'FILE'}
+                              {attachmentData.name?.split('.').pop() || 'FILE'}
                             </div>
                           </div>
                         </div>
                         <div className="p-3">
                           <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
-                            {attachment.name}
+                            {attachmentData.name}
                           </Text>
                           <Text type="secondary" className="text-xs mt-1 block">
-                            {attachment.size}
+                            {attachmentData.size}
                           </Text>
                         </div>
                       </>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -565,7 +693,7 @@ const StreamItem = ({
                       
                                              {/* Comment actions - show on hover */}
                        <div className="flex items-center gap-4 mt-2 ml-4 comment-actions">
-                         <Button 
+                                                  <Button 
                            type="text" 
                            size="small"
                            className="text-xs font-medium text-gray-500 hover:text-blue-600 p-0 h-auto border-0 shadow-none"
@@ -593,7 +721,7 @@ const StreamItem = ({
                              </Button>
                            </>
                          )}
-                       </div>
+                        </div>
                     </div>
                   </div>
                 ))}
@@ -613,17 +741,49 @@ const StreamItem = ({
               </div>
             )}
 
-            {/* Add comment form - always visible */}
+            {/* Add comment form - conditionally visible based on permissions */}
             <div className="mt-4">
-              <CommentInput
-                onSubmit={handleCommentSubmit}
-                loading={submittingComment}
-                placeholder="Add a class comment..."
-              />
+              {userRole === 'student' && classroomSettings.allowStudentComment === false ? (
+                // Show disabled state for students when comments are disabled
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                  <div className="flex items-center justify-center gap-2 text-gray-500">
+                    <CommentOutlined />
+                    <Text type="secondary" className="text-sm">
+                      Comments are disabled by the teacher for this classroom
+                    </Text>
+                  </div>
+                </div>
+              ) : !onAddComment ? (
+                // Show generic no permission message
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                  <div className="flex items-center justify-center gap-2 text-gray-500">
+                    <CommentOutlined />
+                    <Text type="secondary" className="text-sm">
+                      You do not have permission to comment on this post
+                    </Text>
+                  </div>
+                </div>
+              ) : (
+                // Show normal comment input
+                <CommentInput
+                  onSubmit={handleCommentSubmit}
+                  loading={submittingComment}
+                  placeholder="Add a class comment..."
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Video Player Modal */}
+      <VideoPlayerModal
+        visible={videoModalVisible}
+        onCancel={handleVideoModalClose}
+        videoData={selectedVideo}
+        classroomId={classroomId}
+        streamItemId={streamItemId || item._id}
+      />
     </Card>
   );
 };

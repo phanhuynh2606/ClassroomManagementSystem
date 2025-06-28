@@ -23,7 +23,7 @@ import {
   ArrowLeftOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import classroomAPI from "../../services/api/classroom.api";
 import streamAPI from "../../services/api/stream.api";
@@ -65,6 +65,7 @@ const { Title, Text } = Typography;
 const ClassroomDetail = () => {
   const { classId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState("stream");
   const [searchText, setSearchText] = useState("");
@@ -92,9 +93,26 @@ const ClassroomDetail = () => {
   const [classData, setClassData] = useState(null);
   const [studentsData, setStudentsData] = useState([]);
   const [streamData, setStreamData] = useState([]);
+  
+  // Pagination state
+  const [streamPagination, setStreamPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 20
+  });
+  const [loadingMoreStream, setLoadingMoreStream] = useState(false);
 
   // Get classroom permissions
   const permissions = useClassroomPermissions(classData);
+
+  // Handle hash navigation
+  useEffect(() => {
+    const hash = location.hash.replace('#', '');
+    if (hash) {
+      setActiveTab(hash);
+    }
+  }, [location.hash]);
 
   useEffect(() => {
     if (classId) {
@@ -140,20 +158,50 @@ const ClassroomDetail = () => {
     }
   };
 
-  const fetchStreamData = async () => {
+  const fetchStreamData = async (page = 1, append = false) => {
     try {
       const response = await streamAPI.getClassroomStream(classId, {
-        page: 1,
+        page: page,
         limit: 20,
       });
 
-      if (response.success) {
-        setStreamData(response.data.items || []);
-        console.log("streamData", streamData);
+      if (response.success || response.data) {
+        const data = response.data?.data || response.data;
+        const items = data?.items || data || [];
+        const pagination = data?.pagination || {
+          currentPage: page,
+          totalPages: 1,
+          totalItems: items.length,
+          itemsPerPage: 20
+        };
+
+        if (append) {
+          // Append new items for Load More
+          setStreamData(prev => [...prev, ...items]);
+        } else {
+          // Replace items for initial load
+          setStreamData(items);
+        }
+        
+        setStreamPagination(pagination);
       }
     } catch (error) {
       console.error("Error fetching stream data:", error);
       // Don't show error message for stream data as it might be empty for new classrooms
+    }
+  };
+
+  const handleLoadMoreStream = async () => {
+    if (streamPagination.currentPage >= streamPagination.totalPages) return;
+    
+    setLoadingMoreStream(true);
+    try {
+      await fetchStreamData(streamPagination.currentPage + 1, true);
+    } catch (error) {
+      console.error("Error loading more stream data:", error);
+      message.error("Failed to load more posts");
+    } finally {
+      setLoadingMoreStream(false);
     }
   };
 
@@ -249,8 +297,8 @@ const ClassroomDetail = () => {
               title: att.title,
             };
 
-            // Add YouTube-specific fields if it's a YouTube video
-            if (att.type === 'video/youtube') {
+            // Add video-specific fields for both uploaded videos and YouTube videos
+            if (att.type === 'video' || att.type === 'video/youtube') {
               return {
                 ...baseAttachment,
                 videoId: att.videoId,
@@ -261,6 +309,9 @@ const ClassroomDetail = () => {
                 viewCount: att.viewCount,
                 description: att.description,
                 metadata: att.metadata,
+                // Include file-specific fields for uploaded videos
+                fileType: att.fileType,
+                fileSize: att.fileSize,
               };
             }
 
@@ -548,20 +599,49 @@ const ClassroomDetail = () => {
               {streamData.length === 0 ? (
                 <StreamEmptyState />
               ) : (
-                streamData.map((item) => (
-                  <StreamItem
-                    key={item._id || item.id}
-                    item={item}
-                    formatTimeAgo={formatTimeAgo}
-                    onPin={handlePinPost}
-                    onEdit={handleEditPost}
-                    onDelete={handleDeletePost}
-                    onAddComment={handleAddComment}
-                    onDeleteComment={handleDeleteComment}
-                    userRole={user?.role}
-                    currentUserId={user?._id}
-                  />
-                ))
+                <>
+                  {streamData.map((item) => (
+                    <StreamItem
+                      key={item._id || item.id}
+                      item={item}
+                      formatTimeAgo={formatTimeAgo}
+                      onPin={handlePinPost}
+                      onEdit={handleEditPost}
+                      onDelete={handleDeletePost}
+                      onAddComment={handleAddComment}
+                      onDeleteComment={handleDeleteComment}
+                      userRole={user?.role}
+                      currentUserId={user?._id}
+                      classroomId={classId}
+                      streamItemId={item._id}
+                    />
+                  ))}
+                  
+                  {/* Load More Button */}
+                  {streamPagination.currentPage < streamPagination.totalPages && (
+                    <div className="text-center mt-6">
+                      <Button
+                        type="default"
+                        size="large"
+                        loading={loadingMoreStream}
+                        onClick={handleLoadMoreStream}
+                        className="px-8 py-2 h-auto"
+                      >
+                        {loadingMoreStream ? 'Loading more posts...' : `Load More Posts (${streamPagination.totalItems - streamData.length} remaining)`}
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* Pagination Info */}
+                  {streamPagination.totalItems > 0 && (
+                    <div className="text-center mt-4 text-gray-500 text-sm">
+                      Showing {streamData.length} of {streamPagination.totalItems} posts
+                      {streamPagination.totalPages > 1 && (
+                        <span> • Page {streamPagination.currentPage} of {streamPagination.totalPages}</span>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </Col>
@@ -580,11 +660,14 @@ const ClassroomDetail = () => {
       postingAnnouncement,
       announcementForm,
       streamData,
+      streamPagination,
+      loadingMoreStream,
       formatTimeAgo,
       handlePinPost,
       handleEditPost,
       handleDeletePost,
       handleAddComment,
+      handleLoadMoreStream,
       user?.role,
       user?._id,
     ]
@@ -789,7 +872,10 @@ const ClassroomDetail = () => {
       {/* Tabs */}
       <Tabs
         activeKey={activeTab}
-        onChange={setActiveTab}
+        onChange={(key) => {
+          setActiveTab(key);
+          navigate(`#${key}`);
+        }}
         items={tabItems}
         className="classroom-detail-tabs"
       />
