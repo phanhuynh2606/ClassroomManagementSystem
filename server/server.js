@@ -31,7 +31,7 @@ initRoutes(app);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error(err);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 

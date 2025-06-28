@@ -21,4 +21,10 @@ router.get('/history/:classroomId', videoWatchController.getWatchHistory);
 // Get video analytics (teachers only)
 router.get('/analytics/:classroomId/:videoId', videoWatchController.getVideoAnalytics);
 
+// Get total view count for a video
+router.get('/view-count/:classroomId/:videoId', videoWatchController.getVideoViewCount);
+
+// Sync all video view counts to Stream attachments (teachers/admin only)
+router.post('/sync-view-counts/:classroomId', videoWatchController.syncViewCountsToStream);
+
 module.exports = router; 

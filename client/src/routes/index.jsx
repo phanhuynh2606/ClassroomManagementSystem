@@ -38,6 +38,7 @@ import TeacherMaterials from '../pages/teacher/TeacherMaterials';
 import TeacherSettings from '../pages/teacher/TeacherSettings';
 import TeacherNotifications from '../pages/teacher/TeacherNotifications';
 import AssignmentDetail from '../pages/teacher/AssignmentDetail';
+import AssignmentEdit from '../pages/teacher/AssignmentEdit';
 import GradingSystemDemo from '../pages/teacher/GradingSystemDemo';
 import BackgroundDemo from '../pages/teacher/BackgroundDemo';
 import CreateClassForm from '../pages/teacher/CreateClassForm';
@@ -54,7 +55,6 @@ import QuizPage from '../pages/student/QuizPage';
 import StudentGrades from '../pages/student/StudentGrades';
 
 // Demo Components
-import { VideoPlayerDemo } from '../components/teacher/stream';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -143,6 +143,7 @@ const AppRouter = () => {
           <Route path="classroom/:classId" element={<TeacherClassroomDetail />} />
           <Route path="classroom/edit/:classId" element={<EditClassForm />} />
           <Route path="classroom/:classId/assignment/:assignmentId" element={<AssignmentDetail />} />
+          <Route path="classroom/:classId/assignment/:assignmentId/edit" element={<AssignmentEdit />} />
 
           {/* Core Features */}
           <Route path="todo" element={<TeacherTodo />} />
@@ -159,7 +160,6 @@ const AppRouter = () => {
           {/* Demo & Help */}
           <Route path="grading-demo" element={<GradingSystemDemo />} />
           <Route path="background-demo" element={<BackgroundDemo />} />
-          <Route path="video-demo" element={<VideoPlayerDemo />} />
         </Route>
 
         {/* Student Routes */}

@@ -1,9 +1,76 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Modal, Badge } from 'antd';
 import { PlayCircleOutlined, YoutubeOutlined, LinkOutlined } from '@ant-design/icons';
 import {EnhancedVideoPlayer} from './index';
+import { videoWatchAPI } from '../../../services/api';
 
-const VideoPlayerModal = ({ visible, onCancel, videoData, classroomId, streamItemId }) => {
+const VideoPlayerModal = ({ visible, onCancel, videoData, classroomId, streamItemId, enableTracking = true }) => {
+  const playerRef = useRef(null);
+  const [realViewCount, setRealViewCount] = useState(null);
+  const [loadingViewCount, setLoadingViewCount] = useState(true);
+  
+  // Extract videoId from videoData
+  const getVideoId = () => {
+    if (!videoData) return null;
+    
+    let videoId = videoData.videoId || videoData.id;
+    if (!videoId && (videoData.url || videoData.embedUrl)) {
+      const ytUrl = videoData.url || videoData.embedUrl;
+      const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      const match = ytUrl.match(ytRegex);
+      if (match) {
+        videoId = match[1];
+      }
+    }
+    return videoId;
+  };
+
+  // Fetch real view count from database
+  const fetchViewCount = async () => {
+    if (!visible || !classroomId || !enableTracking) return;
+    
+    const videoId = getVideoId();
+    if (!videoId) {
+      setLoadingViewCount(false);
+      return;
+    }
+
+    try {
+      console.log('📊 Fetching view count for:', { videoId, classroomId });
+      const response = await videoWatchAPI.getVideoViewCount(classroomId, videoId);
+      
+      if (response.success) {
+        setRealViewCount(response.data.viewCount);
+        console.log('✅ Real view count fetched:', response.data.viewCount);
+      } else {
+        console.error('❌ Failed to fetch view count:', response);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching view count:', error);
+    } finally {
+      setLoadingViewCount(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchViewCount();
+  }, [visible, classroomId, enableTracking]);
+
+  // Callback when view is counted to refresh view count
+  const handleViewCounted = () => {
+    console.log('🔄 View was counted, refreshing view count...');
+    fetchViewCount();
+  };
+
+  // Reset view count when modal closes
+  useEffect(() => {
+    if (!visible) {
+      setRealViewCount(null);
+      setLoadingViewCount(true);
+    }
+  }, [visible]);
+
+  // Early return after all hooks
   if (!videoData) return null;
 
   const { title, embedUrl, url, duration, channel, viewCount, thumbnail, type } = videoData;
@@ -12,6 +79,34 @@ const VideoPlayerModal = ({ visible, onCancel, videoData, classroomId, streamIte
   const isYouTubeVideo = type === 'video/youtube' || 
                         (url && url.includes('youtube.com')) ||
                         (url && url.includes('youtu.be'));
+
+  const handleModalClose = () => {
+    console.log('🚪 Modal closing - ending watch session...');
+    // End watch session before closing modal
+    if (playerRef.current && enableTracking) {
+      playerRef.current.endWatchSession();
+    }
+    onCancel();
+  };
+
+  // Function to display view count
+  const displayViewCount = () => {
+    if (!enableTracking) {
+      // If tracking is disabled, show original viewCount or nothing
+      return viewCount ? `${viewCount} views` : null;
+    }
+    
+    if (loadingViewCount) {
+      return '⏳ loading...';
+    }
+    
+    if (realViewCount !== null) {
+      return `${realViewCount} views`;
+    }
+    
+    // Fallback to original viewCount if real count fails to load
+    return viewCount ? `${viewCount} views` : '0 views';
+  };
 
   return (
     <Modal
@@ -25,13 +120,13 @@ const VideoPlayerModal = ({ visible, onCancel, videoData, classroomId, streamIte
             <div className="text-sm text-gray-500 flex items-center gap-3">
               <span style={{ fontSize: '13px', fontWeight: 'bold' }}>{channel}</span>
               {duration && <span> • Duration: {duration} minutes</span>}
-              {" "}{viewCount && <span> • {(viewCount)} views</span>}
+              {" "}{displayViewCount() && <span> • {displayViewCount()}</span>}
             </div>
           </div>
         </div>
       }
       open={visible}
-      onCancel={onCancel}
+      onCancel={handleModalClose}
       maskClosable={false}
       footer={[
         <div key="footer" className="flex justify-between items-center w-full">
@@ -69,7 +164,7 @@ const VideoPlayerModal = ({ visible, onCancel, videoData, classroomId, streamIte
               </a>
             )}
             <button
-              onClick={onCancel}
+              onClick={handleModalClose}
               className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
             >
               Close
@@ -83,67 +178,28 @@ const VideoPlayerModal = ({ visible, onCancel, videoData, classroomId, streamIte
       className="enhanced-video-player-modal"
     >
       <div className="video-container">
-        {isYouTubeVideo ? (
-          /* YouTube Video - Use iframe for better YouTube integration */
-          embedUrl ? (
-            <div className="relative w-full" style={{ paddingBottom: '56.25%' /* 16:9 */ }}>
-              <iframe
-                src={`${embedUrl}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3`}
-                title={title}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="absolute top-0 left-0 w-full h-full rounded-lg"
-              />
-            </div>
-          ) : (
-            <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden" style={{ paddingBottom: '56.25%' }}>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
-                <YoutubeOutlined className="text-6xl mb-4 text-gray-400" />
-                <div className="text-lg font-medium">Video not available for embedding</div>
-                <div className="text-sm text-gray-400 mt-2">
-                  <a 
-                    href={url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-red-600 hover:text-red-700 flex items-center gap-1"
-                  >
-                    <LinkOutlined />
-                    Watch on YouTube
-                  </a>
-                </div>
-              </div>
-              {thumbnail && (
-                <img
-                  src={thumbnail}
-                  alt={title}
-                  className="absolute inset-0 w-full h-full object-cover opacity-30"
-                />
-              )}
-            </div>
-          )
-        ) : (
-          /* Uploaded Video - Use Enhanced Player */
-          <div style={{ paddingBottom: '56.25%', position: 'relative' }}>
-            <div className="absolute inset-0">
-              <EnhancedVideoPlayer
-                videoData={videoData}
-                autoplay={true}
-                showControls={true}
-                className="w-full h-full"
-                classroomId={classroomId}
-                streamItemId={streamItemId}
-                enableTracking={true}
-                onReady={(playerData) => {
-                  console.log('Video ready:', playerData);
-                }}
-                onError={(error) => {
-                  console.error('Video error:', error);
-                }}
-              />
-            </div>
+        {/* Use EnhancedVideoPlayer for all videos (YouTube and uploaded) to enable tracking */}
+        <div style={{ paddingBottom: '56.25%', position: 'relative' }}>
+          <div className="absolute inset-0">
+            <EnhancedVideoPlayer
+              videoData={videoData}
+              autoplay={true}
+              showControls={true}
+              className="w-full h-full"
+              classroomId={classroomId}
+              streamItemId={streamItemId}
+              enableTracking={enableTracking}
+              onViewCounted={handleViewCounted}
+              onReady={(playerData) => {
+                console.log('Video ready:', playerData);
+              }}
+              onError={(error) => {
+                console.error('Video error:', error);
+              }}
+              ref={playerRef}
+            />
           </div>
-        )}
+        </div>
       </div>
 
       {/* Inline styles to replace styled-jsx */}

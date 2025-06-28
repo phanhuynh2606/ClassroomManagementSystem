@@ -35,6 +35,17 @@ const videoWatchAPI = {
   // Get video analytics (teachers only)
   getVideoAnalytics: (classroomId, videoId) => {
     return axiosClient.get(`/video-watch/analytics/${classroomId}/${videoId}`);
+  },
+
+  // Get total view count for a video
+  getVideoViewCount: (classroomId, videoId, syncToStream = false) => {
+    const params = syncToStream ? '?syncToStream=true' : '';
+    return axiosClient.get(`/video-watch/view-count/${classroomId}/${videoId}${params}`);
+  },
+
+  // Sync all video view counts to Stream attachments (teachers/admin only)
+  syncViewCountsToStream: (classroomId) => {
+    return axiosClient.post(`/video-watch/sync-view-counts/${classroomId}`);
   }
 };
 
