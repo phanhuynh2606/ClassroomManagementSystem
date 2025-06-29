@@ -5,7 +5,6 @@ const User = require("../models/user.model.js");
 const protect = async (req, res, next) => {
   try {
     let accessToken;
-
     // Get access token from header
     if (req.headers.authorization?.startsWith("Bearer")) {
       accessToken = req.headers.authorization.split(" ")[1];
@@ -57,6 +56,8 @@ const protect = async (req, res, next) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
 
 // Grant access to specific roles
 const authorize = (...roles) => {

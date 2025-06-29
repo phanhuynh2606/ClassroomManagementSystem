@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Tabs, 
-  Button, 
-  Typography, 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  Tabs,
+  Button,
+  Typography,
   Space,
   Row,
   Col,
@@ -17,9 +17,13 @@ import {
   Table,
   Tooltip,
   Modal,
-  message
-} from 'antd';
-import { 
+  message,
+  Breadcrumb,
+  Spin,
+  Badge,
+  Empty,
+} from "antd";
+import {
   ArrowLeftOutlined,
   EditOutlined,
   TrophyOutlined,
@@ -34,254 +38,225 @@ import {
   EyeOutlined,
   DownloadOutlined,
   StarOutlined,
-  SettingOutlined
-} from '@ant-design/icons';
-import { useParams, useNavigate } from 'react-router-dom';
-import moment from 'moment';
+  SettingOutlined,
+  TeamOutlined,
+  BookOutlined,
+  GlobalOutlined,
+  InfoCircleOutlined,
+  FireOutlined,
+} from "@ant-design/icons";
+import { useParams, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import moment from "moment";
+import { assignmentAPI } from "../../services/api";
+import { formatFileSize } from "../../utils/fileUtils";
 
 // Import components
-import { AssignmentGradingModal } from '../../components/teacher/grading';
-import { SubmissionManagement } from '../../components/teacher/assignment';
+import { AssignmentGradingModal } from "../../components/teacher/grading";
+import { SubmissionManagement } from "../../components/teacher/assignment";
+import { fixVietnameseEncoding } from "../../utils/convertStr";
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 
 const AssignmentDetail = () => {
   const { classId, assignmentId } = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const { token } = useSelector((state) => state.auth);
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [gradingModalVisible, setGradingModalVisible] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-  const [submissionManagementVisible, setSubmissionManagementVisible] = useState(false);
+  const [submissionManagementVisible, setSubmissionManagementVisible] =
+    useState(false);
 
-  // Mock assignment data
-  const [assignmentData] = useState({
-    id: assignmentId,
-    title: 'Programming Assignment 1: Basic JavaScript',
-    description: 'Complete the basic programming exercises covering variables, functions, and arrays.',
-    instructions: `
-**Assignment Instructions:**
-
-1. **Variables and Data Types** (25 points)
-   - Create variables of different data types
-   - Demonstrate type conversion
-   - Use const, let, and var appropriately
-
-2. **Functions** (35 points)
-   - Write at least 3 functions with different purposes
-   - Use both arrow functions and regular functions
-   - Include function parameters and return values
-
-3. **Arrays and Objects** (40 points)
-   - Create and manipulate arrays
-   - Use array methods (map, filter, reduce)
-   - Work with objects and object methods
-
-**Submission Guidelines:**
-- Submit your code as .js file
-- Include comments explaining your logic
-- Test your code before submission
-- Follow JavaScript naming conventions
-
-**Grading Criteria:**
-- Code functionality (50%)
-- Code quality and comments (30%)
-- Following instructions (20%)
-    `,
-    dueDate: '2024-02-15T23:59:00Z',
-    totalPoints: 100,
-    status: 'published',
-    submissionsCount: 18,
-    totalStudents: 25,
-    gradedCount: 12,
-    attachments: [
-      { 
-        name: 'assignment_template.js', 
-        size: '2.1 KB', 
-        url: '/files/assignment_template.js',
-        type: 'application/javascript'
-      },
-      { 
-        name: 'requirements.pdf', 
-        size: '245 KB', 
-        url: '/files/requirements.pdf',
-        type: 'application/pdf'
+  // Universal file download function with fallback strategies for all browsers
+  const handleFileDownload = async (downloadUrl, fileName) => {
+    const hideLoading = message.loading('Downloading file...', 0);
+    
+    try {
+      if (!token) {
+        message.error('Authentication required. Please login again.');
+        hideLoading();
+        return;
       }
-    ],
-    createdAt: '2024-01-15T10:00:00Z',
-    allowLateSubmission: true,
-    latePenalty: 5,
-    classroom: {
-      id: classId,
-      name: 'Web Development Fundamentals',
-      subject: 'Computer Science'
+
+      // Strategy 1: Modern Fetch + Blob (Works on all modern browsers)
+      if (window.fetch && window.Blob && window.URL?.createObjectURL) {
+        await downloadWithFetch(downloadUrl, fileName, token);
+        hideLoading();
+        message.success('File downloaded successfully!');
+        return;
+      }
+
+      // Strategy 2: Fallback for older browsers - Direct window open with auth
+      if (window.open) {
+        await downloadWithWindowOpen(downloadUrl, fileName, token);
+        hideLoading();
+        message.success('Download initiated. Check your downloads folder.');
+        return;
+      }
+
+      throw new Error('Browser does not support file downloads');
+      
+    } catch (error) {
+      console.error('Download error:', error);
+      hideLoading();
+      
+      // Ultimate fallback - copy download link
+      if (navigator.clipboard) {
+        try {
+          await navigator.clipboard.writeText(downloadUrl);
+          message.warning('Download failed. Download URL copied to clipboard. You can paste it in a new tab.');
+        } catch {
+          message.error('Download failed. Please try a different browser or contact support.');
+        }
+      } else {
+        message.error('Download failed. Please try a different browser or contact support.');
+      }
     }
-  });
+  };
 
-  // Mock submissions data
-  const [submissions] = useState([
-    {
-      id: 'sub1',
-      student: {
-        id: 'st1',
-        name: 'Nguyễn Văn An',
-        email: 'an.nguyen@student.edu',
-        avatar: null
+  // Strategy 1: Modern fetch + blob approach (Best for all browsers including Edge)
+  const downloadWithFetch = async (downloadUrl, fileName, token) => {
+    const response = await fetch(downloadUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
       },
-      content: `// Assignment 1 - Nguyễn Văn An
-// Variables and Data Types
-const studentName = "Nguyễn Văn An";
-let age = 20;
-var isStudent = true;
+    });
 
-// Functions
-function calculateSum(a, b) {
-  return a + b;
-}
-
-const multiplyNumbers = (x, y) => x * y;
-
-function greetStudent(name) {
-  return \`Hello, \${name}! Welcome to programming.\`;
-}
-
-// Arrays and Objects
-const numbers = [1, 2, 3, 4, 5];
-const doubled = numbers.map(n => n * 2);
-const evenNumbers = numbers.filter(n => n % 2 === 0);
-
-const student = {
-  name: studentName,
-  age: age,
-  courses: ['JavaScript', 'HTML', 'CSS'],
-  introduce: function() {
-    return \`I'm \${this.name}, \${this.age} years old\`;
-  }
-};
-
-// Testing the code
-console.log(calculateSum(5, 3));
-console.log(multiplyNumbers(4, 6));
-console.log(greetStudent(studentName));
-console.log('Doubled numbers:', doubled);
-console.log('Even numbers:', evenNumbers);
-console.log(student.introduce());`,
-      attachments: [
-        { 
-          name: 'assignment1_solution.js', 
-          size: '1.8 KB', 
-          type: 'application/javascript',
-          url: '/files/assignment1_solution.js' 
-        }
-      ],
-      submittedAt: '2024-02-14T18:30:00Z',
-      grade: 85,
-      feedback: 'Bài làm tốt! Code sạch sẽ và logic rõ ràng. Có thể cải thiện thêm error handling và thêm comment chi tiết hơn.',
-      status: 'graded',
-      isLate: false
-    },
-    {
-      id: 'sub2',
-      student: {
-        id: 'st2',
-        name: 'Trần Thị Bình',
-        email: 'binh.tran@student.edu',
-        avatar: null
-      },
-      content: `Hello teacher,
-
-I have completed the assignment. Since I'm new to JavaScript, my code might not be optimal.
-
-// Variables
-let name = "Trần Thị Bình";
-let studentAge = 19;
-const isEnrolled = true;
-
-// Functions
-function addTwoNumbers(num1, num2) {
-  let result = num1 + num2;
-  return result;
-}
-
-function sayHello(personName) {
-  console.log("Hello " + personName);
-}
-
-// Arrays
-let myNumbers = [10, 20, 30, 40, 50];
-let sum = 0;
-for (let i = 0; i < myNumbers.length; i++) {
-  sum = sum + myNumbers[i];
-}
-
-// Object
-let studentInfo = {
-  name: name,
-  age: studentAge,
-  subjects: ["Math", "Science", "Programming"]
-};
-
-console.log("Sum of numbers:", sum);
-console.log("Student:", studentInfo.name);
-
-Thank you!`,
-      attachments: [
-        { 
-          name: 'my_assignment.txt', 
-          size: '945 B', 
-          type: 'text/plain',
-          url: '/files/my_assignment.txt' 
-        }
-      ],
-      submittedAt: '2024-02-16T10:15:00Z',
-      grade: null,
-      feedback: null,
-      status: 'submitted',
-      isLate: true
-    },
-    {
-      id: 'sub3',
-      student: {
-        id: 'st3',
-        name: 'Lê Minh Cường',
-        email: 'cuong.le@student.edu',
-        avatar: null
-      },
-      content: '',
-      attachments: [
-        { 
-          name: 'Assignment1_LeMinhCuong.zip', 
-          size: '3.2 MB', 
-          type: 'application/zip',
-          url: '/files/Assignment1_LeMinhCuong.zip' 
-        },
-        { 
-          name: 'documentation.pdf', 
-          size: '1.1 MB', 
-          type: 'application/pdf',
-          url: '/files/documentation.pdf' 
-        }
-      ],
-      submittedAt: '2024-02-13T20:15:00Z',
-      grade: 92,
-      feedback: 'Bài làm xuất sắc! Code được tổ chức tốt, có documentation đầy đủ. Đặc biệt ấn tượng với phần bonus exercises.',
-      status: 'graded',
-      isLate: false
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`);
     }
-  ]);
+
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fixVietnameseEncoding(fileName) || 'download';
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up
+    setTimeout(() => {
+      window.URL.revokeObjectURL(blobUrl);
+    }, 100);
+  };
+
+  // Strategy 2: Fallback approach for edge cases
+  const downloadWithWindowOpen = async (downloadUrl, fileName, token) => {
+    // For older browsers or special cases, open in new window
+    // Note: This might open as preview in some browsers but still works
+    const newWindow = window.open('', '_blank');
+    newWindow.location.href = `${downloadUrl}?t=${Date.now()}`;
+    
+    // Try to set document title for better UX
+    setTimeout(() => {
+      if (newWindow.document) {
+        newWindow.document.title = `Downloading ${fileName}`;
+      }
+    }, 100);
+  };
+
+  // Browser compatibility detection
+  const getBrowserInfo = () => {
+    const userAgent = navigator.userAgent;
+    const isModernBrowser = !!(window.fetch && window.Blob && window.URL?.createObjectURL);
+    
+    let browserName = 'Unknown';
+    if (userAgent.includes('Edge')) browserName = 'Edge';
+    else if (userAgent.includes('Chrome')) browserName = 'Chrome';
+    else if (userAgent.includes('Firefox')) browserName = 'Firefox';
+    else if (userAgent.includes('Safari')) browserName = 'Safari';
+    else if (userAgent.includes('Opera')) browserName = 'Opera';
+    
+    return { browserName, isModernBrowser };
+  };
+
+  // Real assignment data
+  const [assignmentData, setAssignmentData] = useState(null);
+  const [submissions, setSubmissions] = useState([]);
+
+  // Fetch assignment data
+  useEffect(() => {
+    if (assignmentId) {
+      fetchAssignmentData();
+      fetchSubmissions();
+    }
+  }, [assignmentId]);
+
+  const fetchAssignmentData = async () => {
+    try {
+      setDataLoading(true);
+      const response = await assignmentAPI.getDetail(assignmentId);
+      if (response.success) {
+        setAssignmentData(response.data);
+      } else {
+        message.error("Failed to load assignment data");
+        navigate(`/teacher/classroom/${classId}#classwork`);
+      }
+    } catch (error) {
+      console.error("Error fetching assignment:", error);
+      message.error("Failed to load assignment data");
+      navigate(`/teacher/classroom/${classId}#classwork`);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  const fetchSubmissions = async () => {
+    try {
+      const response = await assignmentAPI.getSubmissions(assignmentId);
+      if (response.success) {
+        setSubmissions(response.data.docs || []);
+      }
+    } catch (error) {
+      console.error("Error fetching submissions:", error);
+    }
+  };
+
+  // Get current assignment data with fallback
+  const currentAssignmentData = assignmentData || {
+    _id: assignmentId,
+    title: 'Assignment',
+    description: 'Loading...',
+    totalPoints: 100,
+    dueDate: new Date(),
+    allowLateSubmission: false,
+    latePenalty: 0,
+    classroom: { name: 'Classroom' },
+    attachments: [],
+    stats: { totalStudents: 0 }
+  }; 
 
   const getStatusTag = (status, isLate) => {
-    if (status === 'graded') {
-      return <Tag color="success" icon={<CheckCircleOutlined />}>Đã chấm</Tag>;
-    } else if (status === 'submitted') {
+    if (status === "graded") {
       return (
-        <Tag color={isLate ? "warning" : "processing"} icon={<ClockCircleOutlined />}>
-          {isLate ? 'Nộp muộn' : 'Chờ chấm'}
+        <Tag color="success" icon={<CheckCircleOutlined />}>
+          Đã chấm
+        </Tag>
+      );
+    } else if (status === "submitted") {
+      return (
+        <Tag
+          color={isLate ? "warning" : "processing"}
+          icon={<ClockCircleOutlined />}
+        >
+          {isLate ? "Nộp muộn" : "Chờ chấm"}
         </Tag>
       );
     } else {
-      return <Tag color="error" icon={<ExclamationCircleOutlined />}>Chưa nộp</Tag>;
+      return (
+        <Tag color="error" icon={<ExclamationCircleOutlined />}>
+          Chưa nộp
+        </Tag>
+      );
     }
   };
 
@@ -292,48 +267,45 @@ Thank you!`,
 
   const handleViewAllSubmissions = () => {
     setSubmissionManagementVisible(true);
-  };
-
+  };  
   const submissionColumns = [
     {
-      title: 'Học sinh',
-      dataIndex: 'student',
-      key: 'student',
+      title: "Học sinh",
+      dataIndex: "student",
+      key: "student",
       render: (student) => (
         <div className="flex items-center gap-3">
-          <Avatar 
-            src={student.avatar} 
-            icon={<UserOutlined />}
-            size={32}
-          />
+          <Avatar src={student.image} icon={<UserOutlined />} size={32} />
           <div>
-            <div className="font-medium">{student.name}</div>
+          <div>
+            <div className="font-medium">{student.fullName}</div>
             <Text type="secondary" className="text-xs">{student.email}</Text>
+          </div>
           </div>
         </div>
       ),
     },
     {
-      title: 'Trạng thái',
-      key: 'status',
+      title: "Trạng thái",
+      key: "status",
       render: (_, record) => getStatusTag(record.status, record.isLate),
     },
     {
-      title: 'Điểm',
-      dataIndex: 'grade',
-      key: 'grade',
-      align: 'center',
+      title: "Điểm",
+      dataIndex: "grade",
+      key: "grade",
+      align: "center",
       render: (grade, record) => {
-        if (record.status === 'missing') return <Text type="secondary">-</Text>;
+        if (record.status === "missing") return <Text type="secondary">-</Text>;
         if (grade === null) return <Text type="secondary">Chưa chấm</Text>;
-        
+
         return (
           <div className="text-center">
             <div className="text-lg font-bold text-blue-600">
-              {grade}/{assignmentData.totalPoints}
+              {grade}/{currentAssignmentData.totalPoints}
             </div>
-            <Progress 
-              percent={(grade / assignmentData.totalPoints) * 100}
+            <Progress
+              percent={(grade / currentAssignmentData.totalPoints) * 100}
               size="small"
               showInfo={false}
             />
@@ -342,16 +314,18 @@ Thank you!`,
       },
     },
     {
-      title: 'Thời gian nộp',
-      dataIndex: 'submittedAt',
-      key: 'submittedAt',
+      title: "Thời gian nộp",
+      dataIndex: "submittedAt",
+      key: "submittedAt",
       render: (submittedAt, record) => {
         if (!submittedAt) return <Text type="secondary">-</Text>;
-        
-        const isLate = moment(submittedAt).isAfter(moment(assignmentData.dueDate));
+
+        const isLate = moment(submittedAt).isAfter(
+          moment(currentAssignmentData.dueDate)
+        );
         return (
           <div>
-            <div>{moment(submittedAt).format('DD/MM HH:mm')}</div>
+            <div>{moment(submittedAt).format("DD/MM HH:mm")}</div>
             {isLate && (
               <Tag color="warning" size="small">
                 <WarningOutlined /> Muộn
@@ -362,25 +336,37 @@ Thank you!`,
       },
     },
     {
-      title: 'Hành động',
-      key: 'actions',
+      title: "Hành động",
+      key: "actions",
       render: (_, record) => (
         <Space>
           <Tooltip title="Xem & Chấm điểm">
-            <Button 
-              type="text" 
+            <Button
+              type="text"
               icon={<EyeOutlined />}
               size="small"
               onClick={() => handleGradeSubmission(record)}
             />
           </Tooltip>
           {record.attachments?.length > 0 && (
-            <Tooltip title="Tải file">
-              <Button 
-                type="text" 
+            <Tooltip title="Tải file đính kèm của học sinh">
+              <Button
+                type="text"
                 icon={<DownloadOutlined />}
                 size="small"
-                onClick={() => message.success('Đang tải file...')}
+                onClick={() => {
+                  if (record.attachments && record.attachments.length > 0) {
+                    // Download first attachment, or could show a modal to select which file
+                    const firstAttachment = record.attachments[0];
+                    if (firstAttachment.downloadUrl) {
+                      handleFileDownload(firstAttachment.downloadUrl, firstAttachment.name || 'submission-file');
+                    } else {
+                      message.warning('Download URL not available for this file');
+                    }
+                  } else {
+                    message.info('No attachments to download');
+                  }
+                }}
               />
             </Tooltip>
           )}
@@ -389,250 +375,575 @@ Thank you!`,
     },
   ];
 
-  // Calculate statistics
+  // Use statistics from backend (calculated server-side for accuracy)
+  const backendStats = currentAssignmentData.stats || {};
+  const actualSubmissions = submissions.filter((s) => s.status !== "missing");
+  
   const stats = {
-    submitted: submissions.length,
-    graded: submissions.filter(s => s.grade !== null).length,
-    pending: submissions.filter(s => s.status === 'submitted').length,
-    late: submissions.filter(s => s.isLate).length,
-    avgGrade: submissions.filter(s => s.grade !== null).length > 0 
-      ? Math.round(submissions.filter(s => s.grade !== null).reduce((sum, s) => sum + s.grade, 0) / submissions.filter(s => s.grade !== null).length)
-      : 0
+    submitted: backendStats.submissionsCount || actualSubmissions.length,
+    graded: backendStats.gradedCount, //|| actualSubmissions.filter((s) => s.grade !== null).length,
+    pending: backendStats.pendingCount || actualSubmissions.filter((s) => s.status === "submitted").length,
+    late: backendStats.lateCount || actualSubmissions.filter((s) => s.isLate).length,
+    avgGrade: backendStats.avgGrade !== undefined ? backendStats.avgGrade : 0,
   };
+
+  const isOverdue = moment().isAfter(currentAssignmentData.dueDate);
+  const daysUntilDue = moment(currentAssignmentData.dueDate).diff(moment(), 'days');
 
   const tabItems = [
     {
-      key: 'overview',
+      key: "overview",
       label: (
         <span>
-          <FileTextOutlined />
-          Tổng quan
+          <BookOutlined />
+          Overview
         </span>
       ),
       children: (
-        <div className="space-y-6">
-          {/* Assignment Info */}
-          <Card>
-            <Row gutter={24}>
-              <Col span={16}>
-                <Title level={4}>{assignmentData.title}</Title>
-                <Text className="text-gray-600 block mb-4">{assignmentData.description}</Text>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <Title level={5}>📋 Hướng dẫn chi tiết:</Title>
-                  <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-                    {assignmentData.instructions}
+        <Row gutter={[24, 24]}>
+          {/* Left Column - Main Content */}
+          <Col xs={24} lg={16}>
+            {/* Assignment Content */}
+            <Card 
+              className="mb-6 shadow-lg border-0"
+              title={
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                    <FileTextOutlined className="text-white text-lg" />
+                  </div>
+                  <div>
+                    <Text strong className="text-lg">Assignment Details</Text>
+                    <div className="text-sm text-gray-500">Content and instructions</div>
                   </div>
                 </div>
+              }
+            >
+              <div className="space-y-4">
+                <div>
+                  <Title level={4} className="mb-2">{currentAssignmentData.title}</Title>
+                  <div 
+                    className="ql-editor"
+                    style={{
+                      fontSize: '16px',
+                      lineHeight: '1.8',
+                      color: '#4a5568',
+                      padding: 0
+                    }}
+                    dangerouslySetInnerHTML={{ __html: currentAssignmentData.description }}
+                  />
+                </div>
 
-                {assignmentData.attachments.length > 0 && (
-                  <div className="mt-4">
-                    <Title level={5}>📎 File đính kèm:</Title>
-                    {assignmentData.attachments.map((file, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded mb-2">
-                        <PaperClipOutlined />
-                        <span>{file.name}</span>
-                        <Text type="secondary">({file.size})</Text>
-                        <Button size="small" type="link" icon={<DownloadOutlined />}>
-                          Tải xuống
-                        </Button>
-                      </div>
-                    ))}
+                {currentAssignmentData.instructions && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-l-4 border-blue-400">
+                    <Title level={5} className="text-blue-700 mb-3">
+                      📋 Detailed Instructions
+                    </Title>
+                    <div 
+                      style={{ whiteSpace: "pre-wrap", lineHeight: "1.8" }}
+                      className="text-gray-700"
+                    >
+                      {currentAssignmentData.instructions}
+                    </div>
                   </div>
                 )}
-              </Col>
-              
-              <Col span={8}>
-                <Card size="small" className="mb-4">
-                  <Statistic
-                    title="Điểm tối đa"
-                    value={assignmentData.totalPoints}
-                    prefix={<TrophyOutlined />}
-                    valueStyle={{ color: '#1890ff' }}
-                  />
-                </Card>
-                
-                <Card size="small" className="mb-4">
-                  <Statistic
-                    title="Hạn nộp"
-                    value={moment(assignmentData.dueDate).format('DD/MM/YYYY HH:mm')}
-                    prefix={<CalendarOutlined />}
-                    valueStyle={{ 
-                      color: moment().isAfter(assignmentData.dueDate) ? '#ff4d4f' : '#52c41a',
-                      fontSize: '16px'
-                    }}
-                  />
-                </Card>
 
-                {assignmentData.allowLateSubmission && (
-                  <Alert
-                    message="Cho phép nộp muộn"
-                    description={`Phạt ${assignmentData.latePenalty}% mỗi ngày`}
-                    type="info"
-                    size="small"
-                    showIcon
-                  />
+                {currentAssignmentData.attachments && currentAssignmentData.attachments.length > 0 && (
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border-l-4 border-purple-400">
+                    <Title level={5} className="text-purple-700 mb-4">
+                      📎 Teacher Resources ({currentAssignmentData.attachments.length})
+                    </Title>
+                    <div className="space-y-3">
+                      {currentAssignmentData.attachments.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                        >
+                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <PaperClipOutlined className="text-purple-600" />
+                          </div>
+                          <div className="flex-1">
+                            <Text strong className="block">{fixVietnameseEncoding(file.name)}</Text>
+                            <Text type="secondary" className="text-sm">
+                              {formatFileSize(null, file)}
+                            </Text>
+                          </div>
+                          <Tooltip 
+                            title={(() => {
+                              const { browserName, isModernBrowser } = getBrowserInfo();
+                              if (!isModernBrowser) {
+                                return `Your browser (${browserName}) has limited download support. File might open in a new tab instead of downloading.`;
+                              }
+                              if (browserName === 'Edge') {
+                                return `✅ Edge - Will download directly to your Downloads folder`;
+                              }
+                              return `✅ ${browserName} - Will download directly to your Downloads folder`;
+                            })()}
+                            placement="top"
+                          >
+                            <Button
+                              type="primary"
+                              ghost
+                              icon={<DownloadOutlined />}
+                              size="small"
+                              onClick={() => handleFileDownload(file.downloadUrl, file.name)}
+                            >
+                              Download
+                            </Button>
+                          </Tooltip>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
+              </div>
+            </Card>
+
+            {/* Statistics Cards */}
+            <Row gutter={16} className="mb-6">
+              <Col span={6}>
+                <Card className="text-center shadow-md border-0">
+                  <Statistic
+                    title="Submitted"
+                    value={stats.submitted}
+                    suffix={`/${backendStats.totalStudents || submissions.length || 0}`}
+                    prefix={<CheckCircleOutlined className="text-green-500" />}
+                    valueStyle={{ color: "#22c55e", fontSize: "24px" }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card className="text-center shadow-md border-0">
+                  <Statistic
+                    title="Graded"
+                    value={stats.graded}
+                    suffix={`/${stats.submitted}`}
+                    prefix={<TrophyOutlined className="text-blue-500" />}
+                    valueStyle={{ color: "#3b82f6", fontSize: "24px" }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card className="text-center shadow-md border-0">
+                  <Statistic
+                    title="Pending"
+                    value={stats.pending}
+                    prefix={<ClockCircleOutlined className="text-orange-500" />}
+                    valueStyle={{ color: "#f59e0b", fontSize: "24px" }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card className="text-center shadow-md border-0">
+                  <Statistic
+                    title="Avg Grade"
+                    value={stats.avgGrade}
+                    suffix={`/${currentAssignmentData.totalPoints}`}
+                    prefix={<StarOutlined className="text-purple-500" />}
+                    valueStyle={{ color: "#8b5cf6", fontSize: "24px" }}
+                  />
+                </Card>
               </Col>
             </Row>
-          </Card>
+          </Col>
 
-          {/* Statistics */}
-          <Row gutter={16}>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Đã nộp"
-                  value={stats.submitted}
-                  suffix={`/${assignmentData.totalStudents}`}
-                  prefix={<CheckCircleOutlined />}
-                  valueStyle={{ color: '#3f8600' }}
+          {/* Right Column - Quick Info */}
+          <Col xs={24} lg={8}>
+            {/* Assignment Info */}
+            <Card 
+              title={
+                <div className="flex items-center gap-2">
+                  <InfoCircleOutlined className="text-blue-500" />
+                  <Text strong>Assignment Info</Text>
+                </div>
+              }
+              className="mb-6 shadow-lg border-0"
+              size="small"
+            >
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Text type="secondary">Points:</Text>
+                  <Tag color="blue" className="px-3 py-1 text-base">
+                    {currentAssignmentData.totalPoints} pts
+                  </Tag>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <Text type="secondary">Status:</Text>
+                  <Tag 
+                    color={currentAssignmentData.visibility === 'published' ? 'green' : 'orange'}
+                    className="px-3 py-1 text-base"
+                  >
+                    {currentAssignmentData.visibility?.charAt(0).toUpperCase() + currentAssignmentData.visibility?.slice(1)}
+                  </Tag>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <Text type="secondary">Submission Type:</Text>
+                  <Tag 
+                    color="purple" 
+                    className="px-3 py-1 text-base"
+                    icon={
+                      currentAssignmentData.submissionSettings?.type === 'file' ? <PaperClipOutlined /> :
+                      currentAssignmentData.submissionSettings?.type === 'text' ? <FileTextOutlined /> :
+                      <><FileTextOutlined /> <PaperClipOutlined /></>
+                    }
+                  >
+                    {currentAssignmentData.submissionSettings?.type === 'both' ? 'Text & File' :
+                     currentAssignmentData.submissionSettings?.type === 'file' ? 'File Only' :
+                     currentAssignmentData.submissionSettings?.type === 'text' ? 'Text Only' :
+                     'Both'}
+                  </Tag>
+                </div>
+
+                <Divider className="my-3" />
+
+                <div className="flex justify-between items-center">
+                  <Text type="secondary">Created:</Text>
+                  <Text>{moment(currentAssignmentData.createdAt).format('DD/MM/YYYY')}</Text>
+                </div>
+
+                {currentAssignmentData.publishDate && (
+                  <div className="flex justify-between items-center">
+                    <Text type="secondary">Published:</Text>
+                    <Text>
+                      {moment(currentAssignmentData.publishDate).format('DD/MM/YYYY HH:mm')}
+                    </Text>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center">
+                  <Text type="secondary">Submissions:</Text>
+                  <Badge count={stats.submitted} showZero color="#52c41a" />
+                </div>
+              </div>
+            </Card>
+
+            {/* Due Date Card */}
+            <Card 
+              className={`mb-6 shadow-lg border-0 ${isOverdue ? 'border-l-4 border-l-red-400 bg-red-50' : daysUntilDue <= 7 ? 'border-l-4 border-l-orange-400 bg-orange-50' : 'border-l-4 border-l-green-400 bg-green-50'}`}
+              size="small"
+            >
+              <div className="text-center">
+                <CalendarOutlined 
+                  className={`text-4xl mb-2 ${isOverdue ? 'text-red-500' : daysUntilDue <= 7 ? 'text-orange-500' : 'text-green-500'}`} 
                 />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Đã chấm"
-                  value={stats.graded}
-                  suffix={`/${stats.submitted}`}
-                  prefix={<TrophyOutlined />}
-                  valueStyle={{ color: '#1890ff' }}
+                <Title level={5} className="mb-1">Due Date</Title>
+                <Text strong className={`text-lg ${isOverdue ? 'text-red-600' : daysUntilDue <= 7 ? 'text-orange-600' : 'text-green-600'}`}>
+                  {moment(currentAssignmentData.dueDate).format("DD/MM/YYYY HH:mm")}
+                </Text>
+                <div className="mt-2">
+                  {isOverdue ? (
+                    <Tag color="red" icon={<WarningOutlined />}>
+                      Overdue
+                    </Tag>
+                  ) : daysUntilDue <= 7 ? (
+                    <Tag color="orange" icon={<ClockCircleOutlined />}>
+                      Due Soon ({daysUntilDue} days)
+                    </Tag>
+                  ) : (
+                    <Tag color="green" icon={<CheckCircleOutlined />}>
+                      Active
+                    </Tag>
+                  )}
+                </div>
+              </div>
+
+              {currentAssignmentData.allowLateSubmission && (
+                <Alert
+                  message="Late Submission Allowed"
+                  description={`Penalty: ${currentAssignmentData.latePenalty}% per day`}
+                  type="info"
+                  size="small"
+                  showIcon
+                  className="mt-4"
                 />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Chờ chấm"
-                  value={stats.pending}
-                  prefix={<ClockCircleOutlined />}
-                  valueStyle={{ color: '#fa8c16' }}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Điểm TB"
-                  value={stats.avgGrade}
-                  suffix={`/${assignmentData.totalPoints}`}
-                  prefix={<StarOutlined />}
-                />
-              </Card>
-            </Col>
-          </Row>
-        </div>
-      )
+              )}
+            </Card>
+          </Col>
+        </Row>
+      ),
     },
     {
-      key: 'submissions',
+      key: "submissions",
       label: (
         <span>
           <UserOutlined />
-          Bài nộp ({submissions.length})
+          Submissions ({stats.submitted})
         </span>
       ),
       children: (
-        <Card>
-          <div className="flex justify-between items-center mb-4">
-            <Title level={4}>📝 Danh sách bài nộp</Title>
-            <Button 
-              type="primary"
-              icon={<SettingOutlined />}
-              onClick={handleViewAllSubmissions}
-            >
-              Quản lý chi tiết
-            </Button>
+        <Card className="shadow-lg border-0">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <Title level={3} className="mb-1">📝 Student Submissions</Title>
+              <Text type="secondary" className="text-base">
+                Monitor and grade student work
+              </Text>
+            </div>
+            <Space>
+              <Button
+                type="primary"
+                icon={<SettingOutlined />}
+                onClick={handleViewAllSubmissions}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 border-0"
+              >
+                Advanced Management
+              </Button>
+            </Space>
           </div>
-          
-          <Table
-            columns={submissionColumns}
-            dataSource={submissions}
-            rowKey="id"
-            pagination={{ pageSize: 10 }}
-          />
+
+          {submissions.length > 0 ? (
+            <Table
+              columns={submissionColumns}
+              dataSource={submissions}
+              rowKey={(record) => record._id || record.id || record.student?._id}
+              pagination={{ 
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} submissions`
+              }}
+              className="shadow-sm"
+            />
+          ) : (
+            <Empty
+              description="No submissions yet"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          )}
         </Card>
-      )
-    }
+      ),
+    },
   ];
 
-  return (
-    <div className="p-6" style={{ minHeight: 'calc(100vh - 64px)' }}>
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate(`/teacher/classroom/${classId}`)}
-        >
-          Quay lại lớp học
-        </Button>
-        
-        <div>
-          <Title level={2} className="mb-0">{assignmentData.title}</Title>
-          <Text type="secondary">{assignmentData.classroom.name}</Text>
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <Spin size="large" />
+          <div className="mt-4">
+            <Text type="secondary" className="text-lg">Loading assignment data...</Text>
+          </div>
         </div>
+      </div>
+    );
+  }
 
-        <div className="ml-auto">
-          <Space>
-            <Button 
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/teacher/classroom/${classId}/assignment/${assignmentId}/edit`)}
-            >
-              Chỉnh sửa
-            </Button>
-            <Button 
-              type="primary"
-              icon={<TrophyOutlined />}
-              onClick={handleViewAllSubmissions}
-            >
-              Chấm điểm
-            </Button>
-          </Space>
+  if (!assignmentData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+        <div className="max-w-2xl mx-auto pt-20">
+          <Alert
+            message="Assignment not found"
+            description="The assignment you're looking for doesn't exist or has been deleted."
+            type="error"
+            showIcon
+            action={
+              <Button
+                type="primary"
+                onClick={() => navigate(`/teacher/classroom/${classId}#classwork`)}
+              >
+                Back to Classwork
+              </Button>
+            }
+            className="shadow-lg"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Header with Glass Effect */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          {/* Breadcrumb */}
+          <Breadcrumb
+            className="mb-4"
+            items={[
+              {
+                title: (
+                  <span
+                    onClick={() => navigate(`/teacher/classroom/${classId}`)}
+                    className="cursor-pointer hover:text-blue-600 transition-colors"
+                  >
+                    <FileTextOutlined className="mr-1" />
+                    {currentAssignmentData.classroom?.name || "Classroom"}
+                  </span>
+                ),
+              },
+              {
+                title: (
+                  <span
+                    onClick={() =>
+                      navigate(`/teacher/classroom/${classId}#classwork`)
+                    }
+                    className="cursor-pointer hover:text-blue-600 transition-colors"
+                  >
+                    Classwork
+                  </span>
+                ),
+              },
+              {
+                title: (
+                  <span className="text-blue-600">
+                    <BookOutlined className="mr-1" />
+                    {currentAssignmentData.title}
+                  </span>
+                ),
+              },
+            ]}
+          />
+
+          {/* Header Actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate(`/teacher/classroom/${classId}#classwork`)}
+                className="flex items-center hover:shadow-md transition-shadow"
+              >
+                Back to Classwork
+              </Button>
+              
+              <div className="hidden md:flex items-center gap-3">
+                <Badge count={actualSubmissions.length} showZero color="#52c41a">
+                  <div className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
+                    Submissions
+                  </div>
+                </Badge>
+                <Tag color={currentAssignmentData.visibility === 'published' ? 'green' : 'orange'} className="px-3 py-1">
+                  {currentAssignmentData.visibility?.charAt(0).toUpperCase() + currentAssignmentData.visibility?.slice(1)}
+                </Tag>
+                <Tag color={isOverdue ? 'red' : daysUntilDue <= 7 ? 'orange' : 'green'} className="px-3 py-1">
+                  {isOverdue ? '⚠️ Overdue' : daysUntilDue <= 7 ? '⏰ Due Soon' : '✅ Active'}
+                </Tag>
+              </div>
+            </div>
+            
+            <Space>
+              <Button 
+                icon={<EditOutlined />}
+                onClick={() =>
+                  navigate(`/teacher/classroom/${classId}/assignment/${assignmentId}/edit`)
+                }
+                className="hover:shadow-md transition-shadow"
+              >
+                Edit
+              </Button>
+              <Button 
+                type="primary"
+                icon={<TrophyOutlined />}
+                onClick={handleViewAllSubmissions}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 border-0 hover:shadow-lg transition-all duration-300"
+              >
+                Grade Submissions
+              </Button>
+            </Space>
+          </div>
         </div>
       </div>
 
-      {/* Status Alert */}
-      {moment().isAfter(assignmentData.dueDate) && (
-        <Alert
-          message="Assignment đã hết hạn nộp"
-          description={`Hạn nộp: ${moment(assignmentData.dueDate).format('DD/MM/YYYY HH:mm')}`}
-          type="warning"
-          showIcon
-          className="mb-6"
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Page Title */}
+        <div className="text-center mb-8">
+          <Title level={2} className="mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent" style={{ marginTop: '0px',marginBottom: '0px' }}>
+            {currentAssignmentData.title}
+          </Title>
+          <Paragraph className="text-gray-600 text-lg">
+            {currentAssignmentData.classroom?.name} • Created {moment(currentAssignmentData.createdAt).fromNow()}
+          </Paragraph>
+        </div>
+
+        {/* Status Alerts */}
+        {currentAssignmentData.visibility === 'scheduled' && 
+         currentAssignmentData.publishDate && 
+         moment(currentAssignmentData.publishDate).isAfter(moment()) && (
+          <Alert
+            message="📅 Assignment is scheduled"
+            description={
+              <div>
+                <span>
+                  This assignment will be automatically published on{' '}
+                  <strong>{moment(currentAssignmentData.publishDate).format("DD/MM/YYYY HH:mm")}</strong>.
+                  Students cannot see it until then.
+                </span>
+              </div>
+            }
+            type="info"
+            showIcon
+            icon={<ClockCircleOutlined />}
+            className="mb-6 shadow-sm"
+          />
+        )}
+
+        {currentAssignmentData.visibility === 'draft' && (
+          <Alert
+            message="📝 Assignment is in draft mode"
+            description="This assignment is not visible to students. Publish it when you're ready."
+            type="warning"
+            showIcon
+            className="mb-6 shadow-sm"
+          />
+        )}
+
+        {isOverdue && (
+          <Alert
+            message="⚠️ Assignment is overdue"
+            description={
+              <div className="flex items-center justify-between">
+                <span>
+                  Due: {moment(currentAssignmentData.dueDate).format("DD/MM/YYYY HH:mm")}
+                  {currentAssignmentData.allowLateSubmission && 
+                    ` • Late submissions allowed with ${currentAssignmentData.latePenalty}% penalty per day`
+                  }
+                </span>
+                <Button size="small" type="link" icon={<SettingOutlined />}>
+                  Extend Deadline
+                </Button>
+              </div>
+            }
+            type="warning"
+            showIcon
+            className="mb-6 shadow-sm"
+          />
+        )}
+
+        {/* Tabs */}
+        <Tabs 
+          activeKey={activeTab} 
+          onChange={setActiveTab} 
+          items={tabItems}
+          className="bg-white rounded-lg shadow-lg p-6"
+          size="large"
         />
-      )}
+      </div>
 
-      {/* Tabs */}
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={tabItems}
-      />
-
-      {/* Grading Modal */}
+      {/* Modals */}
       <AssignmentGradingModal
         visible={gradingModalVisible}
         onCancel={() => setGradingModalVisible(false)}
         onSave={(gradingData) => {
-          console.log('Saved grade:', gradingData);
+          console.log("Saved grade:", gradingData);
           setGradingModalVisible(false);
-          message.success('Đã lưu điểm thành công!');
+          message.success("Grade saved successfully!");
         }}
         loading={loading}
-        assignment={assignmentData}
+        assignment={currentAssignmentData}
         submission={selectedSubmission}
+        allSubmissions={submissions.filter(sub => sub.status !== 'missing')}
       />
 
-      {/* Submission Management Modal */}
       <SubmissionManagement
         visible={submissionManagementVisible}
         onCancel={() => setSubmissionManagementVisible(false)}
         onBack={() => setSubmissionManagementVisible(false)}
-        assignment={assignmentData}
+        assignment={currentAssignmentData}
       />
     </div>
   );
 };
 
-export default AssignmentDetail; 
+export default AssignmentDetail;

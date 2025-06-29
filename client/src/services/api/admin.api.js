@@ -11,7 +11,6 @@ const adminAPI = {
   },
 
   updateUser: (userId, userData) => {
-    console.log(userData)
     return axiosClient.put(`/admin/users/${userId}`, {
       userData: userData
     });

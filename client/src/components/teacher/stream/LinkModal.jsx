@@ -19,14 +19,22 @@ const LinkModal = ({
       const values = await linkForm.validateFields();
       const linkUrl = values.linkUrl.trim();
 
-      // Basic URL validation
-      const urlPattern =
-        /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+      // Enhanced URL validation to support complex URLs like YouTube with query parameters
+      const isValidUrl = (url) => {
+        try {
+          // Try to create URL object - this is more reliable than regex
+          const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+          return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+        } catch (error) {
+          return false;
+        }
+      };
+
       const fullUrl = linkUrl.startsWith("http")
         ? linkUrl
         : `https://${linkUrl}`;
 
-      if (urlPattern.test(linkUrl) || urlPattern.test(fullUrl)) {
+      if (isValidUrl(linkUrl) || isValidUrl(fullUrl)) {
         const linkAttachment = {
           id: Date.now().toString(),
           name: values.title || "Just a moment...",

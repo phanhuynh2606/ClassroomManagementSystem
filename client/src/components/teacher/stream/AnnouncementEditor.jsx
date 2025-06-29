@@ -353,6 +353,7 @@ const AnnouncementEditor = ({
             onAddVideo={handleAddVideo}
             onUploadVideo={handleUploadVideo}
             onAddLink={handleAddLink}
+            userRole={userRole}
           />
 
           {/* Attachments List */}

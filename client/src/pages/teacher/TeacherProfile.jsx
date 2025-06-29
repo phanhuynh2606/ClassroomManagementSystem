@@ -123,7 +123,6 @@ const TeacherProfile = () => {
 
       // Replace with your actual upload API
       const response = await userAPI.updateProfileImage(formData);
-      console.log(response)
       if (response.success) {
         setImageUrl(response.imageUrl);
         setUserData({...userData, image: response.imageUrl});

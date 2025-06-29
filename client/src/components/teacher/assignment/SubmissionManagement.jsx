@@ -50,6 +50,7 @@ import {
 } from '@ant-design/icons';
 import moment from 'moment';
 import { AssignmentGradingModal } from '../grading';
+import { assignmentAPI } from '../../../services/api';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -73,173 +74,6 @@ const SubmissionManagement = ({
   const [bulkGradeModalVisible, setBulkGradeModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('submissions');
 
-  // Mock submission data
-  const mockSubmissions = [
-    {
-      id: 'sub1',
-      student: {
-        id: 'st1',
-        name: 'Nguyễn Văn An',
-        email: 'an.nguyen@student.edu',
-        avatar: null
-      },
-      content: `// Bài tập JavaScript - Nguyễn Văn An
-function calculateSum(arr) {
-  return arr.reduce((sum, num) => sum + num, 0);
-}
-
-function findMax(arr) {
-  return Math.max(...arr);
-}
-
-// Test cases
-const numbers = [1, 2, 3, 4, 5];
-console.log("Sum:", calculateSum(numbers)); // 15
-console.log("Max:", findMax(numbers)); // 5
-
-// Bài tập bổ sung: Sắp xếp mảng
-function sortArray(arr, ascending = true) {
-  return ascending ? 
-    arr.sort((a, b) => a - b) : 
-    arr.sort((a, b) => b - a);
-}
-
-console.log("Sorted:", sortArray([5, 2, 8, 1, 9]));`,
-      attachments: [
-        { 
-          name: 'javascript_exercises.js', 
-          size: '2.3 KB', 
-          type: 'application/javascript',
-          url: '/files/javascript_exercises.js' 
-        },
-        { 
-          name: 'test_results.png', 
-          size: '156 KB', 
-          type: 'image/png',
-          url: '/files/test_results.png' 
-        }
-      ],
-      submittedAt: '2024-01-24T14:30:00Z',
-      grade: 85,
-      feedback: 'Bài làm tốt! Code sạch sẽ và logic rõ ràng. Có thể cải thiện thêm error handling.',
-      status: 'graded',
-      isLate: false
-    },
-    {
-      id: 'sub2',
-      student: {
-        id: 'st2',
-        name: 'Trần Thị Bình',
-        email: 'binh.tran@student.edu',
-        avatar: null
-      },
-      content: `Xin chào thầy,
-
-Em đã hoàn thành bài tập theo yêu cầu. Do em mới học JavaScript nên có thể code chưa được tối ưu lắm ạ.
-
-function calculateSum(numbers) {
-  let total = 0;
-  for (let i = 0; i < numbers.length; i++) {
-    total += numbers[i];
-  }
-  return total;
-}
-
-function findMax(numbers) {
-  let max = numbers[0];
-  for (let i = 1; i < numbers.length; i++) {
-    if (numbers[i] > max) {
-      max = numbers[i];
-    }
-  }
-  return max;
-}
-
-// Test
-let testArray = [10, 5, 8, 20, 3];
-console.log("Tổng:", calculateSum(testArray));
-console.log("Max:", findMax(testArray));
-
-Em cảm ơn thầy!`,
-      attachments: [
-        { 
-          name: 'bai_tap_js.txt', 
-          size: '1.1 KB', 
-          type: 'text/plain',
-          url: '/files/bai_tap_js.txt' 
-        }
-      ],
-      submittedAt: '2024-01-25T16:45:00Z',
-      grade: null,
-      feedback: null,
-      status: 'submitted',
-      isLate: true
-    },
-    {
-      id: 'sub3',
-      student: {
-        id: 'st3',
-        name: 'Lê Minh Cường',
-        email: 'cuong.le@student.edu',
-        avatar: null
-      },
-      content: '',
-      attachments: [
-        { 
-          name: 'Assignment1_LeMinhCuong.docx', 
-          size: '45 KB', 
-          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          url: '/files/Assignment1_LeMinhCuong.docx' 
-        },
-        { 
-          name: 'source_code.zip', 
-          size: '3.2 MB', 
-          type: 'application/zip',
-          url: '/files/source_code.zip' 
-        }
-      ],
-      submittedAt: '2024-01-23T20:15:00Z',
-      grade: 92,
-      feedback: 'Bài làm xuất sắc! Code được tổ chức tốt, có documentation đầy đủ. Đặc biệt ấn tượng với phần bonus.',
-      status: 'graded',
-      isLate: false
-    },
-    {
-      id: 'sub4',
-      student: {
-        id: 'st4',
-        name: 'Phạm Thu Hằng',
-        email: 'hang.pham@student.edu',
-        avatar: null
-      },
-      content: null,
-      attachments: [],
-      submittedAt: null,
-      grade: null,
-      feedback: null,
-      status: 'missing',
-      isLate: false
-    },
-    {
-      id: 'sub5',
-      student: {
-        id: 'st5',
-        name: 'Hoàng Đức Tài',
-        email: 'tai.hoang@student.edu',
-        avatar: null
-      },
-      content: `function sum(a, b) { return a + b; }
-function max(arr) { return Math.max(...arr); }
-console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
-      attachments: [],
-      submittedAt: '2024-01-24T22:00:00Z',
-      grade: null,
-      feedback: null,
-      status: 'submitted',
-      isLate: false
-    }
-  ];
-
   useEffect(() => {
     if (visible && assignment) {
       fetchSubmissions();
@@ -251,13 +85,79 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
   }, [submissions, searchText, statusFilter]);
 
   const fetchSubmissions = async () => {
+    if (!assignment?._id) return;
+    
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSubmissions(mockSubmissions);
+      // Call real API to get submissions with enhanced data
+      const response = await assignmentAPI.getSubmissions(assignment._id, { 
+        includeHistory: true,
+        page: 1,
+        limit: 1000 // Get all submissions for this view
+      });
+      
+      if (response.success) {
+        // Format the data to match expected structure
+        const formattedSubmissions = response.data.docs.map(submission => {
+          // Skip missing submissions (virtual ones created by backend)
+          if (submission._id?.toString().startsWith('missing_') || submission.status === 'missing') {
+            return {
+              _id: submission._id,
+              id: submission._id,
+              student: {
+                _id: submission.student._id,
+                id: submission.student._id,
+                name: submission.student.fullName || submission.student.name,
+                fullName: submission.student.fullName,
+                email: submission.student.email,
+                image: submission.student.image
+              },
+              content: null,
+              attachments: [],
+              submittedAt: null,
+              grade: null,
+              feedback: null,
+              status: 'missing',
+              isLate: false,
+              gradedAt: null,
+              rubricGrades: {},
+              gradingHistory: []
+            };
+          }
+
+          // Format real submissions
+          return {
+            _id: submission._id,
+            id: submission._id, // Keep both for compatibility
+            student: {
+              _id: submission.student._id,
+              id: submission.student._id,
+              name: submission.student.fullName || submission.student.name,
+              fullName: submission.student.fullName,
+              email: submission.student.email,
+              image: submission.student.image
+            },
+            content: submission.content || '',
+            attachments: submission.attachments || [],
+            submittedAt: submission.submittedAt,
+            grade: submission.grade,
+            feedback: submission.feedback,
+            status: submission.status,
+            isLate: submission.status === 'late' || (submission.submittedAt && moment(submission.submittedAt).isAfter(moment(assignment.dueDate))),
+            gradedAt: submission.gradedAt,
+            rubricGrades: submission.rubricGrades || {},
+            gradingHistory: submission.gradingHistory || [],
+            gradingStats: submission.gradingStats || {}
+          };
+        });
+        
+        setSubmissions(formattedSubmissions);
+      } else {
+        message.error(response.message || 'Không thể tải dữ liệu submissions');
+      }
     } catch (error) {
-      message.error('Không thể tải dữ liệu submissions');
+      console.error('Error fetching submissions:', error);
+      message.error(error.response?.data?.message || 'Không thể tải dữ liệu submissions');
     } finally {
       setLoading(false);
     }
@@ -294,6 +194,8 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
         );
       case 'missing':
         return <Tag color="error" icon={<ExclamationCircleOutlined />}>Chưa nộp</Tag>;
+      case 'late':
+        return <Tag color="warning" icon={<ClockCircleOutlined />}>Nộp muộn</Tag>;
       default:
         return <Tag color="default">Unknown</Tag>;
     }
@@ -309,6 +211,12 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
   };
 
   const handleViewSubmission = (submission) => {
+    // Prevent viewing missing submissions
+    if (submission._id?.toString().startsWith('missing_') || submission.status === 'missing') {
+      message.warning('Không thể xem chi tiết submission này vì học sinh chưa nộp bài');
+      return;
+    }
+
     setSelectedSubmission(submission);
     setGradingModalVisible(true);
   };
@@ -317,21 +225,68 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
     try {
       setLoading(true);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Get assignment and submission IDs from current context
+      const assignmentId = assignment?._id;
+      const submissionId = selectedSubmission?._id;
       
-      // Update submissions
-      setSubmissions(prev => prev.map(sub => 
-        sub.id === gradingData.submissionId 
-          ? { ...sub, grade: gradingData.grade, feedback: gradingData.feedback, status: 'graded' }
-          : sub
-      ));
+      if (!assignmentId || !submissionId) {
+        message.error('Không thể xác định assignment hoặc submission');
+        return;
+      }
       
-      message.success('Đã lưu điểm thành công!');
-      setGradingModalVisible(false);
-      setSelectedSubmission(null);
+      // Call the enhanced API to save the grade with history
+      const response = await assignmentAPI.gradeSubmission(
+        assignmentId,
+        submissionId,
+        {
+          grade: gradingData.grade,
+          feedback: gradingData.feedback,
+          rubricGrades: gradingData.rubricGrades,
+          annotations: gradingData.annotations,
+          allowResubmit: gradingData.allowResubmit,
+          hideGradeFromStudent: gradingData.hideGradeFromStudent,
+          changeType: gradingData.changeType,
+          gradeReason: gradingData.gradeReason
+        }
+      );
+      
+      if (response.success) {
+        const changeType = gradingData.changeType || 'initial';
+        const successMessage = changeType === 'initial' 
+          ? 'Đã lưu điểm thành công!' 
+          : `Đã cập nhật điểm thành công (${changeType})!`;
+        
+        message.success(successMessage);
+        
+        // Update submissions list with new grading history
+        setSubmissions(prev => prev.map(sub => 
+          sub._id === submissionId 
+            ? { 
+                ...sub, 
+                ...response.data,
+                // Ensure grading history is preserved
+                gradingHistory: response.data.gradingHistory || sub.gradingHistory || []
+              }
+            : sub
+        ));
+        
+        // Update selected submission to reflect changes
+        setSelectedSubmission(prev => ({
+          ...prev,
+          ...response.data,
+          gradingHistory: response.data.gradingHistory || prev.gradingHistory || []
+        }));
+        
+        // Show grading statistics if available
+        if (response.data.gradingStats) {
+          const stats = response.data.gradingStats;
+        }
+      } else {
+        message.error(response.message || 'Lỗi khi lưu điểm');
+      }
     } catch (error) {
-      message.error('Lỗi khi lưu điểm');
+      console.error('Error saving grade:', error);
+      message.error(error.response?.data?.message || 'Lỗi khi lưu điểm');
     } finally {
       setLoading(false);
     }
@@ -378,7 +333,7 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
       render: (student) => (
         <div className="flex items-center gap-3">
           <Avatar 
-            src={student.avatar} 
+            src={student?.image} 
             icon={<UserOutlined />}
             size={40}
           />
@@ -400,25 +355,109 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
       title: 'Nội dung nộp',
       key: 'content',
       width: 200,
-      render: (_, record) => (
-        <div>
-          {record.content && (
-            <div className="mb-1">
-              <FileTextOutlined className="mr-1" />
-              <Text>Text content</Text>
-            </div>
-          )}
-          {record.attachments.length > 0 && (
-            <div>
-              <PaperClipOutlined className="mr-1" />
-              <Text>{record.attachments.length} file(s)</Text>
-            </div>
-          )}
-          {!record.content && record.attachments.length === 0 && record.status !== 'missing' && (
-            <Text type="secondary">Trống</Text>
-          )}
-        </div>
-      ),
+      render: (_, record) => {
+        // Helper function to detect content type
+        const detectContentType = (content) => {
+          if (!content) return null;
+          
+          // Check if content looks like CSV data
+          const lines = content.split('\n').filter(line => line.trim());
+          if (lines.length > 1) {
+            const firstLine = lines[0];
+            const secondLine = lines[1];
+            
+            // Check if it has comma separators and consistent column count
+            const firstCols = firstLine.split(',').length;
+            const secondCols = secondLine.split(',').length;
+            
+            if (firstCols > 1 && secondCols > 1 && Math.abs(firstCols - secondCols) <= 1) {
+              return 'csv';
+            }
+          }
+          
+          // Check if content looks like JSON
+          try {
+            JSON.parse(content);
+            return 'json';
+          } catch (e) {
+            // Not JSON, continue
+          }
+          
+          // Check if content contains code patterns
+          const codePatterns = [
+            'function', 'class', 'import', 'export', 'const', 'let', 'var',
+            'public', 'private', 'def ', 'print(', '#include'
+          ];
+          
+          const lowerContent = content.toLowerCase();
+          if (codePatterns.some(pattern => lowerContent.includes(pattern))) {
+            return 'code';
+          }
+          
+          return 'text';
+        };
+
+        const contentType = record.content ? detectContentType(record.content) : null;
+
+        return (
+          <div>
+            {/* File Attachments */}
+            {record.attachments && record.attachments.length > 0 && (
+              <div className="mb-1">
+                <PaperClipOutlined className="mr-1" />
+                <Text>
+                  {record.attachments.length} file(s)
+                  {record.attachments.length === 1 && record.attachments[0].name && (
+                    <span className="text-xs text-gray-500">
+                      {' '}({record.attachments[0].name.split('.').pop()?.toUpperCase()})
+                    </span>
+                  )}
+                  {record.attachments.length > 1 && (
+                    <span className="text-xs text-gray-500">
+                      {' '}({record.attachments.map(f => f.name?.split('.').pop()?.toUpperCase()).filter(Boolean).join(', ')})
+                    </span>
+                  )}
+                </Text>
+              </div>
+            )}
+            
+            {/* Text/Code Content */}
+            {record.content && (
+              <div className="mb-1">
+                {contentType === 'csv' && (
+                  <>
+                    <FileTextOutlined className="mr-1" style={{ color: '#52c41a' }} />
+                    <Text>CSV data</Text>
+                  </>
+                )}
+                {contentType === 'json' && (
+                  <>
+                    <FileTextOutlined className="mr-1" style={{ color: '#1890ff' }} />
+                    <Text>JSON data</Text>
+                  </>
+                )}
+                {contentType === 'code' && (
+                  <>
+                    <FileTextOutlined className="mr-1" style={{ color: '#722ed1' }} />
+                    <Text>Code content</Text>
+                  </>
+                )}
+                {contentType === 'text' && (
+                  <>
+                    <FileTextOutlined className="mr-1" />
+                    <Text>Text content</Text>
+                  </>
+                )}
+              </div>
+            )}
+            
+            {/* Empty state */}
+            {!record.content && (!record.attachments || record.attachments.length === 0) && record.status !== 'missing' && (
+              <Text type="secondary">Trống</Text>
+            )}
+          </div>
+        );
+      },
     },
     {
       title: 'Thời gian nộp',
@@ -474,43 +513,62 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
       title: 'Hành động',
       key: 'actions',
       width: 150,
-      render: (_, record) => (
-        <Space>
-          {record.status !== 'missing' && (
-            <Tooltip title="Xem chi tiết">
-              <Button 
-                type="text" 
-                icon={<EyeOutlined />}
-                size="small"
-                onClick={() => handleViewSubmission(record)}
-              />
-            </Tooltip>
-          )}
-          {record.status === 'submitted' && (
-            <Tooltip title="Chấm điểm">
-              <Button 
-                type="text" 
-                icon={<EditOutlined />}
-                size="small"
-                onClick={() => handleViewSubmission(record)}
-                className="text-blue-600"
-              />
-            </Tooltip>
-          )}
-          {record.attachments.length > 0 && (
-            <Tooltip title="Tải file">
-              <Button 
-                type="text" 
-                icon={<DownloadOutlined />}
-                size="small"
-                onClick={() => {
-                  message.success('Đang tải file...');
-                }}
-              />
-            </Tooltip>
-          )}
-        </Space>
-      ),
+      render: (_, record) => {
+        const isMissing = record._id?.toString().startsWith('missing_') || record.status === 'missing';
+        
+        return (
+          <Space>
+            {!isMissing && (
+              <Tooltip title="Xem chi tiết">
+                <Button 
+                  type="text" 
+                  icon={<EyeOutlined />}
+                  size="small"
+                  onClick={() => handleViewSubmission(record)}
+                />
+              </Tooltip>
+            )}
+            {!isMissing && (record.status === 'submitted' || record.status === 'graded') && (
+              <Tooltip title={record.status === 'graded' ? 'Chỉnh sửa điểm' : 'Chấm điểm'}>
+                <Button 
+                  type="text" 
+                  icon={<EditOutlined />}
+                  size="small"
+                  onClick={() => handleViewSubmission(record)}
+                  className="text-blue-600"
+                />
+              </Tooltip>
+            )}
+            {!isMissing && record.attachments && record.attachments.length > 0 && (
+              <Tooltip title="Tải file">
+                <Button 
+                  type="text" 
+                  icon={<DownloadOutlined />}
+                  size="small"
+                  onClick={() => {
+                    message.success('Đang tải file...');
+                    // TODO: Implement actual file download
+                  }}
+                />
+              </Tooltip>
+            )}
+            {isMissing && (
+              <Tooltip title="Học sinh chưa nộp bài">
+                <Button 
+                  type="text" 
+                  icon={<MailOutlined />}
+                  size="small"
+                  onClick={() => {
+                    message.info(`Gửi nhắc nhở đến ${record.student.name}`);
+                    // TODO: Implement send reminder to specific student
+                  }}
+                  className="text-orange-600"
+                />
+              </Tooltip>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -521,9 +579,37 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
     graded: submissions.filter(s => s.status === 'graded').length,
     missing: submissions.filter(s => s.status === 'missing').length,
     late: submissions.filter(s => s.isLate).length,
-    avgGrade: submissions.filter(s => s.grade !== null).length > 0 
-      ? Math.round(submissions.filter(s => s.grade !== null).reduce((sum, s) => sum + s.grade, 0) / submissions.filter(s => s.grade !== null).length)
-      : 0
+    avgGrade: (() => {
+      // Filter submissions with valid grades (must be number and not null/undefined)
+      const validGrades = submissions.filter(s => 
+        s.grade !== null && 
+        s.grade !== undefined && 
+        typeof s.grade === 'number' && 
+        !isNaN(s.grade)
+      );
+      
+      // Debug logging
+      console.log('📊 Grade Statistics Debug:', {
+        totalSubmissions: submissions.length,
+        allGrades: submissions.map(s => ({ 
+          student: s.student?.name, 
+          grade: s.grade, 
+          type: typeof s.grade 
+        })),
+        validGrades: validGrades.length,
+        validGradeValues: validGrades.map(s => s.grade)
+      });
+      
+      if (validGrades.length === 0) return 0;
+      
+      const sum = validGrades.reduce((total, s) => total + Number(s.grade), 0);
+      const average = sum / validGrades.length;
+      
+      console.log('📊 Average calculation:', { sum, validGrades: validGrades.length, average });
+      
+      // Return rounded average, ensuring it's a valid number
+      return isNaN(average) ? 0 : Math.round(average * 10) / 10; // Round to 1 decimal place
+    })()
   };
 
   const rowSelection = {
@@ -532,7 +618,8 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
       setSelectedRows(selectedRowKeys);
     },
     getCheckboxProps: (record) => ({
-      disabled: record.status === 'missing',
+      disabled: record._id?.toString().startsWith('missing_') || record.status === 'missing',
+      name: record.student.name,
     }),
   };
 
@@ -541,9 +628,18 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
   return (
     <Modal
       title={
-        <div className="flex items-center gap-2">
-          <TrophyOutlined />
-          <span>Quản lý submissions - {assignment.title}</span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <TrophyOutlined />
+            <span>Quản lý submissions</span>
+          </div>
+          <div className="text-sm text-gray-500 font-normal">
+            <span className="cursor-pointer hover:text-blue-600" onClick={onBack}>
+              ← Back to Assignment
+            </span>
+            <span className="mx-2">•</span>
+            <span>{assignment.title}</span>
+          </div>
         </div>
       }
       open={visible}
@@ -681,7 +777,7 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
             <Table
               columns={columns}
               dataSource={filteredSubmissions}
-              rowKey="id"
+              rowKey="_id"
               loading={loading}
               rowSelection={rowSelection}
               pagination={{
@@ -729,6 +825,10 @@ console.log(sum(1,2)); console.log(max([1,2,3,4,5]));`,
         loading={loading}
         assignment={assignment}
         submission={selectedSubmission}
+        allSubmissions={submissions.filter(sub => 
+          sub.status !== 'missing' && 
+          !sub._id?.toString().startsWith('missing_')
+        )}
       />
 
       {/* Bulk Grade Modal */}

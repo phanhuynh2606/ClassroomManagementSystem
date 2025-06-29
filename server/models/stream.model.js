@@ -57,7 +57,7 @@ const streamSchema = new mongoose.Schema(
       },
       type: {
         type: String,
-        enum: ['file', 'link', 'video/youtube'],
+        enum: ['file', 'link', "video",'video/youtube'],
         default: 'file'
       },
       fileType: String,

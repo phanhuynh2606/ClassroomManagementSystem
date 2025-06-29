@@ -19,7 +19,6 @@ axiosClient.interceptors.request.use((config) => {
 axiosClient.interceptors.response.use(
   (response) => response.data,
   async (error) => {
-    console.log("Axios error:", error.response?.data);
     const originalRequest = error.config;
     const errorCode = error.response?.data?.code;
 

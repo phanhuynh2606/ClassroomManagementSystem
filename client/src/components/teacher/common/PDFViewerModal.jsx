@@ -170,7 +170,7 @@ const PDFViewerModal = ({
       width="95vw"
       style={{ top: 20 }}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <Row gutter={24} style={{ height: '80vh',overflow:"auto" }}>
         {/* PDF Viewer */}

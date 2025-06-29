@@ -179,7 +179,7 @@ commentSchema.statics.getStreamComments = function(streamItemId, options = {}) {
   }
 
   return this.find(query)
-    .populate('author', 'fullName email avatar role')
+    .populate('author', 'fullName email image role')
     .populate('replyTo', 'fullName')
     .sort({ createdAt: sortOrder })
     .skip(skip)
@@ -200,7 +200,7 @@ commentSchema.statics.getCommentReplies = function(parentCommentId, options = {}
     status: 'active',
     isActive: true
   })
-    .populate('author', 'fullName email avatar role')
+    .populate('author', 'fullName email image role')
     .populate('replyTo', 'fullName')
     .sort({ createdAt: sortOrder })
     .skip(skip)

@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { 
   Card, 
   Button, 
@@ -16,7 +16,8 @@ import {
   Divider,
   Empty,
   Avatar,
-  message
+  message,
+  Spin
 } from 'antd';
 import {
   PlusOutlined,
@@ -36,7 +37,8 @@ import {
   TeamOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { assignmentAPI } from '../../../services/api';
 
 // Import the new modal components
 import { AssignmentCreateModal, SubmissionManagement } from '../assignment';
@@ -46,12 +48,75 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-const ClassworkTab = () => {
+// Utility function to truncate text
+const truncateText = (text, maxLength = 150) => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength).trim() + '...';
+};
+
+// Utility function to strip HTML tags
+const stripHtml = (html) => {
+  if (!html) return '';
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return doc.body.textContent || '';
+};
+
+// Truncated Text Component với nhiều tùy chọn
+const TruncatedText = ({ 
+  text, 
+  maxLength = 150, 
+  lines = 2, 
+  method = 'lines', // 'lines' hoặc 'characters'
+  className = "text-gray-600",
+  stripHtmlTags = false // new option to strip HTML
+}) => {
+  if (!text) return null;
+
+  // Strip HTML if needed
+  const displayText = stripHtmlTags ? stripHtml(text) : text;
+  const titleText = stripHtmlTags ? stripHtml(text) : text;
+
+  if (method === 'characters') {
+    return (
+      <Text 
+        className={className}
+        title={titleText}
+      >
+        {truncateText(displayText, maxLength)}
+      </Text>
+    );
+  }
+
+  // Method = 'lines' (default)
+  return (
+    <Text 
+      className={className}
+      style={{
+        display: '-webkit-box',
+        WebkitLineClamp: lines,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        lineHeight: '1.5em',
+        maxHeight: `${lines * 1.2}em`
+      }}
+      title={titleText}
+    >
+      {displayText}
+    </Text>
+  );
+};
+
+const ClassworkTab = ({ classId: propClassId }) => {
   const navigate = useNavigate();
+  const { classId: paramClassId } = useParams();
+  const classId = propClassId || paramClassId;
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [createType, setCreateType] = useState('assignment');
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   
   // New modal states
   const [assignmentCreateVisible, setAssignmentCreateVisible] = useState(false);
@@ -60,83 +125,68 @@ const ClassworkTab = () => {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [submissionManagementVisible, setSubmissionManagementVisible] = useState(false);
 
-  // Mock data for classwork items
-  const [classworkItems, setClassworkItems] = useState([
-    {
-      id: '1',
-      type: 'assignment',
-      title: 'Programming Assignment 1',
-      description: 'Complete the basic programming exercises',
-      instructions: 'Please complete all exercises in the attached document. Make sure to follow the coding standards discussed in class.',
-      dueDate: '2024-01-25T23:59:00Z',
-      totalPoints: 100,
-      status: 'published',
-      submissionsCount: 15,
-      totalStudents: 25,
-      attachments: [
-        { name: 'assignment_template.pdf', size: '245 KB', url: '/files/assignment_template.pdf' }
-      ],
-      createdAt: '2024-01-15T10:00:00Z',
-      allowLateSubmission: true,
-      latePenalty: 10
-    },
-    {
-      id: '2',
-      type: 'material',
-      title: 'Course Syllabus',
-      description: 'Complete course syllabus and schedule',
-      dueDate: null,
-      points: null,
-      status: 'published',
-      submissionsCount: null,
-      totalStudents: 25,
-      attachments: [
-        { name: 'syllabus.pdf', size: '1.2 MB', url: '/files/syllabus.pdf' }
-      ],
-      createdAt: '2024-01-05T09:00:00Z'
-    }
-  ]);
+  // Real data states
+  const [assignments, setAssignments] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    totalDocs: 0,
+    totalPages: 0
+  });
 
-  // Mock student submissions for grading
-  const [mockSubmissions] = useState([
-    {
-      id: 'sub1',
-      assignmentId: '1',
-      student: {
-        id: 'st1',
-        name: 'Alice Johnson',
-        email: 'alice@student.edu',
-        avatar: null
-      },
-      content: 'I have completed all the exercises as requested. Here is my solution:\n\n1. Function to calculate sum: \n```javascript\nfunction sum(a, b) {\n  return a + b;\n}\n```\n\n2. Array manipulation exercise:\n```javascript\nconst numbers = [1, 2, 3, 4, 5];\nconst doubled = numbers.map(n => n * 2);\nconsole.log(doubled);\n```\n\nI found the exercises challenging but educational. Please let me know if you need any clarification.',
-      attachments: [
-        { name: 'assignment1_solution.js', size: '2.1 KB', url: '/files/assignment1_solution.js' },
-        { name: 'readme.txt', size: '512 B', url: '/files/readme.txt' }
-      ],
-      submittedAt: '2024-01-24T18:30:00Z',
-      grade: null,
-      feedback: null,
-      status: 'submitted'
-    },
-    {
-      id: 'sub2',
-      assignmentId: '1',
-      student: {
-        id: 'st2',
-        name: 'Bob Smith',
-        email: 'bob@student.edu',
-        avatar: null
-      },
-      content: 'My assignment submission:\n\nI struggled with some parts but here\'s what I managed to complete:\n\nExercise 1: Basic functions\nExercise 2: Array operations\n\nI couldn\'t finish exercise 3 due to time constraints. Hope to get partial credit.',
-      attachments: [
-        { name: 'partial_solution.js', size: '1.8 KB', url: '/files/partial_solution.js' }
-      ],
-      submittedAt: '2024-01-26T10:15:00Z', // Late submission
-      grade: 75,
-      feedback: 'Good effort on the completed exercises. You showed understanding of basic concepts. For next time, try to start earlier to avoid rushing. The late submission penalty has been applied.',
-      status: 'graded'
+  // States for submissions data
+  const [allSubmissions, setAllSubmissions] = useState([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+
+  // Fetch assignments data
+  useEffect(() => {
+    if (classId) {
+      fetchAssignments();
     }
-  ]);
+  }, [classId]);
+
+  const fetchAssignments = async (page = 1) => {
+    try {
+      setDataLoading(true);
+      const response = await assignmentAPI.getClassroomAssignments(classId, {
+        page,
+        limit: pagination.limit
+      });
+
+      if (response.success) {
+        setAssignments(response.data.docs || []);
+        setPagination({
+          page: response.data.page,
+          limit: response.data.limit,
+          totalDocs: response.data.totalDocs,
+          totalPages: response.data.totalPages
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+      message.error('Failed to load assignments');
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  const fetchAssignmentSubmissions = async (assignmentId) => {
+    try {
+      setSubmissionsLoading(true);
+      const response = await assignmentAPI.getSubmissions(assignmentId);
+      
+      if (response.success) {
+        return response.data.docs || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+      message.error('Failed to load submissions');
+      return [];
+    } finally {
+      setSubmissionsLoading(false);
+    }
+  };
 
   const createMenuItems = [
     {
@@ -190,39 +240,31 @@ const ClassworkTab = () => {
     const now = moment();
     
     if (date.isBefore(now)) {
-      return <Text type="danger">Due {date.format('MMM D, YYYY')}</Text>;
+      return <Text type="danger">Due {date.format('HH:mm DD/MM/YYYY')}</Text>;
     } else if (date.diff(now, 'days') <= 7) {
-      return <Text type="warning">Due {date.format('MMM D, YYYY')}</Text>;
+      return <Text type="warning">Due {date.format('HH:mm DD/MM/YYYY')}</Text>;
     } else {
-      return <Text>Due {date.format('MMM D, YYYY')}</Text>;
+      return <Text>Due {date.format('HH:mm DD/MM/YYYY')}</Text>;
     }
   };
 
   const handleCreateSubmit = async (values) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // This is for material creation - should call appropriate API
+      if (createType === 'material') {
+        // TODO: Implement material creation API
+        message.info('Material creation not yet implemented');
+      }
       
-      const newItem = {
-        id: Date.now().toString(),
-        type: createType,
-        title: values.title,
-        description: values.description,
-        dueDate: values.dueDate ? values.dueDate.toISOString() : null,
-        points: values.points || null,
-        status: 'published',
-        submissionsCount: 0,
-        totalStudents: 25,
-        attachments: values.attachments || [],
-        createdAt: new Date().toISOString()
-      };
-
-      setClassworkItems(prev => [newItem, ...prev]);
       setCreateModalVisible(false);
       form.resetFields();
+      
+      // Refresh the list
+      fetchAssignments(pagination.page);
     } catch (error) {
       console.error('Error creating item:', error);
+      message.error('Failed to create item');
     } finally {
       setLoading(false);
     }
@@ -238,71 +280,172 @@ const ClassworkTab = () => {
     try {
       setLoading(true);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await assignmentAPI.create(classId, assignmentData);
       
-      const newAssignment = {
-        id: Date.now().toString(),
-        type: 'assignment',
-        title: assignmentData.title,
-        description: assignmentData.description,
-        instructions: assignmentData.instructions,
-        dueDate: assignmentData.dueDate,
-        totalPoints: assignmentData.totalPoints,
-        status: assignmentData.visibility,
-        submissionsCount: 0,
-        totalStudents: 25,
-        attachments: assignmentData.attachments || [],
-        createdAt: new Date().toISOString(),
-        allowLateSubmission: assignmentData.submissionSettings?.allowLateSubmission || false,
-        latePenalty: assignmentData.submissionSettings?.latePenalty || 0
-      };
-
-      setClassworkItems(prev => [newAssignment, ...prev]);
-      setAssignmentCreateVisible(false);
-      message.success('Assignment created successfully!');
+      if (response.success) {
+        message.success('Assignment created successfully!');
+        setAssignmentCreateVisible(false);
+        // Refresh assignments list
+        fetchAssignments(pagination.page);
+      } else {
+        message.error(response.message || 'Failed to create assignment');
+      }
     } catch (error) {
-      message.error('Failed to create assignment');
+      message.error(error.response?.data?.message || 'Failed to create assignment');
       console.error('Error creating assignment:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGradeSubmission = (assignment) => {
-    // Find a submission for this assignment
-    const submission = mockSubmissions.find(sub => sub.assignmentId === assignment.id);
-    if (submission) {
-      setSelectedAssignment(assignment);
-      setSelectedSubmission(submission);
-      setGradingModalVisible(true);
-    } else {
-      message.info('No submissions found for this assignment');
+  const handleGradeSubmission = async (assignment) => {
+    try {
+      // Fetch real submissions for this assignment
+      const submissions = await fetchAssignmentSubmissions(assignment._id);
+      
+      // Filter out missing submissions for grading
+      const realSubmissions = submissions.filter(sub => 
+        !sub._id?.toString().startsWith('missing_') && 
+        sub.status !== 'missing'
+      );
+      
+      if (realSubmissions.length > 0) {
+        // Get the first ungraded submission, or the first submission if all are graded
+        const ungradedSubmission = realSubmissions.find(sub => 
+          (sub.grade === null || sub.grade === undefined) && 
+          sub.status !== 'missing'
+        );
+        const submissionToGrade = ungradedSubmission || realSubmissions[0];
+        
+        setSelectedAssignment(assignment);
+        setSelectedSubmission(submissionToGrade);
+        setAllSubmissions(submissions); // Keep all submissions for navigation, but start with real one
+        setGradingModalVisible(true);
+      } else {
+        message.info('Không có bài nộp nào để chấm điểm. Tất cả học sinh chưa nộp bài.');
+      }
+    } catch (error) {
+      console.error('Error loading submissions for grading:', error);
+      message.error('Failed to load submissions');
     }
   };
 
   const handleViewAllSubmissions = (assignment) => {
-    // Navigate to assignment detail page
-    navigate(`/teacher/classroom/1/assignment/${assignment.id}`);
+    // Open SubmissionManagement modal instead of navigating
+    setSelectedAssignment(assignment);
+    setSubmissionManagementVisible(true);
   };
 
   const handleViewAssignmentDetail = (assignment) => {
-    navigate(`/teacher/classroom/1/assignment/${assignment.id}`);
+    navigate(`/teacher/classroom/${classId}/assignment/${assignment._id}`);
+  };
+
+  const handleEditAssignment = (assignment) => {
+    navigate(`/teacher/classroom/${classId}/assignment/${assignment._id}/edit`);
+  };
+
+  const handleDeleteAssignment = async (assignment) => {
+    Modal.confirm({
+      title: 'Delete Assignment',
+      content: `Are you sure you want to delete "${assignment.title}"? This action cannot be undone.`,
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          const response = await assignmentAPI.delete(assignment._id);
+          if (response.success) {
+            message.success('Assignment deleted successfully');
+            fetchAssignments(pagination.page);
+          }
+        } catch (error) {
+          message.error(error.response?.data?.message || 'Failed to delete assignment');
+        }
+      },
+    });
   };
 
   const handleSaveGrade = async (gradingData) => {
     try {
       setLoading(true);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Get current submission info for API call (selectedSubmission should be set by grading modal)
+      const currentSub = selectedSubmission;
       
-      message.success('Grade saved successfully!');
-      setGradingModalVisible(false);
-      setSelectedAssignment(null);
-      setSelectedSubmission(null);
+      // Call the enhanced API to save the grade with history
+      const response = await assignmentAPI.gradeSubmission(
+        selectedAssignment._id,
+        currentSub._id,
+        {
+          grade: gradingData.grade,
+          feedback: gradingData.feedback,
+          rubricGrades: gradingData.rubricGrades,
+          annotations: gradingData.annotations,
+          allowResubmit: gradingData.allowResubmit,
+          hideGradeFromStudent: gradingData.hideGradeFromStudent,
+          changeType: gradingData.changeType,
+          gradeReason: gradingData.gradeReason
+        }
+      );
+      
+      if (response.success) {
+        // Handle auto penalty application
+        const penaltyInfo = response.data.penaltyInfo;
+        
+        let successMessage = response.message || 'Grade saved successfully!';
+        
+        // Show additional penalty info if applied
+        if (penaltyInfo?.isLate && penaltyInfo.penalty > 0) {
+          message.success(successMessage);
+          message.info({
+            content: `🎯 Auto Late Penalty Applied`,
+            description: `Original grade: ${penaltyInfo.originalGrade} → Final grade: ${penaltyInfo.finalGrade} (-${penaltyInfo.penalty}% for ${penaltyInfo.daysLate} days late)`,
+            duration: 6
+          });
+        } else {
+          message.success(successMessage);
+        }
+        
+        // Update the submission in allSubmissions with new grading history
+        const updatedSubmissions = allSubmissions.map(sub => 
+          sub._id === currentSub._id 
+            ? { 
+                ...sub, 
+                ...response.data,
+                // Ensure grading history is preserved
+                gradingHistory: response.data.gradingHistory || sub.gradingHistory || []
+              }
+            : sub
+        );
+        setAllSubmissions(updatedSubmissions);
+        
+        // Update the selected submission
+        const updatedSubmission = updatedSubmissions.find(
+          sub => sub._id === currentSub._id
+        );
+        if (updatedSubmission) {
+          setSelectedSubmission(updatedSubmission);
+        }
+        
+        // Refresh assignments list to update statistics
+        fetchAssignments(pagination.page);
+        
+        // Show grading statistics if available
+        if (response.data.gradingStats) {
+          const stats = response.data.gradingStats;
+          console.log('Grading Statistics:', {
+            totalAttempts: stats.totalGradingAttempts,
+            hasBeenRevised: stats.hasBeenRevised,
+            gradeChange: stats.gradeChange
+          });
+        }
+        
+        // Don't close modal, just show success and let user continue grading
+      } else {
+        message.error(response.message || 'Failed to save grade');
+      }
     } catch (error) {
-      message.error('Failed to save grade');
+      message.error(error.response?.data?.message || 'Failed to save grade');
       console.error('Error saving grade:', error);
     } finally {
       setLoading(false);
@@ -326,19 +469,38 @@ const ClassworkTab = () => {
       </div>
 
       {/* Classwork Items */}
-      {classworkItems.length === 0 ? (
+      {dataLoading ? (
+        <Card>
+          <div className="flex justify-center items-center py-8">
+            <Spin size="large" />
+          </div>
+        </Card>
+      ) : assignments.length === 0 ? (
         <Card>
           <Empty 
-            description="No classwork created yet"
+            description="No assignments created yet"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </Card>
       ) : (
         <List
-          dataSource={classworkItems}
+          dataSource={assignments}
+          pagination={{
+            current: pagination.page,
+            pageSize: pagination.limit,
+            total: pagination.totalDocs,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => 
+              `${range[0]}-${range[1]} of ${total} assignments`,
+            onChange: (page, pageSize) => {
+              setPagination(prev => ({ ...prev, page, limit: pageSize }));
+              fetchAssignments(page);
+            }
+          }}
           renderItem={(item) => (
-            <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start gap-4">
+            <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
+              <div className="flex items-start gap-4 w-full">
                 <div className="mt-1">
                   {getTypeIcon(item.type)}
                 </div>
@@ -350,12 +512,26 @@ const ClassworkTab = () => {
                         {item.title}
                       </Title>
                       <Space>
-                        <Tag color={getTypeColor(item.type)} className="capitalize">
-                          {item.type}
+                        <Tag color="blue" className="capitalize">
+                          Assignment
                         </Tag>
                         {item.totalPoints && (
                           <Text type="secondary">{item.totalPoints} points</Text>
                         )}
+                        <Tag color={
+                          item.visibility === 'published' ? 'green' : 
+                          item.visibility === 'scheduled' ? 'blue' : 
+                          'orange'
+                        }>
+                          {item.visibility === 'scheduled' && item.publishDate && moment(item.publishDate).isAfter(moment()) ? (
+                            <>
+                              <ClockCircleOutlined className="mr-1" />
+                              Scheduled • {moment(item.publishDate).format('DD/MM HH:mm')}
+                            </>
+                          ) : (
+                            item.visibility.charAt(0).toUpperCase() + item.visibility.slice(1)
+                          )}
+                        </Tag>
                       </Space>
                     </div>
                     
@@ -371,42 +547,48 @@ const ClassworkTab = () => {
                         type="text" 
                         icon={<EditOutlined />}
                         size="small"
+                        onClick={() => handleEditAssignment(item)}
+                        title="Chỉnh sửa assignment"
                       />
-                      {item.type === 'assignment' && (
-                        <>
-                          <Button 
-                            type="text" 
-                            icon={<TrophyOutlined />}
-                            size="small"
-                            onClick={() => handleGradeSubmission(item)}
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            Grade
-                          </Button>
-                          <Button 
-                            type="text" 
-                            icon={<TeamOutlined />}
-                            size="small"
-                            onClick={() => handleViewAllSubmissions(item)}
-                            className="text-blue-600 hover:text-blue-700"
-                          >
-                            Submissions
-                          </Button>
-                        </>
-                      )}
+                      <Button 
+                        type="text" 
+                        icon={<TrophyOutlined />}
+                        size="small"
+                        onClick={() => handleGradeSubmission(item)}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        Grade
+                      </Button>
+                      <Button 
+                        type="text" 
+                        icon={<TeamOutlined />}
+                        size="small"
+                        onClick={() => handleViewAllSubmissions(item)}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        Submissions
+                      </Button>
                       <Button 
                         type="text" 
                         icon={<DeleteOutlined />}
                         size="small"
                         danger
+                        onClick={() => handleDeleteAssignment(item)}
                       />
                     </Space>
                   </div>
 
                   {item.description && (
-                    <Text className="text-gray-600 block mb-3">
-                      {item.description}
-                    </Text>
+                    <div className="mb-3">
+                      <TruncatedText 
+                        text={item.description}
+                        maxLength={10}
+                        lines={1}
+                        method="lines"
+                        className="text-gray-600"
+                        stripHtmlTags={true}
+                      />
+                    </div>
                   )}
 
                   <div className="flex justify-between items-center">
@@ -418,13 +600,11 @@ const ClassworkTab = () => {
                         </div>
                       )}
                       
-                      {item.submissionsCount !== null && (
-                        <Text type="secondary">
-                          {item.submissionsCount}/{item.totalStudents} submitted
-                        </Text>
-                      )}
+                      <Text type="secondary">
+                        {item.submissionsCount || 0} submissions
+                      </Text>
                       
-                      {item.attachments.length > 0 && (
+                      {item.attachments && item.attachments.length > 0 && (
                         <div className="flex items-center gap-1">
                           <PaperClipOutlined className="text-gray-500" />
                           <Text type="secondary">{item.attachments.length} attachment(s)</Text>
@@ -433,7 +613,7 @@ const ClassworkTab = () => {
                     </div>
                     
                     <Text type="secondary" className="text-sm">
-                      Posted {moment(item.createdAt).fromNow()}
+                      Created {moment(item.createdAt).fromNow()}
                     </Text>
                   </div>
                 </div>
@@ -543,13 +723,20 @@ const ClassworkTab = () => {
         loading={loading}
         assignment={selectedAssignment}
         submission={selectedSubmission}
+        allSubmissions={allSubmissions}
       />
 
       {/* Submission Management Modal */}
       <SubmissionManagement
         visible={submissionManagementVisible}
-        onCancel={() => setSubmissionManagementVisible(false)}
-        onBack={() => setSubmissionManagementVisible(false)}
+        onCancel={() => {
+          setSubmissionManagementVisible(false);
+          setSelectedAssignment(null);
+        }}
+        onBack={() => {
+          setSubmissionManagementVisible(false);
+          setSelectedAssignment(null);
+        }}
         assignment={selectedAssignment}
       />
     </div>

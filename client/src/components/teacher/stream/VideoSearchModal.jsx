@@ -1,9 +1,8 @@
 import React, { useState, useCallback } from "react";
-import { Modal, Form, Input, Button } from "antd";
+import { Modal, Input, Button } from "antd";
 import { YoutubeFilled, SearchOutlined } from "@ant-design/icons";
 
 const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
-  const [videoForm] = Form.useForm();
   const [videoPreview, setVideoPreview] = useState(null);
 
   const handleVideoSearch = useCallback(async (searchValue) => {
@@ -34,10 +33,8 @@ const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
                 `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${API_KEY}&part=snippet,statistics,contentDetails`
               ),
             ]);
-
             if (videoResponse.ok) {
               const videoData = await videoResponse.json();
-
               if (videoData.items && videoData.items.length > 0) {
                 const video = videoData.items[0];
                 const snippet = video.snippet;
@@ -124,6 +121,7 @@ const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
         const response = await fetch(
           `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
         );
+        
         if (response.ok) {
           const data = await response.json();
           const videoInfo = {
@@ -194,6 +192,7 @@ const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
         title: videoPreview.title,
         // YouTube specific fields - save all for database
         videoId: videoPreview.id,
+        embedUrl: `https://www.youtube.com/embed/${videoPreview.id}`, // Add embedUrl for iframe display
         thumbnail: videoPreview.thumbnail,
         duration: videoPreview.duration,
         channel: videoPreview.channel,
@@ -205,6 +204,7 @@ const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
           publishedAt: videoPreview.publishedAt,
           likeCount: videoPreview.likeCount,
           tags: videoPreview.tags,
+          embedUrl: `https://www.youtube.com/embed/${videoPreview.id}`, // Also save in metadata for consistency
         },
       };
 
@@ -212,18 +212,16 @@ const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
         onSuccess(videoAttachment);
       }
 
-      // Reset form and close
+      // Reset and close
       setVideoPreview(null);
-      videoForm.resetFields();
       if (onCancel) onCancel();
     }
-  }, [videoPreview, onSuccess, onCancel, videoForm]);
+      }, [videoPreview, onSuccess, onCancel]);
 
   const handleCancel = useCallback(() => {
     setVideoPreview(null);
-    videoForm.resetFields();
     if (onCancel) onCancel();
-  }, [videoForm, onCancel]);
+  }, [onCancel]);
 
   return (
     <Modal
@@ -237,8 +235,25 @@ const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
       }
       open={visible}
       onCancel={handleCancel}
-      footer={null}
-      width="90vw"
+      footer={
+        <div className="p-2 bg-white border-t flex justify-between items-center sticky bottom-0">
+          <Button
+            onClick={handleCancel}
+            className="text-gray-600 border-gray-300 hover:bg-gray-50"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="primary"
+            onClick={handleVideoSubmit}
+            className="bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 font-medium px-6"
+            size="large"
+          >
+            Add video
+          </Button>
+        </div>
+      }
+      width="80vw"
       className="youtube-modal"
       centered
       style={{ maxWidth: "1200px" }}
@@ -254,8 +269,9 @@ const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
           overflow: "hidden",
         },
       }}
+      maskClosable={false}
     >
-      <div style={{ height: "70vh", maxHeight: "600px", overflow: "hidden" }}>
+      <div style={{ height: "75vh", maxHeight: "600px", overflow: "hidden" }}>
         {!videoPreview ? (
           /* Search State */
           <div className="p-8 text-center h-full overflow-y-auto">
@@ -319,7 +335,7 @@ const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
             <div
               className="flex flex-col md:flex-row"
               style={{
-                height: "calc(70vh - 120px)",
+                height: "calc(70vh - 200px)",
                 minHeight: "500px",
                 maxHeight: "600px",
                 overflow: "hidden",
@@ -558,28 +574,7 @@ const VideoSearchModal = ({ visible, onCancel, onSuccess }) => {
                     </div>
                   )}
                 </div>
-
-                {/* Bottom spacing */}
-                <div className="h-3"></div>
               </div>
-            </div>
-
-            {/* Add Video Button - Fixed at bottom */}
-            <div className="p-4 bg-white border-t flex justify-between items-center">
-              <Button
-                onClick={handleCancel}
-                className="text-gray-600 border-gray-300 hover:bg-gray-50"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="primary"
-                onClick={handleVideoSubmit}
-                className="bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 font-medium px-6"
-                size="large"
-              >
-                Add video
-              </Button>
             </div>
           </div>
         )}

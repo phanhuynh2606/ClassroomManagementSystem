@@ -325,64 +325,182 @@ class YouTubeAPI {
   }
 
   // Get video info after upload using direct API call
-  async getVideoInfo(videoId) {
+  async getVideoInfo(videoId, maxRetries = 8) {
+    console.log(`[YouTube API] Getting video info for: ${videoId}`);
+    
     try {
       if (!this.gapi) {
         await this.initializeGapi();
       }
 
-      // Use gapi.client for API calls
-      const response = await this.gapi.client.youtube.videos.list({
-        part: 'snippet,statistics,contentDetails,status',
-        id: videoId
-      });
+      // Retry logic for processing videos with longer waits
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          console.log(`[YouTube API] Attempt ${attempt + 1}/${maxRetries} for video ${videoId}`);
+          
+          // Method 1: Try using gapi.client first
+          let video = null;
+          try {
+            const response = await this.gapi.client.youtube.videos.list({
+              part: 'snippet,statistics,contentDetails,status',
+              id: videoId
+            });
+            
+            console.log(`[YouTube API] GAPI Response:`, response);
+            
+            if (response.result.items && response.result.items.length > 0) {
+              video = response.result.items[0];
+              console.log(`[YouTube API] Video found via GAPI:`, video);
+            }
+          } catch (gapiError) {
+            console.warn(`[YouTube API] GAPI failed, trying REST API:`, gapiError);
+          }
+          
+          // Method 2: Fallback to direct REST API if GAPI fails
+          if (!video) {
+            try {
+              const restResponse = await fetch(
+                `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails,status&id=${videoId}&key=${YOUTUBE_CONFIG.API_KEY}`
+              );
+              
+              if (restResponse.ok) {
+                const restData = await restResponse.json();
+                console.log(`[YouTube API] REST Response:`, restData);
+                
+                if (restData.items && restData.items.length > 0) {
+                  video = restData.items[0];
+                  console.log(`[YouTube API] Video found via REST API:`, video);
+                }
+              }
+            } catch (restError) {
+              console.warn(`[YouTube API] REST API also failed:`, restError);
+            }
+          }
+          
+          if (video) {
+            // Parse duration from ISO 8601 format
+            const parseDuration = (duration) => {
+              console.log(`[YouTube API] Parsing duration:`, duration);
+              
+              if (!duration || typeof duration !== 'string') {
+                console.warn('[YouTube API] No duration provided or invalid format:', duration);
+                return null; // Return null instead of "0:00" to distinguish missing duration
+              }
 
-      if (response.result.items && response.result.items.length > 0) {
-        const video = response.result.items[0];
-        
-        // Parse duration from ISO 8601 format
-        const parseDuration = (duration) => {
-          if (!duration || typeof duration !== 'string') {
-            return "0:00";
+              // ISO 8601 format: PT#M#S or PT#H#M#S
+              const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+              if (!match) {
+                console.warn('[YouTube API] Invalid duration format:', duration);
+                return null;
+              }
+
+              const hours = parseInt(match[1] || "0");
+              const minutes = parseInt(match[2] || "0");  
+              const seconds = parseInt(match[3] || "0");
+
+              // Format duration based on length
+              if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+              } else {
+                return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+              }
+            };
+
+            const rawDuration = video.contentDetails?.duration;
+            const duration = parseDuration(rawDuration);
+            
+            console.log(`[YouTube API] Raw duration: "${rawDuration}" -> Parsed: "${duration}"`);
+            
+            // Check if we have essential data
+            const hasEssentialData = video.snippet?.title && 
+                                   video.snippet?.thumbnails &&
+                                   video.contentDetails;
+            
+            console.log(`[YouTube API] Has essential data:`, {
+              hasTitle: !!video.snippet?.title,
+              hasThumbnails: !!video.snippet?.thumbnails,
+              hasContentDetails: !!video.contentDetails,
+              hasDuration: !!rawDuration,
+              processingStatus: video.status?.uploadStatus
+            });
+
+            // If duration is missing but other data is there, continue retrying
+            if (!duration && attempt < maxRetries - 1) {
+              const waitTime = Math.min((attempt + 1) * 3000, 15000); // Max 15 seconds
+              console.log(`[YouTube API] Duration not available yet, retrying in ${waitTime/1000}s... (processing may still be ongoing)`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+              continue;
+            }
+
+            const videoInfo = {
+              id: videoId,
+              title: video.snippet?.title || 'Untitled Video',
+              description: video.snippet?.description || '',
+              thumbnail: video.snippet?.thumbnails?.high?.url || 
+                        video.snippet?.thumbnails?.medium?.url || 
+                        video.snippet?.thumbnails?.default?.url ||
+                        `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+              duration: duration || "Processing...", // Show processing status instead of 0:00
+              channel: video.snippet?.channelTitle || 'Unknown Channel',
+              url: `https://www.youtube.com/watch?v=${videoId}`,
+              embedUrl: `https://www.youtube.com/embed/${videoId}`,
+              publishedAt: video.snippet?.publishedAt,
+              status: video.status?.privacyStatus || 'unlisted',
+              viewCount: video.statistics?.viewCount || '0',
+              // Debug info
+              _debug: {
+                rawDuration: rawDuration,
+                attempt: attempt + 1,
+                uploadStatus: video.status?.uploadStatus,
+                processingProgress: video.processingDetails?.processingProgress
+              }
+            };
+
+            console.log(`[YouTube API] Final video info:`, videoInfo);
+            return videoInfo;
           }
 
-          const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-          if (!match) {
-            console.warn('Invalid duration format:', duration);
-            return "0:00";
+          // If no video found, wait and retry
+          if (attempt < maxRetries - 1) {
+            const waitTime = Math.min((attempt + 1) * 3000, 10000);
+            console.log(`[YouTube API] Video not found, retrying in ${waitTime/1000}s... (${attempt + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
           }
-
-          const hours = (match[1] || "").replace("H", "");
-          const minutes = (match[2] || "").replace("M", "");
-          const seconds = (match[3] || "").replace("S", "");
-
-          if (hours) {
-            return `${hours}:${minutes.padStart(2, "0")}:${seconds.padStart(2, "0")}`;
-          } else {
-            return `${minutes || "0"}:${seconds.padStart(2, "0")}`;
+        } catch (error) {
+          console.error(`[YouTube API] Attempt ${attempt + 1} failed:`, error);
+          if (attempt < maxRetries - 1) {
+            const waitTime = Math.min((attempt + 1) * 2000, 8000);
+            console.log(`[YouTube API] Error occurred, retrying in ${waitTime/1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            continue;
           }
-        };
-
-        return {
-          id: videoId,
-          title: video.snippet.title,
-          description: video.snippet.description,
-          thumbnail: video.snippet.thumbnails.high?.url || video.snippet.thumbnails.medium?.url,
-          duration: parseDuration(video.contentDetails.duration),
-          channel: video.snippet.channelTitle,
-          url: `https://www.youtube.com/watch?v=${videoId}`,
-          embedUrl: `https://www.youtube.com/embed/${videoId}`,
-          publishedAt: video.snippet.publishedAt,
-          status: video.status.privacyStatus,
-          viewCount: video.statistics.viewCount || '0'
-        };
+          throw error;
+        }
       }
 
-      throw new Error('Video not found');
+      throw new Error('Video not found after maximum retries');
 
     } catch (error) {
-      console.error('Error getting video info:', error);
-      throw error;
+      console.error('[YouTube API] Error getting video info:', error);
+      // Return default info if API fails
+      return {
+        id: videoId,
+        title: 'Video Upload',
+        description: 'Video uploaded successfully',
+        thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        duration: "Processing...", // Indicate processing instead of 0:00
+        channel: 'Your Channel',
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        embedUrl: `https://www.youtube.com/embed/${videoId}`,
+        publishedAt: new Date().toISOString(),
+        status: 'unlisted',
+        viewCount: '0',
+        _debug: {
+          error: error.message,
+          fallbackUsed: true
+        }
+      };
     }
   }
 

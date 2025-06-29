@@ -98,7 +98,7 @@ const EditPostModal = ({
         </Button>
       ]}
       width={700}
-      destroyOnClose
+      destroyOnHidden
     >
       {visible && (
         <Form form={form} layout="vertical">

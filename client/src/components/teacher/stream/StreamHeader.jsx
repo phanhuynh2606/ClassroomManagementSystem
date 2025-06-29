@@ -4,9 +4,8 @@ import { SettingOutlined, InfoCircleOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
-const StreamHeader = ({ classData, onCustomizeClick }) => {
+const StreamHeader = ({ classData, onCustomizeClick, userRole = 'teacher' }) => {
   // Get background style from classroom appearance
-  console.log("classData", classData)
   const getBackgroundStyle = useMemo(() => {
     const appearance = classData?.appearance;
     const background = appearance?.background;
@@ -90,20 +89,22 @@ const StreamHeader = ({ classData, onCustomizeClick }) => {
           </div>
         )}
       </div>
-      <div className="absolute top-4 right-4">
-        <Button
-          icon={<SettingOutlined />}
-          onClick={onCustomizeClick}
-          style={{
-            color: textColor,
-            borderColor: textColor,
-          }}
-          className="hover:bg-white hover:text-gray-800"
-          ghost
-        >
-          Customize
-        </Button>
-      </div>
+      {userRole === 'teacher' && (
+        <div className="absolute top-4 right-4">
+          <Button
+            icon={<SettingOutlined />}
+            onClick={onCustomizeClick}
+            style={{
+              color: textColor,
+              borderColor: textColor,
+            }}
+            className="hover:bg-white hover:text-gray-800"
+            ghost
+          >
+            Customize
+          </Button>
+        </div>
+      )}
       <div className="absolute bottom-4 right-4">
         <Button
           icon={<InfoCircleOutlined />}
