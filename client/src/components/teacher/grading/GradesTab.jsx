@@ -177,8 +177,8 @@ const GradesTab = () => {
       render: (text, record) => (
         <div className="flex items-center gap-3">
           <Avatar 
-            src={record.avatar} 
-            icon={!record.avatar && <UserOutlined />}
+            src={record.image} 
+            icon={!record.image && <UserOutlined />}
             size={32}
           />
           <div>

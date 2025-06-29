@@ -259,7 +259,7 @@ const updateAnnouncement = async (req, res) => {
     }
 
     await announcement.save();
-    await announcement.populate('author', 'fullName email avatar role');
+    await announcement.populate('author', 'fullName email image role');
 
     res.status(200).json({
       success: true,
@@ -355,7 +355,7 @@ const togglePinAnnouncement = async (req, res) => {
       await announcement.pin(userId);
     }
 
-    await announcement.populate('author', 'fullName email avatar role');
+    await announcement.populate('author', 'fullName email image role');
 
     res.status(200).json({
       success: true,

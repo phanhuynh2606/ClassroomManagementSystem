@@ -304,17 +304,135 @@ const createAttachmentUploadMiddleware = () => {
   return upload;
 };
 
+
+const createUploadAssignmentMiddleware = (folderPath = 'assignments', maxCount = 5) => {
+  // Configure Cloudinary storage for multer
+  const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: (req, file) => {
+        // Allow custom folders from request
+        const customFolder = req.body.customFolder || 'classmanagement';
+        const classroomId = req.params.classroomId || req.body.classroomId || req.resolvedClassroomId || 'general';
+        return `${customFolder}/assignments/${classroomId}/${folderPath}`;
+      },
+      // Support all file types
+      // allowed_formats: [
+      //   // Images
+      //   'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg',
+      //   // Documents
+      //   'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf',
+      //   // Videos
+      //   'mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv',
+      //   // Audio
+      //   'mp3', 'wav', 'flac', 'aac', 'ogg', 'wma',
+      //   // Archives
+      //   'zip', 'rar', '7z', 'tar', 'gz',
+      //   // Others
+      //   'csv', 'json', 'xml', 'html', 'css', 'js', 'ts'
+      // ],
+      // Resource type based on file type
+      resource_type: (req, file) => {
+        if (file.mimetype.startsWith('image/')) {
+          return 'image';
+        } else if (file.mimetype.startsWith('video/')) {
+          return 'video';
+        } else if (file.mimetype.startsWith('audio/')) {
+          return 'video'; // Cloudinary uses 'video' for audio files
+        } else {
+          return 'raw'; // For documents and other file types
+        }
+      },
+      // Conditional transformations (only for images)
+      transformation: (req, file) => {
+        if (file.mimetype.startsWith('image/')) {
+          return [
+            { width: 1200, crop: 'limit' },
+            { quality: 'auto', fetch_format: 'auto' }
+          ];
+        }
+        return []; // No transformation for non-image files
+      },
+      
+      // Add custom public_id for better organization
+      public_id: (req, file) => {
+        const timestamp = Date.now();
+        const fileNameWithoutExt = file.originalname.split('.')[0]
+          .replace(/[^a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF]/g, '_');
+        const extension = file.originalname.split('.').pop();
+        return `${fileNameWithoutExt}_${timestamp}.${extension}`;
+      },
+      use_filename: true,
+      unique_filename: true, 
+    }
+  });
+
+  // File filter - now allows all file types with size validation
+  const fileFilter = (req, file, cb) => {
+    // Define allowed MIME types
+    const allowedMimeTypes = [
+      // Images
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 
+      'image/bmp', 'image/tiff', 'image/svg+xml',
+      // Documents
+      'application/pdf', 'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel', 
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain', 'application/rtf',
+      // Videos
+      'video/mp4', 'video/avi', 'video/quicktime', 'video/x-msvideo',
+      'video/x-flv', 'video/webm', 'video/x-matroska',
+      // Audio
+      'audio/mpeg', 'audio/wav', 'audio/flac', 'audio/aac', 
+      'audio/ogg', 'audio/x-ms-wma',
+      // Archives
+      'application/zip', 'application/x-rar-compressed', 
+      'application/x-7z-compressed', 'application/x-tar', 'application/gzip',
+      // Others
+      'text/csv', 'application/json', 'application/xml', 'text/xml',
+      'text/html', 'text/css', 'application/javascript', 'application/typescript'
+    ];
+
+    // Check if file type is allowed
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type ${file.mimetype} is not allowed!`), false);
+    }
+  };
+
+  // Configure multer with storage and limits
+  const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit per file (increased for various file types)
+      files: maxCount // Maximum number of files
+    }
+  });
+
+  return upload;
+};
 // Create different middleware instances for different use cases
 const profileUpload = createUploadMiddleware('profiles', 1);
 const questionImageUpload = createUploadMiddleware('questions', 1);
 const backgroundImageUpload = createBackgroundUploadMiddleware();
 const attachmentUpload = createAttachmentUploadMiddleware();
 
+// Assignment-related uploads - separated by purpose
+const assignmentUpload = createUploadAssignmentMiddleware("teacher", 5); // Teacher assignment materials
+const submissionUpload = createUploadAssignmentMiddleware("submissions", 10); // Student submissions
+
 module.exports = {
   profileUpload,
   questionImageUpload,
   backgroundImageUpload,
   attachmentUpload,
+  assignmentUpload,     // For teacher assignment attachments
+  submissionUpload,     // For student submissions
   createUploadMiddleware, // Export factory function for custom use cases
   createMaterialUploadMiddleware
 };

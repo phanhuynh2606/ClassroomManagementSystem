@@ -92,6 +92,7 @@ const ClassroomDetail = () => {
 
   const [classData, setClassData] = useState(null);
   const [studentsData, setStudentsData] = useState([]);
+  const [teachersData, setTeachersData] = useState([]);
   const [streamData, setStreamData] = useState([]);
   
   // Pagination state
@@ -149,6 +150,15 @@ const ClassroomDetail = () => {
       const response = await classroomAPI.getStudentsByTeacher(classId);
       if (response.success) {
         setStudentsData(response.data.students || []);
+        
+        // Ensure teachersData is always an array
+        const teacher = response.data.classroom?.teacher;
+        if (teacher) {
+          // If teacher is an object, wrap it in an array
+          setTeachersData(Array.isArray(teacher) ? teacher : [teacher]);
+        } else {
+          setTeachersData([]);
+        }
       }
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -673,12 +683,13 @@ const ClassroomDetail = () => {
     ]
   );
 
-  const ClassworkTabComponent = useMemo(() => <ClassworkTab />, []);
+  const ClassworkTabComponent = useMemo(() => <ClassworkTab classId={classId} />, [classId]);
 
   const PeopleTabComponent = useMemo(
     () => (
       <PeopleTab
         studentsData={studentsData}
+        teachersData={teachersData}
         studentsLoading={studentsLoading}
         searchText={searchText}
         setSearchText={setSearchText}

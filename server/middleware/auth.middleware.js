@@ -57,6 +57,8 @@ const protect = async (req, res, next) => {
   }
 };
 
+
+
 // Grant access to specific roles
 const authorize = (...roles) => {
   return (req, res, next) => {

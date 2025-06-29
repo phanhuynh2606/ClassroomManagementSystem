@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   Form,
@@ -17,7 +17,9 @@ import {
   message,
   Radio,
   Checkbox,
-  Button
+  Button,
+  Tooltip,
+  Alert
 } from 'antd';
 import {
   UploadOutlined,
@@ -28,6 +30,8 @@ import {
   SettingOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
+import CustomQuillEditor from '../../CustomQuillEditor';
+import 'react-quill/dist/quill.snow.css';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -46,19 +50,48 @@ const AssignmentCreateModal = ({
   const [submissionType, setSubmissionType] = useState('both');
   const [allowLateSubmission, setAllowLateSubmission] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const [description, setDescription] = useState('');
+  const [visibility, setVisibility] = useState('published');
+
+  // Handle initialValues for edit mode
+  useEffect(() => {
+    if (initialValues?.description) {
+      setDescription(initialValues.description);
+    }
+    if (initialValues?.allowLateSubmission !== undefined) {
+      setAllowLateSubmission(initialValues.allowLateSubmission);
+    }
+    if (initialValues?.submissionSettings?.type) {
+      setSubmissionType(initialValues.submissionSettings.type);
+    }
+    if (initialValues?.visibility) {
+      setVisibility(initialValues.visibility);
+    }
+  }, [initialValues]);
 
   const handleOk = () => {
     form.validateFields().then(values => {
       // Process form data
+      let publishDate = null;
+      if (values.visibility === 'published') {
+        // Xuất bản ngay - set publishDate = hiện tại
+        publishDate = new Date().toISOString();
+      } else if (values.visibility === 'scheduled' && values.publishDate) {
+        // Lên lịch xuất bản - sử dụng publishDate từ form
+        publishDate = values.publishDate.toISOString();
+      }
+      // Bản nháp - publishDate = null
+
       const assignmentData = {
         ...values,
+        description: description, // Use description from state (rich text content)
         dueDate: values.dueDate?.toISOString(),
-        publishDate: values.publishDate?.toISOString(),
+        publishDate: publishDate,
         attachments: attachments,
+        allowLateSubmission: allowLateSubmission,
+        latePenalty: values.latePenalty || 0,
         submissionSettings: {
           type: submissionType,
-          allowLateSubmission: allowLateSubmission,
-          latePenalty: values.latePenalty || 0,
           maxFileSize: values.maxFileSize || 10,
           allowedFileTypes: values.allowedFileTypes || [],
           textSubmissionRequired: values.textSubmissionRequired || false,
@@ -77,6 +110,8 @@ const AssignmentCreateModal = ({
     setAttachments([]);
     setSubmissionType('both');
     setAllowLateSubmission(false);
+    setDescription('');
+    setVisibility('published');
     onCancel();
   };
 
@@ -136,18 +171,66 @@ const AssignmentCreateModal = ({
 
           <Form.Item
             name="description"
-            label="Mô tả & yêu cầu"
+            label={
+              <Space>
+                <span>Mô tả & yêu cầu</span>
+                <Tooltip title="Sử dụng trình soạn thảo để định dạng nội dung: đánh số, bullet points, in đậm, in nghiêng, chèn link, v.v...">
+                  <InfoCircleOutlined style={{ color: '#1890ff' }} />
+                </Tooltip>
+              </Space>
+            }
             rules={[
               { required: true, message: 'Vui lòng nhập mô tả bài tập' },
-              { min: 20, message: 'Mô tả phải có ít nhất 20 ký tự' }
+              { 
+                validator: (_, value) => {
+                  // Remove HTML tags to check actual text length
+                  const textContent = description.replace(/<[^>]*>/g, '').trim();
+                  if (textContent.length < 20) {
+                    return Promise.reject(new Error('Mô tả phải có ít nhất 20 ký tự'));
+                  }
+                  return Promise.resolve();
+                }
+              }
             ]}
           >
-            <TextArea
-              rows={6}
+            <CustomQuillEditor
+              value={description}
+              onChange={(content) => {
+                setDescription(content);
+                form.setFieldsValue({ description: content });
+              }}
               placeholder="Nhập mô tả chi tiết, yêu cầu và hướng dẫn làm bài..."
-              showCount
-              maxLength={2000}
+              style={{ 
+                minHeight: '200px',
+                backgroundColor: '#fff',
+                border: '1px solid #d9d9d9',
+                borderRadius: '4px'
+              }}
+              modules={{
+                toolbar: {
+                  container: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
+                    [{ 'indent': '-1'}, { 'indent': '+1' }],
+                    [{ 'align': [] }],
+                    ['link', 'blockquote', 'code-block'],
+                    ['clean']
+                  ],
+                },
+              }}
+              formats={[
+                'header', 'bold', 'italic', 'underline', 'strike',
+                'list', 'bullet', 'check', 'indent', 'link', 'blockquote',
+                'code-block', 'color', 'background', 'align'
+              ]}
             />
+            <div style={{ marginTop: 8 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                💡 Tip: Sử dụng các công cụ định dạng để làm nổi bật yêu cầu quan trọng, tạo danh sách công việc, hoặc chèn code mẫu
+              </Text>
+            </div>
           </Form.Item>
 
           <Form.Item
@@ -227,13 +310,43 @@ const AssignmentCreateModal = ({
             <Col span={8}>
               <Form.Item
                 name="publishDate"
-                label="Thời gian công bố"
+                label={
+                  <Space>
+                    <span>Thời gian công bố</span>
+                    {visibility === 'scheduled' && (
+                      <Tooltip title="Bài tập sẽ tự động xuất hiện trong danh sách bài tập của học viên vào thời điểm này">
+                        <InfoCircleOutlined style={{ color: '#1890ff' }} />
+                      </Tooltip>
+                    )}
+                  </Space>
+                }
+                rules={[
+                  {
+                    required: visibility === 'scheduled',
+                    message: 'Vui lòng chọn thời gian công bố'
+                  },
+                  {
+                    validator: (_, value) => {
+                      if (visibility === 'scheduled' && value && value.isBefore(moment())) {
+                        return Promise.reject(new Error('Thời gian công bố phải trong tương lai'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+                extra={visibility === 'scheduled' && 
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Định dạng: DD/MM/YYYY HH:mm (24 giờ)
+                  </Text>
+                }
               >
                 <DatePicker
                   showTime
                   format="DD/MM/YYYY HH:mm"
-                  placeholder="Ngay lập tức"
+                  placeholder={visibility === 'scheduled' ? 'Chọn thời gian' : 'Ngay lập tức'}
                   style={{ width: '100%' }}
+                  disabled={visibility !== 'scheduled'}
+                  disabledDate={(current) => current && current < moment().startOf('day')}
                 />
               </Form.Item>
             </Col>
@@ -340,7 +453,46 @@ const AssignmentCreateModal = ({
         </Card>
 
         {/* Publishing Settings */}
-        <Card title="🌐 Cài đặt xuất bản" size="small">
+        <Card 
+          title={
+            <Space>
+              <span>🌐 Cài đặt xuất bản</span>
+              <Tooltip title="Kiểm soát khi nào bài tập hiển thị cho học viên">
+                <InfoCircleOutlined style={{ fontSize: 16, color: '#8c8c8c' }} />
+              </Tooltip>
+            </Space>
+          }
+          size="small"
+        >
+          {visibility === 'scheduled' && (
+            <div style={{ marginBottom: 16, padding: '12px', background: '#e6f7ff', borderRadius: 4, border: '1px solid #91d5ff' }}>
+              <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                <Space>
+                  <InfoCircleOutlined style={{ color: '#1890ff' }} />
+                  <Text strong style={{ color: '#1890ff' }}>Lên lịch xuất bản</Text>
+                </Space>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  • Bài tập sẽ tự động hiển thị cho học viên vào thời gian đã chọn
+                </Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  • Học viên không thể xem bài tập trước thời điểm công bố
+                </Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  • Bạn có thể chỉnh sửa hoặc hủy lịch trước khi công bố
+                </Text>
+              </Space>
+            </div>
+          )}
+          {visibility === 'draft' && (
+            <div style={{ marginBottom: 16, padding: '12px', background: '#f6f6f6', borderRadius: 4, border: '1px solid #d9d9d9' }}>
+              <Space>
+                <InfoCircleOutlined style={{ color: '#8c8c8c' }} />
+                <Text type="secondary">
+                  Bài tập ở chế độ nháp sẽ không hiển thị cho học viên cho đến khi bạn xuất bản
+                </Text>
+              </Space>
+            </div>
+          )}
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -348,10 +500,39 @@ const AssignmentCreateModal = ({
                 label="Trạng thái"
                 rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
               >
-                <Select>
-                  <Option value="draft">Bản nháp</Option>
-                  <Option value="published">Xuất bản ngay</Option>
-                  <Option value="scheduled">Lên lịch xuất bản</Option>
+                <Select
+                  onChange={(value) => {
+                    setVisibility(value);
+                    // Clear publishDate nếu không phải scheduled
+                    if (value !== 'scheduled') {
+                      form.setFieldValue('publishDate', null);
+                    }
+                  }}
+                >
+                  <Option value="draft">
+                    <Tooltip title="Lưu bài tập nhưng chưa hiển thị cho học viên">
+                      <Space>
+                        <InfoCircleOutlined />
+                        Bản nháp
+                      </Space>
+                    </Tooltip>
+                  </Option>
+                  <Option value="published">
+                    <Tooltip title="Bài tập sẽ hiển thị ngay lập tức cho học viên">
+                      <Space>
+                        <CalendarOutlined />
+                        Xuất bản ngay
+                      </Space>
+                    </Tooltip>
+                  </Option>
+                  <Option value="scheduled">
+                    <Tooltip title="Bài tập sẽ tự động hiển thị vào thời gian đã định">
+                      <Space>
+                        <SettingOutlined />
+                        Lên lịch xuất bản
+                      </Space>
+                    </Tooltip>
+                  </Option>
                 </Select>
               </Form.Item>
             </Col>

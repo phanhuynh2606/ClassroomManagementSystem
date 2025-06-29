@@ -1,5 +1,5 @@
 import React, { memo, useState, useCallback } from 'react';
-import { Card, Avatar, Typography, Tag, Space, Input, Button, Dropdown, message, Modal } from 'antd';
+import { Card, Avatar, Typography, Tag, Space, Input, Button, Dropdown, message, Modal, Tooltip } from 'antd';
 import { 
   UserOutlined, 
   CalendarOutlined, 
@@ -15,7 +15,9 @@ import {
   EditOutlined,
   DeleteOutlined,
   CommentOutlined,
-  LinkOutlined
+  LinkOutlined,
+  TrophyOutlined,
+  YoutubeFilled
 } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
 import 'react-quill/dist/quill.snow.css';
@@ -23,6 +25,9 @@ import CommentInput from './CommentInput';
 import VideoPlayerModal from './VideoPlayerModal';
 import VideoRefreshButton from './VideoRefreshButton';
 import dayjs from 'dayjs';
+import { formatFileSize } from '../../../utils/fileUtils';
+import { MdAttachFile } from 'react-icons/md';
+import { fixVietnameseEncoding } from '../../../utils/convertStr';
 
 const { Text, Title } = Typography;
 
@@ -499,27 +504,40 @@ const StreamItem = ({
                 {item.title}
               </Title>
             )}
-            {item.content && (
-              <div 
-                className="text-gray-700 html-content ql-editor"
-                dangerouslySetInnerHTML={{ __html: item.content }}
-                style={{ 
-                  fontSize: '16px',
-                  lineHeight: '1.6',
-                  whiteSpace: 'normal',
-                  border: 'none',
-                  padding: 0
-                }}
-              />
-            )}
+
             
-            {/* Due date for assignments */}
-            {item.type === 'assignment' && item.dueDate && (
-              <div className="mt-3 p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
-                <Text className="text-red-700">
-                  <CalendarOutlined className="mr-2" />
-                  Due: {new Date(item.dueDate).toLocaleString()}
-                </Text>
+            {/* Assignment specific info */}
+            {item.type === 'assignment' && (
+              <div className="mt-3 p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-4">
+                    {item.dueDate && (
+                      <Text className="text-red-700">
+                        <CalendarOutlined className="mr-2" />
+                        Due: {new Date(item.dueDate).toLocaleString()}
+                      </Text>
+                    )}
+                                         {item.totalPoints && (
+                       <Text className="text-red-700">
+                         <TrophyOutlined className="mr-2" />
+                         {item.totalPoints} points
+                       </Text>
+                     )}
+                  </div>
+                  <Button 
+                    type="primary"
+                    size="small"
+                    onClick={() => {
+                      if (userRole === 'student') {
+                        window.open(`/student/classrooms/${classroomId}/assignments/${item.resourceId}`, '_blank');
+                      } else {
+                        window.open(`/teacher/classroom/${classroomId}/assignment/${item.resourceId}`, '_blank');
+                      }
+                    }}
+                  >
+                    {userRole === 'student' ? 'View Assignment' : 'Manage'}
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -527,7 +545,7 @@ const StreamItem = ({
           {/* Attachments - Google Classroom Style */}
           {item.attachments && item.attachments.length > 0 && (
             <div className="mb-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 {item.attachments.map((attachment, index) => {
                   // Use updated attachment data if available
                   const attachmentData = updatedAttachments?.[attachment.id] || attachment;
@@ -541,58 +559,51 @@ const StreamItem = ({
                     {attachmentData.type === "video/youtube" || attachmentData.type === "video" ? (
                       <>
                         {/* YouTube Video Card */}
-                        <div className="relative aspect-video bg-black">
+                        <div className="relative h-16 bg-black">
                           <img
                             src={attachmentData.thumbnail}
                             alt="Video thumbnail"
                             className="w-full h-full object-cover"
                           />
-                          <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-1.5 py-0.5 rounded">
+                          <div className="absolute bottom-1 right-1 bg-black bg-opacity-75 text-white text-xs px-1 py-0.5 rounded">
                             {attachmentData.duration}
                           </div>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                               attachmentData.type === "video/youtube" 
                                 ? "bg-red-600" 
                                 : "bg-blue-600"
                             }`}>
                               {attachmentData.type === "video/youtube" ? (
-                                <div className="w-0 h-0 border-l-[8px] border-l-white border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent ml-1"></div>
+                                <div className="w-0 h-0 border-l-[6px] border-l-white border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent ml-1"></div>
                               ) : (
-                                <span className="text-white text-xl">🎬</span>
+                                <span className="text-white text-sm">🎬</span>
                               )}
                             </div>
                           </div>
                           
                           {/* Video type badge */}
-                          <div className="absolute top-2 left-2">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          <div className="absolute top-1 left-1">
+                            <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${
                               attachmentData.type === "video/youtube"
                                 ? "bg-red-500 text-white"
                                 : "bg-blue-500 text-white"
                             }`}>
-                              {attachmentData.type === "video/youtube" ? "YouTube" : "Upload"}
+                              {attachmentData.type === "video/youtube" ? "YT" : "UP"}
                             </span>
                           </div>
                         </div>
-                        <div className="p-3">
+                        <div className="p-2">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
+                              <Text className="text-xs font-medium text-gray-900 line-clamp-1 leading-tight">
                                 {attachmentData.name}
                               </Text>
                               <Text type="secondary" className="text-xs mt-1 block">
                                 {attachmentData.type === "video/youtube" ? (
-                                  <>
-                                    <span className="text-red-500">📺</span> YouTube video • {attachmentData.duration}
-                                  </>
+                                  <> <YoutubeFilled className="mr-1 text-red-500" color="red"/> {attachmentData.duration}</>
                                 ) : (
-                                  <>
-                                    <span className="text-blue-500">🎬</span> Uploaded video • {attachmentData.duration}
-                                    {attachmentData.duration === "Processing..." && (
-                                      <span className="text-orange-500"> (Processing...)</span>
-                                    )}
-                                  </>
+                                  <>🎬 {attachmentData.duration}</>
                                 )}
                               </Text>
                             </div>
@@ -612,13 +623,13 @@ const StreamItem = ({
                     ) : attachmentData.type === "link" ? (
                       <>
                         {/* Link Card */}
-                        <div className="aspect-video bg-gray-100 flex items-center justify-center border-b">
-                          <div className="w-16 h-16 bg-blue-500 rounded-lg flex items-center justify-center">
-                            <LinkOutlined className="text-white text-2xl" />
+                        <div className="h-20 bg-gray-100 flex items-center justify-center border-b">
+                          <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <LinkOutlined className="text-white text-lg" />
                           </div>
                         </div>
-                        <div className="p-3">
-                          <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
+                        <div className="p-2">
+                          <Text className="text-xs font-medium text-gray-900 line-clamp-1 leading-tight">
                             {attachmentData.title || attachmentData.name || "Link"}
                           </Text>
                           <Text type="secondary" className="text-xs mt-1 block truncate">
@@ -629,20 +640,20 @@ const StreamItem = ({
                     ) : (
                       <>
                         {/* File Card */}
-                        <div className="aspect-video bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center border-b">
+                        <div className="h-20 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center border-b">
                           <div className="text-center">
-                            <PaperClipOutlined className="text-white text-3xl mb-2" />
+                            <PaperClipOutlined className="text-white text-xl mb-1" />
                             <div className="text-white text-xs font-medium uppercase tracking-wide">
-                              {attachmentData.name?.split('.').pop() || 'FILE'}
+                              {fixVietnameseEncoding(attachmentData.name?.split('.').pop()) || 'FILE'}
                             </div>
                           </div>
                         </div>
-                        <div className="p-3">
-                          <Text className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
-                            {attachmentData.name}
+                        <div className="p-2">
+                          <Text className="text-xs font-medium text-gray-900 line-clamp-1 leading-tight">
+                            {fixVietnameseEncoding(attachmentData.name)}
                           </Text>
-                          <Text type="secondary" className="text-xs mt-1 block">
-                            {attachmentData.size}
+                          <Text type="secondary" className="text-xs mt-1 flex items-center gap-1">
+                            <MdAttachFile/> {formatFileSize(null, attachmentData)}
                           </Text>
                         </div>
                       </>

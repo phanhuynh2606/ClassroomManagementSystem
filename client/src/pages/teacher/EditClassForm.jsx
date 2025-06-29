@@ -84,12 +84,12 @@ const EditClassForm = () => {
       };
 
       const response = await classroomAPI.updateByTeacher(classId, formData);
-      
-      if (response.data.success) {
+      console.log("response", response);
+      if (response.success) {
         message.success('Class updated successfully! Changes will need admin approval.');
         navigate(`/teacher/classroom/${classId}`);
       } else {
-        message.error(response.data.message || 'Failed to update class');
+        message.error(response.message || 'Failed to update class');
       }
     } catch (error) {
       console.error('Error updating class:', error);

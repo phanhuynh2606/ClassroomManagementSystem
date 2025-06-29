@@ -29,27 +29,17 @@ import {
   TeamOutlined,
   UserDeleteOutlined
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { TabPane } = Tabs;
 
-const PeopleTab = ({ studentsData, studentsLoading, searchText, setSearchText, classData, handleCopyClassCode }) => {
+const PeopleTab = ({ studentsData, teachersData, studentsLoading, searchText, setSearchText, classData, handleCopyClassCode }) => {
   const [removeModalVisible, setRemoveModalVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [activeTab, setActiveTab] = useState('students');
-
-  // Mock teachers data
-  const teachersData = [
-    {
-      id: '1',
-      name: 'John Smith',
-      email: 'john.smith@school.edu',
-      role: 'Primary Teacher',
-      avatar: null,
-      joinedAt: '2024-01-01T00:00:00Z'
-    }
-  ];
+  console.log("teachersData", teachersData);
 
   const handleRemoveStudent = (student) => {
     setSelectedStudent(student);
@@ -102,13 +92,13 @@ const PeopleTab = ({ studentsData, studentsLoading, searchText, setSearchText, c
         // Handle different data structures
         const name = record?.name || record?.student?.fullName || record?.fullName || 'Unknown';
         const email = record?.email || record?.student?.email || '';
-        const avatar = record?.avatar || record?.student?.avatar;
+        const image = record?.image || record?.student?.image;
         
         return (
           <div className="flex items-center gap-3">
             <Avatar 
-              src={avatar} 
-              icon={!avatar && <UserOutlined />}
+              src={image} 
+              icon={!image && <UserOutlined />}
               size={40}
             />
             <div>
@@ -155,7 +145,7 @@ const PeopleTab = ({ studentsData, studentsLoading, searchText, setSearchText, c
       key: 'joinedAt',
       render: (date, record) => {
         const joinDate = date || record?.student?.createdAt || record?.createdAt;
-        return joinDate ? new Date(joinDate).toLocaleDateString() : 'Unknown';
+        return joinDate ? dayjs(joinDate).format('HH:mm DD/MM/YYYY') : 'Unknown';
       },
       sorter: (a, b) => {
         const dateA = a?.joinedAt || a?.student?.createdAt || a?.createdAt || '1970-01-01';
@@ -258,14 +248,14 @@ const PeopleTab = ({ studentsData, studentsLoading, searchText, setSearchText, c
           tab={
             <span>
               <UserOutlined />
-              Teachers ({teachersData.length})
+              Teachers ({Array.isArray(teachersData) ? teachersData.length : 0})
             </span>
           } 
           key="teachers"
         >
           <Card>
             <List
-              dataSource={teachersData}
+              dataSource={Array.isArray(teachersData) ? teachersData : []}
               renderItem={(teacher) => (
                 <List.Item
                   actions={[
@@ -273,7 +263,14 @@ const PeopleTab = ({ studentsData, studentsLoading, searchText, setSearchText, c
                       key="email"
                       type="text" 
                       icon={<MailOutlined />}
-                      onClick={() => window.open(`mailto:${teacher.email}`, '_blank')}
+                      onClick={() => {
+                        const email = teacher?.email || teacher?.user?.email;
+                        if (email) {
+                          window.open(`mailto:${email}`, '_blank');
+                        } else {
+                          message.warning('No email address found');
+                        }
+                      }}
                     >
                       Email
                     </Button>
@@ -282,28 +279,35 @@ const PeopleTab = ({ studentsData, studentsLoading, searchText, setSearchText, c
                   <List.Item.Meta
                     avatar={
                       <Avatar 
-                        src={teacher.avatar} 
-                        icon={!teacher.avatar && <UserOutlined />}
+                        src={teacher?.image || teacher?.avatar || teacher?.user?.image} 
+                        icon={<UserOutlined />}
                         size={48}
                       />
                     }
                     title={
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{teacher.name}</span>
-                        <Tag color="blue">{teacher.role}</Tag>
+                        <span className="font-medium">
+                          {teacher?.fullName || teacher?.name || teacher?.user?.fullName || 'Teacher'}
+                        </span>
+                        <Tag color="blue">
+                          {teacher?.role || 'Teacher'}
+                        </Tag>
                       </div>
                     }
                     description={
                       <Space direction="vertical" size={2}>
-                        <Text type="secondary">{teacher.email}</Text>
-                        <Text type="secondary" className="text-sm">
-                          Joined {new Date(teacher.joinedAt).toLocaleDateString()}
+                        <Text type="secondary">
+                          {teacher?.email || teacher?.user?.email || 'No email'}
                         </Text>
+                        
                       </Space>
                     }
                   />
                 </List.Item>
               )}
+              locale={{
+                emptyText: 'No teachers found'
+              }}
             />
           </Card>
         </TabPane>
