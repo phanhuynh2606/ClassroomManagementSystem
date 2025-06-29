@@ -5,6 +5,8 @@ const connectDB = require('./config/db.config');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const initRoutes = require('./routes/index.route');
+const { startAllSchedulers } = require('./utils/scheduler');
+
 // Load env vars
 dotenv.config();
 
@@ -39,4 +41,7 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  
+  // Start schedulers after server is running
+  startAllSchedulers();
 }); 
