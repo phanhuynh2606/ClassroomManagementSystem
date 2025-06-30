@@ -140,14 +140,10 @@ const StudentClassroomDetail = () => {
     if (!append) setStreamLoading(true);
     
     try {
-      console.log('Fetching stream data for classroom:', classroomId, 'page:', page);
       const response = await streamAPI.getClassroomStream(classroomId, {
         page: page,
         limit: 20,
       });
-      
-      console.log('Raw API response:', response);
-      console.log('Response data:', response.data);
       
       // Handle different response structures
       let data, items, pagination;
@@ -175,8 +171,6 @@ const StudentClassroomDetail = () => {
         console.warn('Stream data is not an array:', items);
         items = [];
       }
-      
-      console.log('Stream data received:', items, 'pagination:', pagination);
       
       if (append) {
         // Append new items for Load More
@@ -264,13 +258,11 @@ const StudentClassroomDetail = () => {
     }
 
     try {
-      console.log('Adding comment to post:', postId, 'Content:', commentText);
       
       // Call API to add comment
       const response = await streamAPI.addComment(postId, commentText);
       const newComment = response.data?.data || response.data;
       
-      console.log('Comment added successfully:', newComment);
       
       // Update local state with the new comment from server
       setStreamPosts(prevPosts => {
@@ -314,7 +306,6 @@ const StudentClassroomDetail = () => {
   // Handle delete comment (students can delete their own comments)
   const handleDeleteComment = async (postId, commentId) => {
     try {
-      console.log('Deleting comment:', commentId, 'from post:', postId);
       
       await streamAPI.deleteComment(postId, commentId);
       
@@ -383,19 +374,9 @@ const StudentClassroomDetail = () => {
         category: 'post', // Add category
         visibility: 'classroom' // Add visibility
       };
-
-      console.log('Creating student post:', {
-        ...postData,
-        titleLength: title.length,
-        contentLength: richTextContent.length,
-        plainContentLength: plainContent.length,
-        hasAttachments: attachments.length > 0
-      });
       
       // Use createAnnouncement for now (backend will differentiate by type)
       const response = await streamAPI.createAnnouncement(classroomId, postData);
-      
-      console.log('API Response:', response);
       
       // Handle different response structures
       if (response.data?.success || response.success || response.status === 200 || response.status === 201) {

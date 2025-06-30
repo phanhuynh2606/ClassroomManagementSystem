@@ -45,6 +45,8 @@ import {
   EditOutlined,
   CloudUploadOutlined,
   StarOutlined,
+  EyeInvisibleOutlined,
+  RedoOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -255,23 +257,43 @@ const StudentAssignmentDetail = () => {
   };
 
   const canSubmit = () => {
-    if (submission) return false; // Already submitted
     if (assignment.visibility !== "published") return false;
     if (!assignment.isActive) return false;
 
     // Check if late submission is allowed
     const isOverdue = moment().isAfter(moment(assignment.dueDate));
-    return !isOverdue || assignment.allowLateSubmission;
+    
+    // If no submission yet
+    if (!submission) {
+      return !isOverdue || assignment.allowLateSubmission;
+    }
+    
+    // If already submitted, check if resubmission is allowed
+    if (submission && submission.allowResubmit) {
+      return !isOverdue || assignment.allowLateSubmission;
+    }
+    
+    // Already submitted and no resubmission allowed
+    return false;
+  };
+
+  const canResubmit = () => {
+    return submission && submission.allowResubmit && canSubmit();
   };
 
   const handleSubmissionSubmit = async (submissionData) => {
     try {
       setSubmitting(true);
+      const isResubmission = canResubmit();
       
       const response = await assignmentAPI.submit(assignmentId, submissionData);
 
       if (response.success) {
-        message.success("Assignment submitted successfully!");
+        if (isResubmission) {
+          message.success("Assignment resubmitted successfully!");
+        } else {
+          message.success("Assignment submitted successfully!");
+        }
         setSubmitModalVisible(false);
         fetchAssignmentDetail();
       } else {
@@ -404,12 +426,12 @@ const StudentAssignmentDetail = () => {
               {canSubmit() && (
                 <Button 
                   type="primary" 
-                  icon={<SendOutlined />}
+                  icon={canResubmit() ? <RedoOutlined /> : <SendOutlined />}
                   onClick={() => setSubmitModalVisible(true)}
-                  className="bg-gradient-to-r from-green-500 to-green-600 border-0 hover:shadow-lg transition-all duration-300 px-6"
+                  className={`${canResubmit() ? 'bg-gradient-to-r from-orange-500 to-orange-600' : 'bg-gradient-to-r from-green-500 to-green-600'} border-0 hover:shadow-lg transition-all duration-300 px-6`}
                   size="large"
                 >
-                  Submit Assignment
+                  {canResubmit() ? 'Resubmit Assignment' : 'Submit Assignment'}
                 </Button>
               )}
             </div>
@@ -468,9 +490,9 @@ const StudentAssignmentDetail = () => {
               assignment.allowLateSubmission
                 ? `Due: ${moment(assignment.dueDate).format(
                     "DD/MM/YYYY HH:mm"
-                  )} - Late submission allowed with ${
-                    assignment.latePenalty
-                  }% penalty per day`
+                  )} - Late submission allowed${
+                    assignment.maxLateDays ? ` for up to ${assignment.maxLateDays} days` : ''
+                  } with ${assignment.latePenalty}% penalty per day`
                 : `Due: ${moment(assignment.dueDate).format(
                     "DD/MM/YYYY HH:mm"
                   )} - Late submission not allowed`
@@ -655,7 +677,7 @@ const StudentAssignmentDetail = () => {
                   )}
 
                   {/* Grade Section */}
-                  {submission.status === "graded" && (
+                  {submission.status === "graded" && submission.grade !== null && submission.grade !== undefined && (
                     <div className="p-6 border-2 border-green-200 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50">
                       <div className="text-center mb-4">
                         <div className="flex items-center justify-center gap-4 mb-4">
@@ -697,6 +719,52 @@ const StudentAssignmentDetail = () => {
                           </div>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Grade Hidden Message */}
+                  {submission.status === "graded" && (submission.grade === null || submission.grade === undefined) && (
+                    <div className="p-6 border-2 border-blue-200 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <EyeInvisibleOutlined className="text-2xl text-blue-600" />
+                        </div>
+                        <Title level={4} className="text-blue-700 mb-2">Assignment Graded</Title>
+                        <Text className="text-blue-600">
+                          Your assignment has been graded by the teacher, but the grade is currently hidden. 
+                          Please contact your teacher for more information.
+                        </Text>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Resubmission Section */}
+                  {canResubmit() && (
+                    <div className="p-4 border-2 border-orange-200 rounded-lg bg-gradient-to-r from-orange-50 to-yellow-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                            <RedoOutlined className="text-orange-600" />
+                          </div>
+                          <div>
+                            <Text strong className="text-orange-700">Resubmission Allowed</Text>
+                            <div className="text-sm text-orange-600">
+                              Your teacher has allowed you to submit this assignment again.
+                              {submission.resubmissionCount > 0 && (
+                                <span> (This would be resubmission #{(submission.resubmissionCount || 0) + 1})</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Button 
+                          type="primary" 
+                          icon={<RedoOutlined />}
+                          onClick={() => setSubmitModalVisible(true)}
+                          className="bg-orange-500 border-orange-500 hover:bg-orange-600"
+                        >
+                          Resubmit
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -874,7 +942,7 @@ const StudentAssignmentDetail = () => {
               {assignment.allowLateSubmission && (
                 <Alert
                   message="Late Submission Allowed"
-                  description={`Penalty: ${assignment.latePenalty}% per day`}
+                  description={`${assignment.maxLateDays ? `Up to ${assignment.maxLateDays} days late. ` : ''}Penalty: ${assignment.latePenalty}% per day`}
                   type="info"
                   size="small"
                   showIcon

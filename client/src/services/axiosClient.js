@@ -45,7 +45,6 @@ axiosClient.interceptors.response.use(
           return axiosClient(originalRequest);
         }
       } catch (refreshError) {
-        console.log("Refresh error:", refreshError.response?.data);
         if (refreshError.response?.data?.code === "REFRESH_TOKEN_EXPIRED" || refreshError.response?.data?.code === "NO_REFRESH_TOKEN") {
           localStorage.removeItem('token');
           localStorage.removeItem('persist:root');

@@ -66,6 +66,7 @@ const AssignmentDetail = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
+  const [gradingLoading, setGradingLoading] = useState(false);
   const [gradingModalVisible, setGradingModalVisible] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [submissionManagementVisible, setSubmissionManagementVisible] =
@@ -261,12 +262,111 @@ const AssignmentDetail = () => {
   };
 
   const handleGradeSubmission = (submission) => {
+    console.log("🎯 handleGradeSubmission called with:", submission);
     setSelectedSubmission(submission);
     setGradingModalVisible(true);
   };
 
   const handleViewAllSubmissions = () => {
     setSubmissionManagementVisible(true);
+  };
+
+  const handleSaveGrade = async (gradingData) => {
+    // Save reference for potential rollback
+    const submissionBeingGraded = selectedSubmission;
+    
+    try {
+      setGradingLoading(true);
+      console.log("💾 Saving grade for submission:", selectedSubmission?._id);
+      
+      if (!selectedSubmission || !selectedSubmission._id) {
+        message.error("Không tìm thấy thông tin submission!");
+        return;
+      }
+
+      if (!assignmentId) {
+        message.error("Không tìm thấy assignment ID!");
+        return;
+      }
+
+      // Optimistic update: Update UI immediately
+      const updatedSubmissions = submissions.map(sub => {
+        if (sub._id === selectedSubmission._id) {
+          return {
+            ...sub,
+            grade: gradingData.grade,
+            feedback: gradingData.feedback,
+            status: 'graded',
+            gradedAt: new Date().toISOString(),
+            allowResubmit: gradingData.allowResubmit,
+            hideGradeFromStudent: gradingData.hideGradeFromStudent,
+            // Add grading history
+            gradingHistory: [
+              ...(sub.gradingHistory || []).map(h => ({ ...h, isLatest: false })),
+              {
+                grade: gradingData.grade,
+                originalGrade: gradingData.grade,
+                feedback: gradingData.feedback,
+                gradedAt: new Date().toISOString(),
+                gradedBy: null, // Current teacher
+                gradedByName: 'Current Teacher',
+                isLatest: true,
+                gradeReason: gradingData.gradeReason || 'Manual grade via grading modal',
+                changeType: gradingData.changeType || 'initial'
+              }
+            ]
+          };
+        }
+        return sub;
+      });
+      
+      // Update local state immediately (optimistic update)
+      setSubmissions(updatedSubmissions);
+
+      // Update assignment data to reflect new stats (optimistic)
+      if (assignmentData && selectedSubmission.status !== 'graded') {
+        setAssignmentData(prev => ({
+          ...prev,
+          stats: {
+            ...prev.stats,
+            gradedCount: (prev.stats?.gradedCount || 0) + 1,
+            pendingCount: Math.max((prev.stats?.pendingCount || 0) - 1, 0)
+          }
+        }));
+      }
+
+      // Close modal immediately for better UX
+      setGradingModalVisible(false);
+      setSelectedSubmission(null);
+      message.success("Chấm điểm thành công!");
+
+      // Call assignment API to grade submission in background
+      const response = await assignmentAPI.gradeSubmission(
+        assignmentId,
+        submissionBeingGraded._id,
+        gradingData
+      );
+
+      if (response.success) {
+        // Only refresh submissions data in background, no UI flash
+        fetchSubmissions().catch(console.error);
+      } else {
+        throw new Error(response.message || "Failed to save grade");
+      }
+    } catch (error) {
+      console.error("❌ Error saving grade:", error);
+      
+      // Rollback optimistic update on error
+      await fetchSubmissions();
+      
+      // Reopen modal and show error if API failed
+      setGradingModalVisible(true);
+      setSelectedSubmission(submissionBeingGraded);
+      
+      message.error(`Lỗi khi chấm điểm: ${error.response?.data?.message || error.message || 'Unknown error'}`);
+    } finally {
+      setGradingLoading(false);
+    }
   };  
   const submissionColumns = [
     {
@@ -651,7 +751,7 @@ const AssignmentDetail = () => {
               {currentAssignmentData.allowLateSubmission && (
                 <Alert
                   message="Late Submission Allowed"
-                  description={`Penalty: ${currentAssignmentData.latePenalty}% per day`}
+                  description={`${currentAssignmentData.maxLateDays ? `Up to ${currentAssignmentData.maxLateDays} days late. ` : ''}Penalty: ${currentAssignmentData.latePenalty}% per day`}
                   type="info"
                   size="small"
                   showIcon
@@ -897,7 +997,7 @@ const AssignmentDetail = () => {
                 <span>
                   Due: {moment(currentAssignmentData.dueDate).format("DD/MM/YYYY HH:mm")}
                   {currentAssignmentData.allowLateSubmission && 
-                    ` • Late submissions allowed with ${currentAssignmentData.latePenalty}% penalty per day`
+                    ` • Late submissions allowed${currentAssignmentData.maxLateDays ? ` for up to ${currentAssignmentData.maxLateDays} days` : ''} with ${currentAssignmentData.latePenalty}% penalty per day`
                   }
                 </span>
                 <Button size="small" type="link" icon={<SettingOutlined />}>
@@ -925,12 +1025,8 @@ const AssignmentDetail = () => {
       <AssignmentGradingModal
         visible={gradingModalVisible}
         onCancel={() => setGradingModalVisible(false)}
-        onSave={(gradingData) => {
-          console.log("Saved grade:", gradingData);
-          setGradingModalVisible(false);
-          message.success("Grade saved successfully!");
-        }}
-        loading={loading}
+        onSave={handleSaveGrade}
+        loading={gradingLoading}
         assignment={currentAssignmentData}
         submission={selectedSubmission}
         allSubmissions={submissions.filter(sub => sub.status !== 'missing')}
