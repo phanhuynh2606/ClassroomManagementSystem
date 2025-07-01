@@ -1844,7 +1844,6 @@ const AssignmentGradingModal = ({
                                 type: isAutoGrade
                                   ? "auto-grading"
                                   : "manual-grading",
-                                originalIndex: index,
                                 grading: grading,
                                 children: (
                                   <>
@@ -2091,27 +2090,32 @@ const AssignmentGradingModal = ({
                         }
 
                         // Assign colors based on event types
-                        return events.map((event, index) => ({
-                          ...event,
-                          color:
-                            event.type === "deadline"
-                              ? "volcano"
-                              : event.type === "submission"
-                              ? event.isLate
-                                ? "orange"
-                                : "blue"
-                              : event.type === "auto-grading"
-                              ? "purple"
-                              : event.type === "manual-grading"
-                              ? "green"
-                              : event.type === "batch-auto-grade"
-                              ? "magenta"
-                              : event.type === "grading" &&
-                                index ===
-                                  events.findIndex((e) => e.type === "grading")
-                              ? "green"
-                              : "orange",
-                        }));
+                        return events.map((event, index) => {
+                          // Destructure to remove non-DOM properties
+                          const { isLate, type, grading, timestamp, ...timelineProps } = event;
+                          
+                          return {
+                            ...timelineProps,
+                            color:
+                              type === "deadline"
+                                ? "volcano"
+                                : type === "submission"
+                                ? isLate
+                                  ? "orange"
+                                  : "blue"
+                                : type === "auto-grading"
+                                ? "purple"
+                                : type === "manual-grading"
+                                ? "green"
+                                : type === "batch-auto-grade"
+                                ? "magenta"
+                                : type === "grading" &&
+                                  index ===
+                                    events.findIndex((e) => e.type === "grading")
+                                ? "green"
+                                : "orange",
+                          };
+                        });
                       })()}
                     />
                   </Card>

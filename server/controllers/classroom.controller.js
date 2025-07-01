@@ -1273,8 +1273,8 @@ const getClassroomDetail = async (req, res) => {
     const { classroomId } = req.params;
     
     const classroom = await Classroom.findById(classroomId)
-      .populate('teacher', 'fullName email')
-      .populate('students.student', 'fullName email');
+      .populate('teacher', 'fullName email image')
+      .populate('students.student', 'fullName email image');
 
     if (!classroom) {
       return res.status(404).json({

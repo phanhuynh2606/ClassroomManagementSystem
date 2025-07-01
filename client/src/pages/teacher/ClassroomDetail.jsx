@@ -118,7 +118,6 @@ const ClassroomDetail = () => {
   useEffect(() => {
     if (classId) {
       fetchClassroomData();
-      fetchStudentsData();
       fetchStreamData();
     }
   }, [classId]);
@@ -129,6 +128,8 @@ const ClassroomDetail = () => {
       const response = await classroomAPI.getDetail(classId);
       if (response.success) {
         setClassData(response.data);
+        setStudentsData(response.data.students || []);
+        setTeachersData(Array.isArray(response.data.teacher) ? response.data.teacher : [response.data.teacher]);
       } else {
         message.error(response.message || "Classroom not found");
         navigate("/teacher/classroom");
@@ -141,30 +142,6 @@ const ClassroomDetail = () => {
       navigate("/teacher/classroom");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchStudentsData = async () => {
-    setStudentsLoading(true);
-    try {
-      const response = await classroomAPI.getStudentsByTeacher(classId);
-      if (response.success) {
-        setStudentsData(response.data.students || []);
-        
-        // Ensure teachersData is always an array
-        const teacher = response.data.classroom?.teacher;
-        if (teacher) {
-          // If teacher is an object, wrap it in an array
-          setTeachersData(Array.isArray(teacher) ? teacher : [teacher]);
-        } else {
-          setTeachersData([]);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching students:", error);
-      // Don't show error message as this might be expected for new classrooms
-    } finally {
-      setStudentsLoading(false);
     }
   };
 
@@ -624,6 +601,7 @@ const ClassroomDetail = () => {
                       currentUserId={user?._id}
                       classroomId={classId}
                       streamItemId={item._id}
+                      classroomSettings={classData?.settings || {}}
                     />
                   ))}
                   

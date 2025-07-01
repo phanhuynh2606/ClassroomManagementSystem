@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, lazy } from "react";
 import {
   Card,
   Tabs,
@@ -12,16 +12,16 @@ import {
   Alert,
   Divider,
   Tag,
-  Timeline,
   Avatar,
   Table,
   Tooltip,
-  Modal,
   message,
   Breadcrumb,
   Spin,
   Badge,
   Empty,
+  Modal,
+  List,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -39,25 +39,26 @@ import {
   DownloadOutlined,
   StarOutlined,
   SettingOutlined,
-  TeamOutlined,
   BookOutlined,
-  GlobalOutlined,
   InfoCircleOutlined,
-  FireOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import moment from "moment";
 import { assignmentAPI } from "../../services/api";
-import { formatFileSize } from "../../utils/fileUtils";
-
-// Import components
+import {
+  formatFileSize,
+  downloadAssignmentAttachment,
+  downloadSubmissionAttachment,
+  getBrowserInfo,
+} from "../../utils/fileUtils";
 import { AssignmentGradingModal } from "../../components/teacher/grading";
-import { SubmissionManagement } from "../../components/teacher/assignment";
+const SubmissionManagement = lazy(() =>
+  import("../../components/teacher/assignment/SubmissionManagement")
+);
 import { fixVietnameseEncoding } from "../../utils/convertStr";
 
 const { Title, Text, Paragraph } = Typography;
-const { TabPane } = Tabs;
 
 const AssignmentDetail = () => {
   const { classId, assignmentId } = useParams();
@@ -71,114 +72,11 @@ const AssignmentDetail = () => {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [submissionManagementVisible, setSubmissionManagementVisible] =
     useState(false);
-
-  // Universal file download function with fallback strategies for all browsers
-  const handleFileDownload = async (downloadUrl, fileName) => {
-    const hideLoading = message.loading('Downloading file...', 0);
-    
-    try {
-      if (!token) {
-        message.error('Authentication required. Please login again.');
-        hideLoading();
-        return;
-      }
-
-      // Strategy 1: Modern Fetch + Blob (Works on all modern browsers)
-      if (window.fetch && window.Blob && window.URL?.createObjectURL) {
-        await downloadWithFetch(downloadUrl, fileName, token);
-        hideLoading();
-        message.success('File downloaded successfully!');
-        return;
-      }
-
-      // Strategy 2: Fallback for older browsers - Direct window open with auth
-      if (window.open) {
-        await downloadWithWindowOpen(downloadUrl, fileName, token);
-        hideLoading();
-        message.success('Download initiated. Check your downloads folder.');
-        return;
-      }
-
-      throw new Error('Browser does not support file downloads');
-      
-    } catch (error) {
-      console.error('Download error:', error);
-      hideLoading();
-      
-      // Ultimate fallback - copy download link
-      if (navigator.clipboard) {
-        try {
-          await navigator.clipboard.writeText(downloadUrl);
-          message.warning('Download failed. Download URL copied to clipboard. You can paste it in a new tab.');
-        } catch {
-          message.error('Download failed. Please try a different browser or contact support.');
-        }
-      } else {
-        message.error('Download failed. Please try a different browser or contact support.');
-      }
-    }
-  };
-
-  // Strategy 1: Modern fetch + blob approach (Best for all browsers including Edge)
-  const downloadWithFetch = async (downloadUrl, fileName, token) => {
-    const response = await fetch(downloadUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`);
-    }
-
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fixVietnameseEncoding(fileName) || 'download';
-    link.style.display = 'none';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up
-    setTimeout(() => {
-      window.URL.revokeObjectURL(blobUrl);
-    }, 100);
-  };
-
-  // Strategy 2: Fallback approach for edge cases
-  const downloadWithWindowOpen = async (downloadUrl, fileName, token) => {
-    // For older browsers or special cases, open in new window
-    // Note: This might open as preview in some browsers but still works
-    const newWindow = window.open('', '_blank');
-    newWindow.location.href = `${downloadUrl}?t=${Date.now()}`;
-    
-    // Try to set document title for better UX
-    setTimeout(() => {
-      if (newWindow.document) {
-        newWindow.document.title = `Downloading ${fileName}`;
-      }
-    }, 100);
-  };
-
-  // Browser compatibility detection
-  const getBrowserInfo = () => {
-    const userAgent = navigator.userAgent;
-    const isModernBrowser = !!(window.fetch && window.Blob && window.URL?.createObjectURL);
-    
-    let browserName = 'Unknown';
-    if (userAgent.includes('Edge')) browserName = 'Edge';
-    else if (userAgent.includes('Chrome')) browserName = 'Chrome';
-    else if (userAgent.includes('Firefox')) browserName = 'Firefox';
-    else if (userAgent.includes('Safari')) browserName = 'Safari';
-    else if (userAgent.includes('Opera')) browserName = 'Opera';
-    
-    return { browserName, isModernBrowser };
-  };
+  const [fileDownloadModalVisible, setFileDownloadModalVisible] =
+    useState(false);
+  const [selectedSubmissionForDownload, setSelectedSubmissionForDownload] =
+    useState(null);
+  const [downloadingFiles, setDownloadingFiles] = useState(new Set());
 
   // Real assignment data
   const [assignmentData, setAssignmentData] = useState(null);
@@ -188,7 +86,6 @@ const AssignmentDetail = () => {
   useEffect(() => {
     if (assignmentId) {
       fetchAssignmentData();
-      fetchSubmissions();
     }
   }, [assignmentId]);
 
@@ -198,6 +95,7 @@ const AssignmentDetail = () => {
       const response = await assignmentAPI.getDetail(assignmentId);
       if (response.success) {
         setAssignmentData(response.data);
+        setSubmissions(response.data.submissions);
       } else {
         message.error("Failed to load assignment data");
         navigate(`/teacher/classroom/${classId}#classwork`);
@@ -211,30 +109,19 @@ const AssignmentDetail = () => {
     }
   };
 
-  const fetchSubmissions = async () => {
-    try {
-      const response = await assignmentAPI.getSubmissions(assignmentId);
-      if (response.success) {
-        setSubmissions(response.data.docs || []);
-      }
-    } catch (error) {
-      console.error("Error fetching submissions:", error);
-    }
-  };
-
   // Get current assignment data with fallback
   const currentAssignmentData = assignmentData || {
     _id: assignmentId,
-    title: 'Assignment',
-    description: 'Loading...',
+    title: "Assignment",
+    description: "Loading...",
     totalPoints: 100,
     dueDate: new Date(),
     allowLateSubmission: false,
     latePenalty: 0,
-    classroom: { name: 'Classroom' },
+    classroom: { name: "Classroom" },
     attachments: [],
-    stats: { totalStudents: 0 }
-  }; 
+    stats: { totalStudents: 0 },
+  };
 
   const getStatusTag = (status, isLate) => {
     if (status === "graded") {
@@ -262,7 +149,6 @@ const AssignmentDetail = () => {
   };
 
   const handleGradeSubmission = (submission) => {
-    console.log("🎯 handleGradeSubmission called with:", submission);
     setSelectedSubmission(submission);
     setGradingModalVisible(true);
   };
@@ -271,14 +157,90 @@ const AssignmentDetail = () => {
     setSubmissionManagementVisible(true);
   };
 
+  // 🚀 Preload SubmissionManagement on hover for better UX
+  const handleAdvancedManagementHover = useCallback(() => {
+    // Preload the heavy component before user clicks
+    import("../../components/teacher/assignment/SubmissionManagement");
+  }, []);
+
+  // Handle file download for submissions with multiple attachments
+  const handleDownloadSubmissionFiles = useCallback((submission) => {
+    if (!submission.attachments || submission.attachments.length === 0) {
+      message.info("No attachments to download");
+      return;
+    }
+
+    if (submission.attachments.length === 1) {
+      // Single file - download directly
+      handleSingleFileDownload(submission, 0);
+    } else {
+      // Multiple files - show selection modal
+      setSelectedSubmissionForDownload(submission);
+      setFileDownloadModalVisible(true);
+    }
+  }, []);
+
+  const handleSingleFileDownload = useCallback(
+    async (submission, attachmentIndex) => {
+      const fileId = `${submission._id}-${attachmentIndex}`;
+
+      if (downloadingFiles.has(fileId)) {
+        message.warning("Download already in progress...");
+        return;
+      }
+
+      setDownloadingFiles((prev) => new Set(prev).add(fileId));
+
+      try {
+        const attachment = submission.attachments[attachmentIndex];
+        await downloadSubmissionAttachment(
+          assignmentId,
+          submission._id,
+          attachmentIndex,
+          attachment.name || `submission-file-${attachmentIndex + 1}`,
+          token,
+          attachment
+        );
+      } catch (error) {
+        console.error("Download failed:", error);
+      } finally {
+        setDownloadingFiles((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(fileId);
+          return newSet;
+        });
+      }
+    },
+    [assignmentId, token, downloadingFiles]
+  );
+
+  const handleDownloadAllFiles = useCallback(
+    async (submission) => {
+      if (!submission.attachments || submission.attachments.length === 0)
+        return;
+
+      message.info(
+        `Starting download of ${submission.attachments.length} files...`
+      );
+
+      // Download files with delay to avoid overwhelming the browser
+      for (let i = 0; i < submission.attachments.length; i++) {
+        await new Promise((resolve) => setTimeout(resolve, i * 500)); // 500ms delay between downloads
+        await handleSingleFileDownload(submission, i);
+      }
+
+      setFileDownloadModalVisible(false);
+    },
+    [handleSingleFileDownload]
+  );
+
   const handleSaveGrade = async (gradingData) => {
     // Save reference for potential rollback
     const submissionBeingGraded = selectedSubmission;
-    
+
     try {
       setGradingLoading(true);
-      console.log("💾 Saving grade for submission:", selectedSubmission?._id);
-      
+
       if (!selectedSubmission || !selectedSubmission._id) {
         message.error("Không tìm thấy thông tin submission!");
         return;
@@ -290,48 +252,52 @@ const AssignmentDetail = () => {
       }
 
       // Optimistic update: Update UI immediately
-      const updatedSubmissions = submissions.map(sub => {
+      const updatedSubmissions = submissions.map((sub) => {
         if (sub._id === selectedSubmission._id) {
           return {
             ...sub,
             grade: gradingData.grade,
             feedback: gradingData.feedback,
-            status: 'graded',
+            status: "graded",
             gradedAt: new Date().toISOString(),
             allowResubmit: gradingData.allowResubmit,
             hideGradeFromStudent: gradingData.hideGradeFromStudent,
             // Add grading history
             gradingHistory: [
-              ...(sub.gradingHistory || []).map(h => ({ ...h, isLatest: false })),
+              ...(sub.gradingHistory || []).map((h) => ({
+                ...h,
+                isLatest: false,
+              })),
               {
                 grade: gradingData.grade,
                 originalGrade: gradingData.grade,
                 feedback: gradingData.feedback,
                 gradedAt: new Date().toISOString(),
                 gradedBy: null, // Current teacher
-                gradedByName: 'Current Teacher',
+                gradedByName: "Current Teacher",
                 isLatest: true,
-                gradeReason: gradingData.gradeReason || 'Manual grade via grading modal',
-                changeType: gradingData.changeType || 'initial'
-              }
-            ]
+                gradeReason:
+                  gradingData.gradeReason || "Manual grade via grading modal",
+                changeType: gradingData.changeType || "initial",
+              },
+            ],
           };
         }
         return sub;
       });
-      
+
       // Update local state immediately (optimistic update)
       setSubmissions(updatedSubmissions);
 
       // Update assignment data to reflect new stats (optimistic)
-      if (assignmentData && selectedSubmission.status !== 'graded') {
-        setAssignmentData(prev => ({
+      if (assignmentData && selectedSubmission.status !== "graded") {
+        setAssignmentData((prev) => ({
           ...prev,
           stats: {
             ...prev.stats,
             gradedCount: (prev.stats?.gradedCount || 0) + 1,
-            pendingCount: Math.max((prev.stats?.pendingCount || 0) - 1, 0)
-          }
+            pendingCount: Math.max((prev.stats?.pendingCount || 0) - 1, 0),
+          },
         }));
       }
 
@@ -355,19 +321,23 @@ const AssignmentDetail = () => {
       }
     } catch (error) {
       console.error("❌ Error saving grade:", error);
-      
+
       // Rollback optimistic update on error
       await fetchSubmissions();
-      
+
       // Reopen modal and show error if API failed
       setGradingModalVisible(true);
       setSelectedSubmission(submissionBeingGraded);
-      
-      message.error(`Lỗi khi chấm điểm: ${error.response?.data?.message || error.message || 'Unknown error'}`);
+
+      message.error(
+        `Lỗi khi chấm điểm: ${
+          error.response?.data?.message || error.message || "Unknown error"
+        }`
+      );
     } finally {
       setGradingLoading(false);
     }
-  };  
+  };
   const submissionColumns = [
     {
       title: "Học sinh",
@@ -377,10 +347,12 @@ const AssignmentDetail = () => {
         <div className="flex items-center gap-3">
           <Avatar src={student.image} icon={<UserOutlined />} size={32} />
           <div>
-          <div>
-            <div className="font-medium">{student.fullName}</div>
-            <Text type="secondary" className="text-xs">{student.email}</Text>
-          </div>
+            <div>
+              <div className="font-medium">{student.fullName}</div>
+              <Text type="secondary" className="text-xs">
+                {student.email}
+              </Text>
+            </div>
           </div>
         </div>
       ),
@@ -449,25 +421,31 @@ const AssignmentDetail = () => {
             />
           </Tooltip>
           {record.attachments?.length > 0 && (
-            <Tooltip title="Tải file đính kèm của học sinh">
+            <Tooltip
+              title={
+                record.attachments.length === 1
+                  ? `Download: ${fixVietnameseEncoding(
+                      record.attachments[0].name
+                    )}`
+                  : `Download ${record.attachments.length} files`
+              }
+            >
               <Button
                 type="text"
                 icon={<DownloadOutlined />}
                 size="small"
-                onClick={() => {
-                  if (record.attachments && record.attachments.length > 0) {
-                    // Download first attachment, or could show a modal to select which file
-                    const firstAttachment = record.attachments[0];
-                    if (firstAttachment.downloadUrl) {
-                      handleFileDownload(firstAttachment.downloadUrl, firstAttachment.name || 'submission-file');
-                    } else {
-                      message.warning('Download URL not available for this file');
-                    }
-                  } else {
-                    message.info('No attachments to download');
-                  }
-                }}
-              />
+                onClick={() => handleDownloadSubmissionFiles(record)}
+                loading={Array.from(
+                  { length: record.attachments.length },
+                  (_, i) => downloadingFiles.has(`${record._id}-${i}`)
+                ).some(Boolean)}
+              >
+                {record.attachments.length > 1 && (
+                  <span className="ml-1 text-xs bg-blue-100 text-blue-600 px-1 rounded">
+                    {record.attachments.length}
+                  </span>
+                )}
+              </Button>
             </Tooltip>
           )}
         </Space>
@@ -478,17 +456,24 @@ const AssignmentDetail = () => {
   // Use statistics from backend (calculated server-side for accuracy)
   const backendStats = currentAssignmentData.stats || {};
   const actualSubmissions = submissions.filter((s) => s.status !== "missing");
-  
+
   const stats = {
     submitted: backendStats.submissionsCount || actualSubmissions.length,
     graded: backendStats.gradedCount, //|| actualSubmissions.filter((s) => s.grade !== null).length,
-    pending: backendStats.pendingCount || actualSubmissions.filter((s) => s.status === "submitted").length,
-    late: backendStats.lateCount || actualSubmissions.filter((s) => s.isLate).length,
+    pending:
+      backendStats.pendingCount ||
+      actualSubmissions.filter((s) => s.status === "submitted").length,
+    late:
+      backendStats.lateCount ||
+      actualSubmissions.filter((s) => s.isLate).length,
     avgGrade: backendStats.avgGrade !== undefined ? backendStats.avgGrade : 0,
   };
 
   const isOverdue = moment().isAfter(currentAssignmentData.dueDate);
-  const daysUntilDue = moment(currentAssignmentData.dueDate).diff(moment(), 'days');
+  const daysUntilDue = moment(currentAssignmentData.dueDate).diff(
+    moment(),
+    "days"
+  );
 
   const tabItems = [
     {
@@ -504,7 +489,7 @@ const AssignmentDetail = () => {
           {/* Left Column - Main Content */}
           <Col xs={24} lg={16}>
             {/* Assignment Content */}
-            <Card 
+            <Card
               className="mb-6 shadow-lg border-0"
               title={
                 <div className="flex items-center gap-3">
@@ -512,24 +497,32 @@ const AssignmentDetail = () => {
                     <FileTextOutlined className="text-white text-lg" />
                   </div>
                   <div>
-                    <Text strong className="text-lg">Assignment Details</Text>
-                    <div className="text-sm text-gray-500">Content and instructions</div>
+                    <Text strong className="text-lg">
+                      Assignment Details
+                    </Text>
+                    <div className="text-sm text-gray-500">
+                      Content and instructions
+                    </div>
                   </div>
                 </div>
               }
             >
               <div className="space-y-4">
                 <div>
-                  <Title level={4} className="mb-2">{currentAssignmentData.title}</Title>
-                  <div 
+                  <Title level={4} className="mb-2">
+                    {currentAssignmentData.title}
+                  </Title>
+                  <div
                     className="ql-editor"
                     style={{
-                      fontSize: '16px',
-                      lineHeight: '1.8',
-                      color: '#4a5568',
-                      padding: 0
+                      fontSize: "16px",
+                      lineHeight: "1.8",
+                      color: "#4a5568",
+                      padding: 0,
                     }}
-                    dangerouslySetInnerHTML={{ __html: currentAssignmentData.description }}
+                    dangerouslySetInnerHTML={{
+                      __html: currentAssignmentData.description,
+                    }}
                   />
                 </div>
 
@@ -538,7 +531,7 @@ const AssignmentDetail = () => {
                     <Title level={5} className="text-blue-700 mb-3">
                       📋 Detailed Instructions
                     </Title>
-                    <div 
+                    <div
                       style={{ whiteSpace: "pre-wrap", lineHeight: "1.8" }}
                       className="text-gray-700"
                     >
@@ -547,54 +540,73 @@ const AssignmentDetail = () => {
                   </div>
                 )}
 
-                {currentAssignmentData.attachments && currentAssignmentData.attachments.length > 0 && (
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border-l-4 border-purple-400">
-                    <Title level={5} className="text-purple-700 mb-4">
-                      📎 Teacher Resources ({currentAssignmentData.attachments.length})
-                    </Title>
-                    <div className="space-y-3">
-                      {currentAssignmentData.attachments.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                        >
-                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <PaperClipOutlined className="text-purple-600" />
-                          </div>
-                          <div className="flex-1">
-                            <Text strong className="block">{fixVietnameseEncoding(file.name)}</Text>
-                            <Text type="secondary" className="text-sm">
-                              {formatFileSize(null, file)}
-                            </Text>
-                          </div>
-                          <Tooltip 
-                            title={(() => {
-                              const { browserName, isModernBrowser } = getBrowserInfo();
-                              if (!isModernBrowser) {
-                                return `Your browser (${browserName}) has limited download support. File might open in a new tab instead of downloading.`;
-                              }
-                              if (browserName === 'Edge') {
-                                return `✅ Edge - Will download directly to your Downloads folder`;
-                              }
-                              return `✅ ${browserName} - Will download directly to your Downloads folder`;
-                            })()}
-                            placement="top"
-                          >
-                            <Button
-                              type="primary"
-                              ghost
-                              icon={<DownloadOutlined />}
-                              size="small"
-                              onClick={() => handleFileDownload(file.downloadUrl, file.name)}
+                {currentAssignmentData.attachments &&
+                  currentAssignmentData.attachments.length > 0 && (
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border-l-4 border-purple-400">
+                      <Title level={5} className="text-purple-700 mb-4">
+                        📎 Teacher Resources (
+                        {currentAssignmentData.attachments.length})
+                      </Title>
+                      <div className="space-y-3">
+                        {currentAssignmentData.attachments.map(
+                          (file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
                             >
-                              Download
-                            </Button>
-                          </Tooltip>
-                        </div>
-                      ))}
+                              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <PaperClipOutlined className="text-purple-600" />
+                              </div>
+                              <div className="flex-1">
+                                <Text strong className="block">
+                                  {fixVietnameseEncoding(file.name)}
+                                </Text>
+                                <Text type="secondary" className="text-sm">
+                                  {formatFileSize(null, file)}
+                                </Text>
+                              </div>
+                              <Tooltip
+                                title={(() => {
+                                  const { browserName, isModernBrowser } =
+                                    getBrowserInfo();
+                                  if (!isModernBrowser) {
+                                    return `Your browser (${browserName}) has limited download support. File might open in a new tab instead of downloading.`;
+                                  }
+                                  if (browserName === "Edge") {
+                                    return `✅ Edge - Will download directly to your Downloads folder`;
+                                  }
+                                  return `✅ ${browserName} - Will download directly to your Downloads folder`;
+                                })()}
+                                placement="top"
+                              >
+                                <Button
+                                  type="primary"
+                                  ghost
+                                  icon={<DownloadOutlined />}
+                                  size="small"
+                                  onClick={async () => {
+                                    try {
+                                      await downloadAssignmentAttachment(
+                                        assignmentId,
+                                        index,
+                                        file.name,
+                                        token,
+                                        file
+                                      );
+                                    } catch (error) {
+                                      console.error("Download failed:", error);
+                                    }
+                                  }}
+                                >
+                                  Download
+                                </Button>
+                              </Tooltip>
+                            </div>
+                          )
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             </Card>
 
@@ -605,7 +617,9 @@ const AssignmentDetail = () => {
                   <Statistic
                     title="Submitted"
                     value={stats.submitted}
-                    suffix={`/${backendStats.totalStudents || submissions.length || 0}`}
+                    suffix={`/${
+                      backendStats.totalStudents || submissions.length || 0
+                    }`}
                     prefix={<CheckCircleOutlined className="text-green-500" />}
                     valueStyle={{ color: "#22c55e", fontSize: "24px" }}
                   />
@@ -649,7 +663,7 @@ const AssignmentDetail = () => {
           {/* Right Column - Quick Info */}
           <Col xs={24} lg={8}>
             {/* Assignment Info */}
-            <Card 
+            <Card
               title={
                 <div className="flex items-center gap-2">
                   <InfoCircleOutlined className="text-blue-500" />
@@ -666,32 +680,50 @@ const AssignmentDetail = () => {
                     {currentAssignmentData.totalPoints} pts
                   </Tag>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <Text type="secondary">Status:</Text>
-                  <Tag 
-                    color={currentAssignmentData.visibility === 'published' ? 'green' : 'orange'}
+                  <Tag
+                    color={
+                      currentAssignmentData.visibility === "published"
+                        ? "green"
+                        : "orange"
+                    }
                     className="px-3 py-1 text-base"
                   >
-                    {currentAssignmentData.visibility?.charAt(0).toUpperCase() + currentAssignmentData.visibility?.slice(1)}
+                    {currentAssignmentData.visibility?.charAt(0).toUpperCase() +
+                      currentAssignmentData.visibility?.slice(1)}
                   </Tag>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <Text type="secondary">Submission Type:</Text>
-                  <Tag 
-                    color="purple" 
+                  <Tag
+                    color="purple"
                     className="px-3 py-1 text-base"
                     icon={
-                      currentAssignmentData.submissionSettings?.type === 'file' ? <PaperClipOutlined /> :
-                      currentAssignmentData.submissionSettings?.type === 'text' ? <FileTextOutlined /> :
-                      <><FileTextOutlined /> <PaperClipOutlined /></>
+                      currentAssignmentData.submissionSettings?.type ===
+                      "file" ? (
+                        <PaperClipOutlined />
+                      ) : currentAssignmentData.submissionSettings?.type ===
+                        "text" ? (
+                        <FileTextOutlined />
+                      ) : (
+                        <>
+                          <FileTextOutlined /> <PaperClipOutlined />
+                        </>
+                      )
                     }
                   >
-                    {currentAssignmentData.submissionSettings?.type === 'both' ? 'Text & File' :
-                     currentAssignmentData.submissionSettings?.type === 'file' ? 'File Only' :
-                     currentAssignmentData.submissionSettings?.type === 'text' ? 'Text Only' :
-                     'Both'}
+                    {currentAssignmentData.submissionSettings?.type === "both"
+                      ? "Text & File"
+                      : currentAssignmentData.submissionSettings?.type ===
+                        "file"
+                      ? "File Only"
+                      : currentAssignmentData.submissionSettings?.type ===
+                        "text"
+                      ? "Text Only"
+                      : "Both"}
                   </Tag>
                 </div>
 
@@ -699,14 +731,20 @@ const AssignmentDetail = () => {
 
                 <div className="flex justify-between items-center">
                   <Text type="secondary">Created:</Text>
-                  <Text>{moment(currentAssignmentData.createdAt).format('DD/MM/YYYY')}</Text>
+                  <Text>
+                    {moment(currentAssignmentData.createdAt).format(
+                      "DD/MM/YYYY"
+                    )}
+                  </Text>
                 </div>
 
                 {currentAssignmentData.publishDate && (
                   <div className="flex justify-between items-center">
                     <Text type="secondary">Published:</Text>
                     <Text>
-                      {moment(currentAssignmentData.publishDate).format('DD/MM/YYYY HH:mm')}
+                      {moment(currentAssignmentData.publishDate).format(
+                        "DD/MM/YYYY HH:mm"
+                      )}
                     </Text>
                   </div>
                 )}
@@ -719,17 +757,42 @@ const AssignmentDetail = () => {
             </Card>
 
             {/* Due Date Card */}
-            <Card 
-              className={`mb-6 shadow-lg border-0 ${isOverdue ? 'border-l-4 border-l-red-400 bg-red-50' : daysUntilDue <= 7 ? 'border-l-4 border-l-orange-400 bg-orange-50' : 'border-l-4 border-l-green-400 bg-green-50'}`}
+            <Card
+              className={`mb-6 shadow-lg border-0 ${
+                isOverdue
+                  ? "border-l-4 border-l-red-400 bg-red-50"
+                  : daysUntilDue <= 7
+                  ? "border-l-4 border-l-orange-400 bg-orange-50"
+                  : "border-l-4 border-l-green-400 bg-green-50"
+              }`}
               size="small"
             >
               <div className="text-center">
-                <CalendarOutlined 
-                  className={`text-4xl mb-2 ${isOverdue ? 'text-red-500' : daysUntilDue <= 7 ? 'text-orange-500' : 'text-green-500'}`} 
+                <CalendarOutlined
+                  className={`text-4xl mb-2 ${
+                    isOverdue
+                      ? "text-red-500"
+                      : daysUntilDue <= 7
+                      ? "text-orange-500"
+                      : "text-green-500"
+                  }`}
                 />
-                <Title level={5} className="mb-1">Due Date</Title>
-                <Text strong className={`text-lg ${isOverdue ? 'text-red-600' : daysUntilDue <= 7 ? 'text-orange-600' : 'text-green-600'}`}>
-                  {moment(currentAssignmentData.dueDate).format("DD/MM/YYYY HH:mm")}
+                <Title level={5} className="mb-1">
+                  Due Date
+                </Title>
+                <Text
+                  strong
+                  className={`text-lg ${
+                    isOverdue
+                      ? "text-red-600"
+                      : daysUntilDue <= 7
+                      ? "text-orange-600"
+                      : "text-green-600"
+                  }`}
+                >
+                  {moment(currentAssignmentData.dueDate).format(
+                    "DD/MM/YYYY HH:mm"
+                  )}
                 </Text>
                 <div className="mt-2">
                   {isOverdue ? (
@@ -751,7 +814,11 @@ const AssignmentDetail = () => {
               {currentAssignmentData.allowLateSubmission && (
                 <Alert
                   message="Late Submission Allowed"
-                  description={`${currentAssignmentData.maxLateDays ? `Up to ${currentAssignmentData.maxLateDays} days late. ` : ''}Penalty: ${currentAssignmentData.latePenalty}% per day`}
+                  description={`${
+                    currentAssignmentData.maxLateDays
+                      ? `Up to ${currentAssignmentData.maxLateDays} days late. `
+                      : ""
+                  }Penalty: ${currentAssignmentData.latePenalty}% per day`}
                   type="info"
                   size="small"
                   showIcon
@@ -775,7 +842,9 @@ const AssignmentDetail = () => {
         <Card className="shadow-lg border-0">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <Title level={3} className="mb-1">📝 Student Submissions</Title>
+              <Title level={3} className="mb-1">
+                📝 Student Submissions
+              </Title>
               <Text type="secondary" className="text-base">
                 Monitor and grade student work
               </Text>
@@ -785,6 +854,7 @@ const AssignmentDetail = () => {
                 type="primary"
                 icon={<SettingOutlined />}
                 onClick={handleViewAllSubmissions}
+                onMouseEnter={handleAdvancedManagementHover}
                 className="bg-gradient-to-r from-blue-500 to-blue-600 border-0"
               >
                 Advanced Management
@@ -796,12 +866,15 @@ const AssignmentDetail = () => {
             <Table
               columns={submissionColumns}
               dataSource={submissions}
-              rowKey={(record) => record._id || record.id || record.student?._id}
-              pagination={{ 
+              rowKey={(record) =>
+                record._id || record.id || record.student?._id
+              }
+              pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
                 showQuickJumper: true,
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} submissions`
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} of ${total} submissions`,
               }}
               className="shadow-sm"
             />
@@ -822,7 +895,9 @@ const AssignmentDetail = () => {
         <div className="text-center">
           <Spin size="large" />
           <div className="mt-4">
-            <Text type="secondary" className="text-lg">Loading assignment data...</Text>
+            <Text type="secondary" className="text-lg">
+              Loading assignment data...
+            </Text>
           </div>
         </div>
       </div>
@@ -841,7 +916,9 @@ const AssignmentDetail = () => {
             action={
               <Button
                 type="primary"
-                onClick={() => navigate(`/teacher/classroom/${classId}#classwork`)}
+                onClick={() =>
+                  navigate(`/teacher/classroom/${classId}#classwork`)
+                }
               >
                 Back to Classwork
               </Button>
@@ -901,41 +978,67 @@ const AssignmentDetail = () => {
             <div className="flex items-center gap-4">
               <Button
                 icon={<ArrowLeftOutlined />}
-                onClick={() => navigate(`/teacher/classroom/${classId}#classwork`)}
+                onClick={() =>
+                  navigate(`/teacher/classroom/${classId}#classwork`)
+                }
                 className="flex items-center hover:shadow-md transition-shadow"
               >
                 Back to Classwork
               </Button>
-              
+
               <div className="hidden md:flex items-center gap-3">
-                <Badge count={actualSubmissions.length} showZero color="#52c41a">
+                <Badge
+                  count={actualSubmissions.length}
+                  showZero
+                  color="#52c41a"
+                >
                   <div className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
                     Submissions
                   </div>
                 </Badge>
-                <Tag color={currentAssignmentData.visibility === 'published' ? 'green' : 'orange'} className="px-3 py-1">
-                  {currentAssignmentData.visibility?.charAt(0).toUpperCase() + currentAssignmentData.visibility?.slice(1)}
+                <Tag
+                  color={
+                    currentAssignmentData.visibility === "published"
+                      ? "green"
+                      : "orange"
+                  }
+                  className="px-3 py-1"
+                >
+                  {currentAssignmentData.visibility?.charAt(0).toUpperCase() +
+                    currentAssignmentData.visibility?.slice(1)}
                 </Tag>
-                <Tag color={isOverdue ? 'red' : daysUntilDue <= 7 ? 'orange' : 'green'} className="px-3 py-1">
-                  {isOverdue ? '⚠️ Overdue' : daysUntilDue <= 7 ? '⏰ Due Soon' : '✅ Active'}
+                <Tag
+                  color={
+                    isOverdue ? "red" : daysUntilDue <= 7 ? "orange" : "green"
+                  }
+                  className="px-3 py-1"
+                >
+                  {isOverdue
+                    ? "⚠️ Overdue"
+                    : daysUntilDue <= 7
+                    ? "⏰ Due Soon"
+                    : "✅ Active"}
                 </Tag>
               </div>
             </div>
-            
+
             <Space>
-              <Button 
+              <Button
                 icon={<EditOutlined />}
                 onClick={() =>
-                  navigate(`/teacher/classroom/${classId}/assignment/${assignmentId}/edit`)
+                  navigate(
+                    `/teacher/classroom/${classId}/assignment/${assignmentId}/edit`
+                  )
                 }
                 className="hover:shadow-md transition-shadow"
               >
                 Edit
               </Button>
-              <Button 
+              <Button
                 type="primary"
                 icon={<TrophyOutlined />}
                 onClick={handleViewAllSubmissions}
+                onMouseEnter={handleAdvancedManagementHover}
                 className="bg-gradient-to-r from-blue-500 to-blue-600 border-0 hover:shadow-lg transition-all duration-300"
               >
                 Grade Submissions
@@ -949,37 +1052,46 @@ const AssignmentDetail = () => {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Page Title */}
         <div className="text-center mb-8">
-          <Title level={2} className="mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent" style={{ marginTop: '0px',marginBottom: '0px' }}>
+          <Title
+            level={2}
+            className="mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+            style={{ marginTop: "0px", marginBottom: "0px" }}
+          >
             {currentAssignmentData.title}
           </Title>
           <Paragraph className="text-gray-600 text-lg">
-            {currentAssignmentData.classroom?.name} • Created {moment(currentAssignmentData.createdAt).fromNow()}
+            {currentAssignmentData.classroom?.name} • Created{" "}
+            {moment(currentAssignmentData.createdAt).fromNow()}
           </Paragraph>
         </div>
 
         {/* Status Alerts */}
-        {currentAssignmentData.visibility === 'scheduled' && 
-         currentAssignmentData.publishDate && 
-         moment(currentAssignmentData.publishDate).isAfter(moment()) && (
-          <Alert
-            message="📅 Assignment is scheduled"
-            description={
-              <div>
-                <span>
-                  This assignment will be automatically published on{' '}
-                  <strong>{moment(currentAssignmentData.publishDate).format("DD/MM/YYYY HH:mm")}</strong>.
-                  Students cannot see it until then.
-                </span>
-              </div>
-            }
-            type="info"
-            showIcon
-            icon={<ClockCircleOutlined />}
-            className="mb-6 shadow-sm"
-          />
-        )}
+        {currentAssignmentData.visibility === "scheduled" &&
+          currentAssignmentData.publishDate &&
+          moment(currentAssignmentData.publishDate).isAfter(moment()) && (
+            <Alert
+              message="📅 Assignment is scheduled"
+              description={
+                <div>
+                  <span>
+                    This assignment will be automatically published on{" "}
+                    <strong>
+                      {moment(currentAssignmentData.publishDate).format(
+                        "DD/MM/YYYY HH:mm"
+                      )}
+                    </strong>
+                    . Students cannot see it until then.
+                  </span>
+                </div>
+              }
+              type="info"
+              showIcon
+              icon={<ClockCircleOutlined />}
+              className="mb-6 shadow-sm"
+            />
+          )}
 
-        {currentAssignmentData.visibility === 'draft' && (
+        {currentAssignmentData.visibility === "draft" && (
           <Alert
             message="📝 Assignment is in draft mode"
             description="This assignment is not visible to students. Publish it when you're ready."
@@ -995,10 +1107,18 @@ const AssignmentDetail = () => {
             description={
               <div className="flex items-center justify-between">
                 <span>
-                  Due: {moment(currentAssignmentData.dueDate).format("DD/MM/YYYY HH:mm")}
-                  {currentAssignmentData.allowLateSubmission && 
-                    ` • Late submissions allowed${currentAssignmentData.maxLateDays ? ` for up to ${currentAssignmentData.maxLateDays} days` : ''} with ${currentAssignmentData.latePenalty}% penalty per day`
-                  }
+                  Due:{" "}
+                  {moment(currentAssignmentData.dueDate).format(
+                    "DD/MM/YYYY HH:mm"
+                  )}
+                  {currentAssignmentData.allowLateSubmission &&
+                    ` • Late submissions allowed${
+                      currentAssignmentData.maxLateDays
+                        ? ` for up to ${currentAssignmentData.maxLateDays} days`
+                        : ""
+                    } with ${
+                      currentAssignmentData.latePenalty
+                    }% penalty per day`}
                 </span>
                 <Button size="small" type="link" icon={<SettingOutlined />}>
                   Extend Deadline
@@ -1012,9 +1132,9 @@ const AssignmentDetail = () => {
         )}
 
         {/* Tabs */}
-        <Tabs 
-          activeKey={activeTab} 
-          onChange={setActiveTab} 
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
           items={tabItems}
           className="bg-white rounded-lg shadow-lg p-6"
           size="large"
@@ -1029,7 +1149,7 @@ const AssignmentDetail = () => {
         loading={gradingLoading}
         assignment={currentAssignmentData}
         submission={selectedSubmission}
-        allSubmissions={submissions.filter(sub => sub.status !== 'missing')}
+        allSubmissions={submissions.filter((sub) => sub.status !== "missing")}
       />
 
       <SubmissionManagement
@@ -1038,6 +1158,123 @@ const AssignmentDetail = () => {
         onBack={() => setSubmissionManagementVisible(false)}
         assignment={currentAssignmentData}
       />
+
+      {/* File Download Selection Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <DownloadOutlined className="text-blue-500" />
+            <span>Download Submission Files</span>
+            <Badge
+              count={selectedSubmissionForDownload?.attachments?.length || 0}
+              showZero={false}
+              color="#1890ff"
+            />
+          </div>
+        }
+        open={fileDownloadModalVisible}
+        onCancel={() => setFileDownloadModalVisible(false)}
+        width={600}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => setFileDownloadModalVisible(false)}
+          >
+            Cancel
+          </Button>,
+          <Button
+            key="download-all"
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={() =>
+              handleDownloadAllFiles(selectedSubmissionForDownload)
+            }
+            disabled={!selectedSubmissionForDownload?.attachments?.length}
+          >
+            Download All (
+            {selectedSubmissionForDownload?.attachments?.length || 0} files)
+          </Button>,
+        ]}
+      >
+        {selectedSubmissionForDownload && (
+          <div>
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Avatar
+                  src={selectedSubmissionForDownload.student?.image}
+                  icon={<UserOutlined />}
+                  size={24}
+                />
+                <Text strong>
+                  {selectedSubmissionForDownload.student?.fullName}
+                </Text>
+              </div>
+              <Text type="secondary">
+                Submitted:{" "}
+                {moment(selectedSubmissionForDownload.submittedAt).format(
+                  "DD/MM/YYYY HH:mm"
+                )}
+              </Text>
+            </div>
+
+            <List
+              dataSource={selectedSubmissionForDownload.attachments || []}
+              renderItem={(attachment, index) => {
+                const fileId = `${selectedSubmissionForDownload._id}-${index}`;
+                const isDownloading = downloadingFiles.has(fileId);
+
+                return (
+                  <List.Item
+                    actions={[
+                      <Button
+                        key="download"
+                        type="primary"
+                        size="small"
+                        icon={<DownloadOutlined />}
+                        loading={isDownloading}
+                        onClick={() =>
+                          handleSingleFileDownload(
+                            selectedSubmissionForDownload,
+                            index
+                          )
+                        }
+                      >
+                        {isDownloading ? "Downloading..." : "Download"}
+                      </Button>,
+                    ]}
+                  >
+                    <List.Item.Meta
+                      avatar={
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <PaperClipOutlined className="text-blue-600" />
+                        </div>
+                      }
+                      title={
+                        <div className="flex items-center gap-2">
+                          <Text strong className="flex-1">
+                            {fixVietnameseEncoding(attachment.name)}
+                          </Text>
+                          <Tag color="blue" className="text-xs">
+                            {attachment.name?.split(".").pop()?.toUpperCase() ||
+                              "FILE"}
+                          </Tag>
+                        </div>
+                      }
+                      description={
+                        <Text type="secondary" className="text-sm">
+                          {formatFileSize(null, attachment)} • File {index + 1}{" "}
+                          of {selectedSubmissionForDownload.attachments.length}
+                        </Text>
+                      }
+                    />
+                  </List.Item>
+                );
+              }}
+              className="max-h-96 overflow-y-auto"
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

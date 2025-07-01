@@ -21,6 +21,9 @@ import {
   InputNumber,
   Alert,
   Row,
+  List,
+  Badge,
+  Spin,
 } from "antd";
 import {
   EyeOutlined,
@@ -46,6 +49,9 @@ import {
 import moment from "moment";
 import { AssignmentGradingModal } from "../grading";
 import { assignmentAPI } from "../../../services/api";
+import { useSelector } from "react-redux";
+import { downloadSubmissionAttachment } from "../../../utils/fileUtils";
+import { useCallback } from "react";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -53,6 +59,8 @@ const { TextArea } = Input;
 const { Option } = Select;
 
 const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
+  // 🚨 ALL HOOKS MUST BE DECLARED BEFORE ANY EARLY RETURNS
+  // Basic state hooks
   const [loading, setLoading] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [filteredSubmissions, setFilteredSubmissions] = useState([]);
@@ -63,23 +71,24 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [bulkGradeModalVisible, setBulkGradeModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("submissions");
-
+  
   // Bulk grading states
   const [bulkGradingModalVisible, setBulkGradingModalVisible] = useState(false);
   const [autoGradingLoading, setAutoGradingLoading] = useState(false);
   const [bulkGradingLoading, setBulkGradingLoading] = useState(false);
 
-  useEffect(() => {
-    if (visible && assignment) {
-      fetchSubmissions();
-    }
-  }, [visible, assignment]);
+  // File download states
+  const [fileDownloadModalVisible, setFileDownloadModalVisible] = useState(false);
+  const [selectedSubmissionForDownload, setSelectedSubmissionForDownload] = useState(null);
+  const [downloadingFiles, setDownloadingFiles] = useState(new Set());
 
-  useEffect(() => {
-    filterSubmissions();
-  }, [submissions, searchText, statusFilter]);
+  // Redux hooks
+  const { user, token } = useSelector((state) => state.auth);
 
-  const fetchSubmissions = async () => {
+  // 🚨 ALL useCallback and useEffect hooks MUST be before early return
+  
+  // Core functions that are called in useEffects
+  const fetchSubmissions = useCallback(async () => {
     if (!assignment?._id) return;
 
     setLoading(true);
@@ -144,6 +153,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
             isLate:
               submission.status === "late" ||
               (submission.submittedAt &&
+                assignment?.dueDate &&
                 moment(submission.submittedAt).isAfter(
                   moment(assignment.dueDate)
                 )),
@@ -166,9 +176,9 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [assignment?._id]);
 
-  const filterSubmissions = () => {
+  const filterSubmissions = useCallback(() => {
     let filtered = submissions;
 
     // Search filter
@@ -186,7 +196,109 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
     }
 
     setFilteredSubmissions(filtered);
-  };
+  }, [submissions, searchText, statusFilter]);
+
+  // Enhanced download system for multiple files
+  const handleSingleFileDownload = useCallback(async (submission, attachmentIndex) => {
+    if (!assignment?._id) {
+      message.error('Assignment data not available');
+      return;
+    }
+
+    const fileId = `${submission._id}-${attachmentIndex}`;
+    
+    if (downloadingFiles.has(fileId)) {
+      message.warning('Download already in progress...');
+      return;
+    }
+
+    setDownloadingFiles(prev => new Set(prev).add(fileId));
+
+    try {
+      const attachment = submission.attachments[attachmentIndex];
+      await downloadSubmissionAttachment(
+        assignment?._id, // Use optional chaining for safety
+        submission._id,
+        attachmentIndex,
+        attachment.name || `submission-file-${attachmentIndex + 1}`,
+        token,
+        attachment
+      );
+    } catch (error) {
+      console.error('Download failed:', error);
+    } finally {
+      setDownloadingFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
+    }
+  }, [assignment?._id, token, downloadingFiles]);
+
+  const handleDownloadAllFiles = useCallback(async (submission) => {
+    if (!submission.attachments || submission.attachments.length === 0) return;
+
+    message.info(`Starting download of ${submission.attachments.length} files...`);
+    
+    // Download files with delay to avoid overwhelming the browser
+    for (let i = 0; i < submission.attachments.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, i * 500)); // 500ms delay between downloads
+      await handleSingleFileDownload(submission, i);
+    }
+    
+    setFileDownloadModalVisible(false);
+  }, [handleSingleFileDownload]);
+
+  const handleDownloadSubmissionFiles = useCallback((submission) => {
+    if (!submission.attachments || submission.attachments.length === 0) {
+      message.info('No attachments to download');
+      return;
+    }
+
+    if (submission.attachments.length === 1) {
+      // Single file - download directly
+      handleSingleFileDownload(submission, 0);
+    } else {
+      // Multiple files - show selection modal
+      setSelectedSubmissionForDownload(submission);
+      setFileDownloadModalVisible(true);
+    }
+  }, [handleSingleFileDownload]);
+
+  // Effects
+  useEffect(() => {
+    if (visible && assignment) {
+      fetchSubmissions();
+    }
+  }, [visible, assignment, fetchSubmissions]);
+
+  useEffect(() => {
+    filterSubmissions();
+  }, [filterSubmissions]);
+
+
+  // Early return AFTER all hooks are declared
+  if (!assignment) {
+    return (
+      <Modal
+        title="Loading Assignment..."
+        open={visible}
+        onCancel={onCancel}
+        footer={null}
+        width={400}
+        className="text-center"
+      >
+        <div className="py-8">
+          <Spin size="large" />
+          <div className="mt-4">
+            <Text type="secondary">Loading assignment data...</Text>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
+
 
   const getStatusTag = (status, isLate) => {
     switch (status) {
@@ -464,7 +576,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
         try {
           setAutoGradingLoading(true);
           const response = await assignmentAPI.autoGradeMissingSubmissions(
-            assignment._id
+            assignment?._id
           );
 
           if (response.success) {
@@ -534,7 +646,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
         try {
           setBulkGradingLoading(true);
           const response = await assignmentAPI.bulkGradeMissingSubmissions(
-            assignment._id,
+            assignment?._id,
             {
               grade: Number(grade),
               feedback: feedback,
@@ -829,16 +941,28 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
             {!isMissing &&
               record.attachments &&
               record.attachments.length > 0 && (
-                <Tooltip title="Tải file">
+                <Tooltip 
+                  title={
+                    record.attachments.length === 1 
+                      ? `Download: ${record.attachments[0].name}`
+                      : `Download ${record.attachments.length} files`
+                  }
+                >
                   <Button
                     type="text"
                     icon={<DownloadOutlined />}
                     size="small"
-                    onClick={() => {
-                      message.success("Đang tải file...");
-                      // TODO: Implement actual file download
-                    }}
-                  />
+                    onClick={() => handleDownloadSubmissionFiles(record)}
+                    loading={Array.from({ length: record.attachments.length }, (_, i) => 
+                      downloadingFiles.has(`${record._id}-${i}`)
+                    ).some(Boolean)}
+                  >
+                    {record.attachments.length > 1 && (
+                      <span className="ml-1 text-xs bg-blue-100 text-blue-600 px-1 rounded">
+                        {record.attachments.length}
+                      </span>
+                    )}
+                  </Button>
                 </Tooltip>
               )}
             {isMissing && (
@@ -1066,8 +1190,8 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                     <>
                       <CheckCircleOutlined className="text-green-600" />
                       <span className="text-green-700">
-                        Auto-Grade: {assignment.missingSubmissionPolicy.autoGradeValue || 0} 
-                        ({assignment.missingSubmissionPolicy.daysAfterDueForAutoGrade || 1} days)
+                        Auto-Grade: {assignment?.missingSubmissionPolicy?.autoGradeValue || 0} 
+                        ({assignment?.missingSubmissionPolicy?.daysAfterDueForAutoGrade || 1} days)
                       </span>
                     </>
                   ) : (
@@ -1100,9 +1224,9 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                       <CheckCircleOutlined className="text-green-600" />
                       <span className="text-green-700">
                         Notifications: Enabled
-                        {assignment.missingSubmissionPolicy.reminderDaysBeforeDue?.length > 0 && (
+                        {assignment?.missingSubmissionPolicy?.reminderDaysBeforeDue?.length > 0 && (
                           <span className="text-xs ml-1">
-                            ({assignment.missingSubmissionPolicy.reminderDaysBeforeDue.sort((a, b) => a - b).join(', ')} days)
+                            ({assignment?.missingSubmissionPolicy?.reminderDaysBeforeDue.sort((a, b) => a - b).join(', ')} days)
                           </span>
                         )}
                       </span>
@@ -1189,7 +1313,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                       <Statistic
                         title="Điểm TB"
                         value={stats.avgGrade}
-                        suffix={`/${assignment.totalPoints || 100}`}
+                        suffix={`/${assignment?.totalPoints || 100}`}
                         prefix={<StarOutlined />}
                       />
                     </Card>
@@ -1370,6 +1494,108 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
         isOverdue={isAssignmentOverdue()}
         daysOverdue={getDaysOverdue()}
       />
+
+      {/* File Download Selection Modal */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <DownloadOutlined className="text-blue-500" />
+            <span>Download Submission Files</span>
+            <Badge 
+              count={selectedSubmissionForDownload?.attachments?.length || 0} 
+              showZero={false} 
+              color="#1890ff" 
+            />
+          </div>
+        }
+        open={fileDownloadModalVisible}
+        onCancel={() => setFileDownloadModalVisible(false)}
+        width={600}
+        footer={[
+          <Button key="cancel" onClick={() => setFileDownloadModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button 
+            key="download-all" 
+            type="primary" 
+            icon={<DownloadOutlined />}
+            onClick={() => handleDownloadAllFiles(selectedSubmissionForDownload)}
+            disabled={!selectedSubmissionForDownload?.attachments?.length}
+          >
+            Download All ({selectedSubmissionForDownload?.attachments?.length || 0} files)
+          </Button>
+        ]}
+      >
+        {selectedSubmissionForDownload && (
+          <div>
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Avatar 
+                  src={selectedSubmissionForDownload.student?.image} 
+                  icon={<UserOutlined />} 
+                  size={24} 
+                />
+                <Text strong>{selectedSubmissionForDownload.student?.fullName}</Text>
+              </div>
+              <Text type="secondary">
+                Submitted: {selectedSubmissionForDownload.submittedAt ? 
+                  moment(selectedSubmissionForDownload.submittedAt).format('DD/MM/YYYY HH:mm') : 
+                  'No submission date'
+                }
+              </Text>
+            </div>
+
+            <List
+              dataSource={selectedSubmissionForDownload.attachments || []}
+              renderItem={(attachment, index) => {
+                const fileId = `${selectedSubmissionForDownload._id}-${index}`;
+                const isDownloading = downloadingFiles.has(fileId);
+                
+                return (
+                  <List.Item
+                    actions={[
+                      <Button
+                        key="download"
+                        type="primary"
+                        size="small"
+                        icon={<DownloadOutlined />}
+                        loading={isDownloading}
+                        onClick={() => handleSingleFileDownload(selectedSubmissionForDownload, index)}
+                      >
+                        {isDownloading ? 'Downloading...' : 'Download'}
+                      </Button>
+                    ]}
+                  >
+                    <List.Item.Meta
+                      avatar={
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <PaperClipOutlined className="text-blue-600" />
+                        </div>
+                      }
+                      title={
+                        <div className="flex items-center gap-2">
+                          <Text strong className="flex-1">
+                            {attachment.name}
+                          </Text>
+                          <Tag color="blue" className="text-xs">
+                            {attachment.name?.split('.').pop()?.toUpperCase() || 'FILE'}
+                          </Tag>
+                        </div>
+                      }
+                      description={
+                        <Text type="secondary" className="text-sm">
+                          {attachment.fileSize ? `${(attachment.fileSize / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'} • File {index + 1} of {selectedSubmissionForDownload.attachments.length}
+                        </Text>
+                      }
+                    />
+                  </List.Item>
+                );
+              }}
+              className="max-h-96 overflow-y-auto"
+            />
+          </div>
+        )}
+      </Modal>
     </Modal>
   );
 };

@@ -1,5 +1,7 @@
 // File utility functions
 
+import { fixVietnameseEncoding } from "./convertStr";
+
 /**
  * Format file size to human readable format
  * @param {number|string} size - File size in bytes (can be fileSize or size field)
@@ -107,4 +109,222 @@ export const isFileTypeAllowed = (file, allowedTypes) => {
   const ext = getFileExtension(filename);
   
   return allowedTypes.includes(ext);
+};
+
+// Get browser info for download support
+export const getBrowserInfo = () => {
+  const userAgent = navigator.userAgent;
+  let browserName = "Unknown";
+  let isModernBrowser = true;
+
+  if (userAgent.indexOf("Chrome") > -1) {
+    browserName = "Chrome";
+  } else if (userAgent.indexOf("Firefox") > -1) {
+    browserName = "Firefox";
+  } else if (userAgent.indexOf("Safari") > -1) {
+    browserName = "Safari";
+  } else if (userAgent.indexOf("Edge") > -1) {
+    browserName = "Edge";
+  } else if (userAgent.indexOf("Opera") > -1) {
+    browserName = "Opera";
+  } else {
+    isModernBrowser = false;
+  }
+
+  return { browserName, isModernBrowser };
+};
+
+// Universal secure file download function that works for all contexts
+export const handleSecureDownload = async (options) => {
+  const {
+    downloadUrl,           // Secure download URL (preferred)
+    fallbackUrl,          // Direct URL (fallback)
+    fileName,             // File name for download
+    token,                // Authentication token
+    type = 'file',        // Type: 'stream', 'assignment', 'submission', 'file'
+    context = {},         // Additional context: { assignmentId, submissionId, streamId, attachmentIndex }
+    onProgress,           // Progress callback (optional)
+    onSuccess,            // Success callback (optional)
+    onError               // Error callback (optional)
+  } = options;
+
+  // Validate required parameters
+  if (!fileName) {
+    const error = new Error('File name is required for download');
+    onError?.(error);
+    throw error;
+  }
+
+  if (!token) {
+    const error = new Error('Authentication required. Please login again.');
+    onError?.(error);
+    throw error;
+  }
+
+  const fixedFileName = fixVietnameseEncoding(fileName);
+  const hideLoading = onProgress?.('start') || 
+    (typeof message !== 'undefined' ? message.loading(`Downloading ${fixedFileName}...`, 0) : null);
+
+  try {
+    let finalDownloadUrl = downloadUrl;
+
+    // If no downloadUrl provided, construct one based on type and context
+    if (!finalDownloadUrl && type && context) {
+      const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+      
+      switch (type) {
+        case 'stream':
+          if (context.streamId !== undefined && context.attachmentIndex !== undefined) {
+            finalDownloadUrl = `${serverUrl}/api/files/stream/${context.streamId}/attachment/${context.attachmentIndex}`;
+          }
+          break;
+        case 'assignment':
+          if (context.assignmentId !== undefined && context.attachmentIndex !== undefined) {
+            finalDownloadUrl = `${serverUrl}/api/files/assignment/${context.assignmentId}/attachment/${context.attachmentIndex}`;
+          }
+          break;
+        case 'submission':
+          if (context.assignmentId !== undefined && context.submissionId !== undefined && context.attachmentIndex !== undefined) {
+            finalDownloadUrl = `${serverUrl}/api/files/submission/${context.assignmentId}/${context.submissionId}/${context.attachmentIndex}`;
+          }
+          break;
+        default:
+          // For generic files, use the fallbackUrl
+          finalDownloadUrl = fallbackUrl;
+          break;
+      }
+    }
+
+    // Use fallbackUrl if still no finalDownloadUrl
+    if (!finalDownloadUrl) {
+      finalDownloadUrl = fallbackUrl;
+    }
+
+    if (!finalDownloadUrl) {
+      throw new Error('No download URL available');
+    }
+
+    // Determine if this is a secure endpoint that needs Authorization header
+    const isSecureEndpoint = finalDownloadUrl.includes('/api/files/') || 
+                            downloadUrl || 
+                            finalDownloadUrl.includes('downloadUrl');
+
+    const fetchOptions = {
+      method: 'GET',
+      headers: {
+        'Accept': '*/*',
+      }
+    };
+
+    if (isSecureEndpoint && token) {
+      fetchOptions.headers['Authorization'] = `Bearer ${token}`;
+    } else {
+      fetchOptions.credentials = 'include';
+    }
+
+    onProgress?.('downloading');
+
+    const response = await fetch(finalDownloadUrl, fetchOptions);
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Session expired. Please login again.');
+      } else if (response.status === 403) {
+        throw new Error('You do not have permission to download this file.');
+      } else if (response.status === 404) {
+        throw new Error('File not found.');
+      } else if (response.status === 400) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'This file cannot be downloaded.');
+      } else {
+        throw new Error(`Download failed with status: ${response.status}`);
+      }
+    }
+
+    onProgress?.('processing');
+
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fixedFileName;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up
+    setTimeout(() => {
+      window.URL.revokeObjectURL(blobUrl);
+    }, 100);
+
+    const successMessage = `Download started: ${fixedFileName}`;
+    onSuccess?.(successMessage);
+    
+    if (typeof message !== 'undefined') {
+      message.success(successMessage);
+    }
+
+    return true;
+
+  } catch (error) {
+    console.error('Download failed:', error);
+    const errorMessage = error.message || 'Download failed. Please try again.';
+    onError?.(error);
+    
+    if (typeof message !== 'undefined') {
+      message.error(errorMessage);
+    }
+    
+    throw error;
+  } finally {
+    hideLoading?.();
+    onProgress?.('complete');
+  }
+};
+
+// Convenience functions for specific download types
+export const downloadStreamAttachment = async (streamId, attachmentIndex, fileName, token, attachment = {}) => {
+  return handleSecureDownload({
+    downloadUrl: attachment.downloadUrl,
+    fallbackUrl: attachment.url,
+    fileName,
+    token,
+    type: 'stream',
+    context: { streamId, attachmentIndex }
+  });
+};
+
+export const downloadAssignmentAttachment = async (assignmentId, attachmentIndex, fileName, token, attachment = {}) => {
+  return handleSecureDownload({
+    downloadUrl: attachment.downloadUrl,
+    fallbackUrl: attachment.url,
+    fileName,
+    token,
+    type: 'assignment',
+    context: { assignmentId, attachmentIndex }
+  });
+};
+
+export const downloadSubmissionAttachment = async (assignmentId, submissionId, attachmentIndex, fileName, token, attachment = {}) => {
+  return handleSecureDownload({
+    downloadUrl: attachment.downloadUrl,
+    fallbackUrl: attachment.url,
+    fileName,
+    token,
+    type: 'submission',
+    context: { assignmentId, submissionId, attachmentIndex }
+  });
+};
+
+export const downloadGenericFile = async (file, token) => {
+  return handleSecureDownload({
+    downloadUrl: file.downloadUrl,
+    fallbackUrl: file.url || file.previewUrl,
+    fileName: file.name,
+    token,
+    type: 'file'
+  });
 }; 

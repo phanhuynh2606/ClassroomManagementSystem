@@ -5,6 +5,7 @@ const { uploadToCloudinary } = require('../utils/Helper');
 const Comment = require('../models/comment.model');
 const { CloudinaryAPI } = require('../config/cloudinary.config');
 
+const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
 // Create announcement
 const createAnnouncement = async (req, res) => {
   try {
@@ -122,10 +123,41 @@ const createAnnouncement = async (req, res) => {
     // Populate author info
     await post.populate('author', 'fullName email image role');
 
+    // Process attachments to secure file attachment URLs before sending response
+    
+    const postObj = post.toObject();
+    
+    if (postObj.attachments && postObj.attachments.length > 0) {
+      postObj.attachments = postObj.attachments.map((attachment, index) => {
+        // Only replace URLs for file attachments, keep videos and links as they are
+        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
+          return {
+            name: attachment.name,
+            fileType: attachment.fileType,
+            fileSize: attachment.fileSize,
+            size: attachment.size,
+            type: attachment.type || 'file',
+            // Secure download endpoints (authentication via header)
+            downloadUrl: `${serverUrl}/api/files/stream/${postObj._id}/attachment/${index}`,
+            previewUrl: `${serverUrl}/api/files/stream/${postObj._id}/attachment/${index}?preview=true`,
+            index: index,
+            // Remove the original URL for security
+            metadata: attachment.metadata
+          };
+        } else {
+          // Keep video and link attachments unchanged
+          return {
+            ...attachment,
+            index: index
+          };
+        }
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: `${userRole === 'student' ? 'Post' : 'Announcement'} created successfully`,
-      data: post
+      data: postObj
     });
 
   } catch (error) {
@@ -189,10 +221,46 @@ const getClassroomStream = async (req, res) => {
       publishAt: { $lte: new Date() }
     });
 
+    // Process stream items to secure file attachment URLs
+    
+    const processedStreamItems = streamItems.map(item => {
+      const itemObj = item.toObject();
+      
+      // Process attachments to replace file URLs with secure download links
+      if (itemObj.attachments && itemObj.attachments.length > 0) {
+        itemObj.attachments = itemObj.attachments.map((attachment, index) => {
+          // Only replace URLs for file attachments, keep videos and links as they are
+          if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
+            return {
+              name: attachment.name,
+              fileType: attachment.fileType,
+              fileSize: attachment.fileSize,
+              size: attachment.size,
+              type: attachment.type || 'file',
+              // Secure download endpoints (authentication via header)
+              downloadUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}`,
+              previewUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}?preview=true`,
+              index: index,
+              // Remove the original URL for security
+              metadata: attachment.metadata
+            };
+          } else {
+            // Keep video and link attachments unchanged
+            return {
+              ...attachment,
+              index: index
+            };
+          }
+        });
+      }
+      
+      return itemObj;
+    });
+
     res.status(200).json({
       success: true,
       data: {
-        items: streamItems,
+        items: processedStreamItems,
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(totalCount / parseInt(limit)),
@@ -261,10 +329,41 @@ const updateAnnouncement = async (req, res) => {
     await announcement.save();
     await announcement.populate('author', 'fullName email image role');
 
+    // Process attachments to secure file attachment URLs before sending response
+    
+    const announcementObj = announcement.toObject();
+    
+    if (announcementObj.attachments && announcementObj.attachments.length > 0) {
+      announcementObj.attachments = announcementObj.attachments.map((attachment, index) => {
+        // Only replace URLs for file attachments, keep videos and links as they are
+        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
+          return {
+            name: attachment.name,
+            fileType: attachment.fileType,
+            fileSize: attachment.fileSize,
+            size: attachment.size,
+            type: attachment.type || 'file',
+            // Secure download endpoints (authentication via header)
+            downloadUrl: `${serverUrl}/api/files/stream/${announcementObj._id}/attachment/${index}`,
+            previewUrl: `${serverUrl}/api/files/stream/${announcementObj._id}/attachment/${index}?preview=true`,
+            index: index,
+            // Remove the original URL for security
+            metadata: attachment.metadata
+          };
+        } else {
+          // Keep video and link attachments unchanged
+          return {
+            ...attachment,
+            index: index
+          };
+        }
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: 'Announcement updated successfully',
-      data: announcement
+      data: announcementObj
     });
 
   } catch (error) {
@@ -357,10 +456,41 @@ const togglePinAnnouncement = async (req, res) => {
 
     await announcement.populate('author', 'fullName email image role');
 
+    // Process attachments to secure file attachment URLs before sending response
+    
+    const announcementObj = announcement.toObject();
+    
+    if (announcementObj.attachments && announcementObj.attachments.length > 0) {
+      announcementObj.attachments = announcementObj.attachments.map((attachment, index) => {
+        // Only replace URLs for file attachments, keep videos and links as they are
+        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
+          return {
+            name: attachment.name,
+            fileType: attachment.fileType,
+            fileSize: attachment.fileSize,
+            size: attachment.size,
+            type: attachment.type || 'file',
+            // Secure download endpoints (authentication via header)
+            downloadUrl: `${serverUrl}/api/files/stream/${announcementObj._id}/attachment/${index}`,
+            previewUrl: `${serverUrl}/api/files/stream/${announcementObj._id}/attachment/${index}?preview=true`,
+            index: index,
+            // Remove the original URL for security
+            metadata: attachment.metadata
+          };
+        } else {
+          // Keep video and link attachments unchanged
+          return {
+            ...attachment,
+            index: index
+          };
+        }
+      });
+    }
+
     res.status(200).json({
       success: true,
-      message: `Announcement ${announcement.pinned ? 'pinned' : 'unpinned'} successfully`,
-      data: announcement
+      message: `Announcement ${announcementObj.pinned ? 'pinned' : 'unpinned'} successfully`,
+      data: announcementObj
     });
 
   } catch (error) {
@@ -672,9 +802,40 @@ const updateStreamItem = async (req, res) => {
       { new: true }
     ).populate('author', 'fullName email image role');
 
+    // Process attachments to secure file attachment URLs before sending response
+    
+    const itemObj = updatedItem.toObject();
+    
+    if (itemObj.attachments && itemObj.attachments.length > 0) {
+      itemObj.attachments = itemObj.attachments.map((attachment, index) => {
+        // Only replace URLs for file attachments, keep videos and links as they are
+        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
+          return {
+            name: attachment.name,
+            fileType: attachment.fileType,
+            fileSize: attachment.fileSize,
+            size: attachment.size,
+            type: attachment.type || 'file',
+            // Secure download endpoints (authentication via header)
+            downloadUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}`,
+            previewUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}?preview=true`,
+            index: index,
+            // Remove the original URL for security
+            metadata: attachment.metadata
+          };
+        } else {
+          // Keep video and link attachments unchanged
+          return {
+            ...attachment,
+            index: index
+          };
+        }
+      });
+    }
+
     res.status(200).json({
       success: true,
-      data: updatedItem,
+      data: itemObj,
       message: 'Post updated successfully'
     });
 
@@ -769,10 +930,41 @@ const togglePinStreamItem = async (req, res) => {
       { new: true }
     ).populate('author', 'fullName email image role');
 
+    // Process attachments to secure file attachment URLs before sending response
+    
+    const itemObj = updatedItem.toObject();
+    
+    if (itemObj.attachments && itemObj.attachments.length > 0) {
+      itemObj.attachments = itemObj.attachments.map((attachment, index) => {
+        // Only replace URLs for file attachments, keep videos and links as they are
+        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
+          return {
+            name: attachment.name,
+            fileType: attachment.fileType,
+            fileSize: attachment.fileSize,
+            size: attachment.size,
+            type: attachment.type || 'file',
+            // Secure download endpoints (authentication via header)
+            downloadUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}`,
+            previewUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}?preview=true`,
+            index: index,
+            // Remove the original URL for security
+            metadata: attachment.metadata
+          };
+        } else {
+          // Keep video and link attachments unchanged
+          return {
+            ...attachment,
+            index: index
+          };
+        }
+      });
+    }
+
     res.status(200).json({
       success: true,
-      data: updatedItem,
-      message: `Post ${updatedItem.pinned ? 'pinned' : 'unpinned'} successfully`
+      data: itemObj,
+      message: `Post ${itemObj.pinned ? 'pinned' : 'unpinned'} successfully`
     });
 
   } catch (error) {

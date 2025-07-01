@@ -4,7 +4,7 @@ const User = require('../models/user.model');
 const Stream = require('../models/stream.model');
 const cloudinary = require('../config/cloudinary.config');
 const fs = require('fs');
-
+const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
 // Create assignment
 const createAssignment = async (req, res) => {
   try {
@@ -212,7 +212,12 @@ const getClassroomAssignments = async (req, res) => {
         );
         assignmentObj.userSubmission = userSubmission || null;
       }
-      
+      assignmentObj.attachments = assignment.attachments.map(attachment => ({
+        name: attachment.name,
+        fileType: attachment.fileType,
+        fileSize: attachment.fileSize,
+      }));
+      delete assignmentObj.submissions;
       return assignmentObj;
     });
 
@@ -317,7 +322,6 @@ const getAssignmentDetail = async (req, res) => {
     const assignmentData = assignment.toObject();
     
     // Replace attachment URLs with secure download links (token will be sent via Authorization header)
-    const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
     if (assignmentData.attachments && assignmentData.attachments.length > 0) {
       assignmentData.attachments = assignmentData.attachments.map((attachment, index) => ({
         name: attachment.name,
@@ -325,7 +329,7 @@ const getAssignmentDetail = async (req, res) => {
         fileSize: attachment.fileSize,
         // Secure download endpoints (authentication via header)
         downloadUrl: `${serverUrl}/api/files/assignment/${assignmentId}/attachment/${index}`,
-        previewUrl: `${serverUrl}/api/files/preview/${assignmentId}/${index}`,
+        previewUrl: `${serverUrl}/api/files/assignment/${assignmentId}/attachment/${index}?preview=true`,
         index: index
       }));
     }
@@ -339,6 +343,7 @@ const getAssignmentDetail = async (req, res) => {
             fileType: attachment.fileType,
             fileSize: attachment.fileSize,
             downloadUrl: `${serverUrl}/api/files/submission/${assignmentId}/${submission._id}/${index}`,
+            previewUrl: `${serverUrl}/api/files/submission/${assignmentId}/${submission._id}/${index}?preview=true`,
             index: index
           }));
         }
@@ -1040,6 +1045,17 @@ const getAssignmentSubmissions = async (req, res) => {
           hasBeenRevised: false,
           latestChangeType: null
         };
+      }
+
+      if (submissionObj.attachments) {
+        submissionObj.attachments = submissionObj.attachments.map((attachment, index) => ({
+          name: attachment.name,
+          fileType: attachment.fileType,
+          fileSize: attachment.fileSize,
+          downloadUrl: `${serverUrl}/api/files/submission/${assignment._id}/${submissionObj._id}/${index}`,
+          previewUrl: `${serverUrl}/api/files/submission/${assignment._id}/${submissionObj._id}/${index}?preview=true`,
+          index: index
+        }));
       }
       
       return submissionObj;

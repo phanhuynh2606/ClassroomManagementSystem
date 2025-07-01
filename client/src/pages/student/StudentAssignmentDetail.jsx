@@ -661,7 +661,7 @@ const StudentAssignmentDetail = () => {
                               <PaperClipOutlined className="text-green-600" />
                             </div>
                             <div className="flex-1">
-                              <Text strong>File {index + 1}</Text>
+                              <Text strong>{fixVietnameseEncoding(file.name)}</Text>
                             </div>
                             <Button
                               size="small"
