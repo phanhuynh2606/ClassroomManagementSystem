@@ -43,7 +43,6 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
 import moment from "moment";
 import { assignmentAPI } from "../../services/api";
 import {
@@ -63,7 +62,6 @@ const { Title, Text, Paragraph } = Typography;
 const AssignmentDetail = () => {
   const { classId, assignmentId } = useParams();
   const navigate = useNavigate();
-  const { token } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -198,7 +196,6 @@ const AssignmentDetail = () => {
           submission._id,
           attachmentIndex,
           attachment.name || `submission-file-${attachmentIndex + 1}`,
-          token,
           attachment
         );
       } catch (error) {
@@ -211,7 +208,7 @@ const AssignmentDetail = () => {
         });
       }
     },
-    [assignmentId, token, downloadingFiles]
+    [assignmentId, downloadingFiles]
   );
 
   const handleDownloadAllFiles = useCallback(
@@ -590,7 +587,6 @@ const AssignmentDetail = () => {
                                         assignmentId,
                                         index,
                                         file.name,
-                                        token,
                                         file
                                       );
                                     } catch (error) {

@@ -12,7 +12,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // Generate access token
   const generateAccessToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
-      expiresIn: '1d', // Access token expires in 1 day
+      expiresIn: '1m', // Access token expires in 1 day
     });
   };
 

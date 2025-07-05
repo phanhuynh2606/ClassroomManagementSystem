@@ -380,11 +380,11 @@ const StreamItem = ({
           item._id,
           index,
           attachment.name,
-          token,
           attachment
         );
       } catch (error) {
         // Error handling is done by the utility function
+        message.error('Download failed');
         console.error('Download failed:', error);
       } finally {
         setDownloadingFiles(prev => {

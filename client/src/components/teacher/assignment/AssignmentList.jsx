@@ -241,11 +241,52 @@ const ClassworkTab = ({ classId: propClassId }) => {
     const now = moment();
     
     if (date.isBefore(now)) {
-      return <Text type="danger">Due {date.format('HH:mm DD/MM/YYYY')}</Text>;
+      // Đã quá hạn
+      const overdueDays = now.diff(date, 'days');
+      return (
+        <Space size="small">
+          <Tag color="red" icon={<ClockCircleOutlined />}>
+            {overdueDays === 0 
+              ? 'Quá hạn hôm nay' 
+              : `Quá hạn ${overdueDays} ngày`
+            }
+          </Tag>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            {date.format('HH:mm DD/MM/YYYY')}
+          </Text>
+        </Space>
+      );
     } else if (date.diff(now, 'days') <= 7) {
-      return <Text type="warning">Due {date.format('HH:mm DD/MM/YYYY')}</Text>;
+      // Sắp đến hạn (trong 7 ngày)
+      const daysLeft = date.diff(now, 'days');
+      const hoursLeft = date.diff(now, 'hours') % 24;
+      
+      return (
+        <Space size="small">
+          <Tag color="orange" icon={<CalendarOutlined />}>
+            {daysLeft === 0 
+              ? `Hết hạn trong ${hoursLeft}h`
+              : `Còn ${daysLeft} ngày`
+            }
+          </Tag>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            {date.format('HH:mm DD/MM/YYYY')}
+          </Text>
+        </Space>
+      );
     } else {
-      return <Text>Due {date.format('HH:mm DD/MM/YYYY')}</Text>;
+      // Còn nhiều thời gian
+      const daysLeft = date.diff(now, 'days');
+      return (
+        <Space size="small">
+          <Tag color="green" icon={<CalendarOutlined />}>
+            Còn {daysLeft} ngày
+          </Tag>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            {date.format('HH:mm DD/MM/YYYY')}
+          </Text>
+        </Space>
+      );
     }
   };
 
@@ -593,8 +634,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
                       {item.dueDate && (
-                        <div className="flex items-center gap-1">
-                          <CalendarOutlined className="text-gray-500" />
+                        <div className="flex items-center">
                           {formatDueDate(item.dueDate)}
                         </div>
                       )}

@@ -1,6 +1,8 @@
 // File utility functions
 
 import { fixVietnameseEncoding } from "./convertStr";
+import { message } from "antd";
+import axiosClient from "../services/axiosClient";
 
 /**
  * Format file size to human readable format
@@ -140,7 +142,6 @@ export const handleSecureDownload = async (options) => {
     downloadUrl,           // Secure download URL (preferred)
     fallbackUrl,          // Direct URL (fallback)
     fileName,             // File name for download
-    token,                // Authentication token
     type = 'file',        // Type: 'stream', 'assignment', 'submission', 'file'
     context = {},         // Additional context: { assignmentId, submissionId, streamId, attachmentIndex }
     onProgress,           // Progress callback (optional)
@@ -155,15 +156,10 @@ export const handleSecureDownload = async (options) => {
     throw error;
   }
 
-  if (!token) {
-    const error = new Error('Authentication required. Please login again.');
-    onError?.(error);
-    throw error;
-  }
 
   const fixedFileName = fixVietnameseEncoding(fileName);
   const hideLoading = onProgress?.('start') || 
-    (typeof message !== 'undefined' ? message.loading(`Downloading ${fixedFileName}...`, 0) : null);
+    message.loading(`Downloading ${fixedFileName}...`, 0);
 
   try {
     let finalDownloadUrl = downloadUrl;
@@ -204,46 +200,39 @@ export const handleSecureDownload = async (options) => {
       throw new Error('No download URL available');
     }
 
-    // Determine if this is a secure endpoint that needs Authorization header
-    const isSecureEndpoint = finalDownloadUrl.includes('/api/files/') || 
-                            downloadUrl || 
-                            finalDownloadUrl.includes('downloadUrl');
-
-    const fetchOptions = {
-      method: 'GET',
+      onProgress?.('downloading');
+    console.log("finalDownloadUrl", finalDownloadUrl);
+    
+    // Extract only the path part if finalDownloadUrl is a full URL
+    let requestPath = finalDownloadUrl;
+    if (finalDownloadUrl.startsWith('http')) {
+      try {
+        const url = new URL(finalDownloadUrl);
+        requestPath = url.pathname; // Just the path part: /api/files/stream/xxx/attachment/0
+        
+        // Remove /api prefix since axiosClient already has /api in baseURL
+        if (requestPath.startsWith('/api')) {
+          requestPath = requestPath.substring(4); // Remove '/api' -> /files/stream/xxx/attachment/0
+        }
+      } catch (error) {
+        console.warn('Failed to parse URL, using as-is:', error);
+      }
+    }
+    
+    console.log("requestPath", requestPath);
+    
+    // Use axiosClient with just the path to avoid double baseURL
+    const response = await axiosClient.get(requestPath, {
+      responseType: 'blob', // Important for file downloads
       headers: {
         'Accept': '*/*',
       }
-    };
-
-    if (isSecureEndpoint && token) {
-      fetchOptions.headers['Authorization'] = `Bearer ${token}`;
-    } else {
-      fetchOptions.credentials = 'include';
-    }
-
-    onProgress?.('downloading');
-
-    const response = await fetch(finalDownloadUrl, fetchOptions);
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Session expired. Please login again.');
-      } else if (response.status === 403) {
-        throw new Error('You do not have permission to download this file.');
-      } else if (response.status === 404) {
-        throw new Error('File not found.');
-      } else if (response.status === 400) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'This file cannot be downloaded.');
-      } else {
-        throw new Error(`Download failed with status: ${response.status}`);
-      }
-    }
+    });
 
     onProgress?.('processing');
 
-    const blob = await response.blob();
+    // axiosClient returns response.data directly, which is the blob
+    const blob = response;
     const blobUrl = window.URL.createObjectURL(blob);
     
     const link = document.createElement('a');
@@ -263,9 +252,7 @@ export const handleSecureDownload = async (options) => {
     const successMessage = `Download started: ${fixedFileName}`;
     onSuccess?.(successMessage);
     
-    if (typeof message !== 'undefined') {
-      message.success(successMessage);
-    }
+    message.success(successMessage);
 
     return true;
 
@@ -274,9 +261,7 @@ export const handleSecureDownload = async (options) => {
     const errorMessage = error.message || 'Download failed. Please try again.';
     onError?.(error);
     
-    if (typeof message !== 'undefined') {
-      message.error(errorMessage);
-    }
+    message.error(errorMessage);
     
     throw error;
   } finally {
@@ -286,45 +271,41 @@ export const handleSecureDownload = async (options) => {
 };
 
 // Convenience functions for specific download types
-export const downloadStreamAttachment = async (streamId, attachmentIndex, fileName, token, attachment = {}) => {
+export const downloadStreamAttachment = async (streamId, attachmentIndex, fileName, attachment = {}) => {
   return handleSecureDownload({
     downloadUrl: attachment.downloadUrl,
     fallbackUrl: attachment.url,
     fileName,
-    token,
     type: 'stream',
     context: { streamId, attachmentIndex }
   });
 };
 
-export const downloadAssignmentAttachment = async (assignmentId, attachmentIndex, fileName, token, attachment = {}) => {
+export const downloadAssignmentAttachment = async (assignmentId, attachmentIndex, fileName, attachment = {}) => {
   return handleSecureDownload({
     downloadUrl: attachment.downloadUrl,
     fallbackUrl: attachment.url,
     fileName,
-    token,
     type: 'assignment',
     context: { assignmentId, attachmentIndex }
   });
 };
 
-export const downloadSubmissionAttachment = async (assignmentId, submissionId, attachmentIndex, fileName, token, attachment = {}) => {
+export const downloadSubmissionAttachment = async (assignmentId, submissionId, attachmentIndex, fileName, attachment = {}) => {
   return handleSecureDownload({
     downloadUrl: attachment.downloadUrl,
     fallbackUrl: attachment.url,
     fileName,
-    token,
     type: 'submission',
     context: { assignmentId, submissionId, attachmentIndex }
   });
 };
 
-export const downloadGenericFile = async (file, token) => {
+export const downloadGenericFile = async (file) => {
   return handleSecureDownload({
     downloadUrl: file.downloadUrl,
     fallbackUrl: file.url || file.previewUrl,
     fileName: file.name,
-    token,
     type: 'file'
   });
 }; 

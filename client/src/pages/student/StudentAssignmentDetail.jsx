@@ -52,7 +52,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import moment from "moment";
 import { assignmentAPI } from "../../services/api";
-import { formatFileSize } from "../../utils/fileUtils";
+import { formatFileSize, downloadGenericFile, getBrowserInfo } from "../../utils/fileUtils";
 import { fixVietnameseEncoding } from "../../utils/convertStr";
 import { StudentSubmissionModal } from "../../components/student/submission";
 
@@ -65,97 +65,18 @@ const StudentAssignmentDetail = () => {
   const { user, token } = useSelector((state) => state.auth);
   const [form] = Form.useForm();
 
-  // Universal file download function with fallback strategies for all browsers
+  // Simple file download using fileUtils
   const handleFileDownload = async (downloadUrl, fileName) => {
-    const hideLoading = message.loading('Downloading file...', 0);
-    
     try {
-      if (!token) {
-        message.error('Authentication required. Please login again.');
-        hideLoading();
-        return;
-      }
-
-      // Strategy 1: Modern Fetch + Blob (Works on all modern browsers)
-      if (window.fetch && window.Blob && window.URL?.createObjectURL) {
-        await downloadWithFetch(downloadUrl, fileName, token);
-        hideLoading();
-        message.success('File downloaded successfully!');
-        return;
-      }
-
-      // Strategy 2: Fallback for older browsers - Direct window open with auth
-      if (window.open) {
-        await downloadWithWindowOpen(downloadUrl, fileName, token);
-        hideLoading();
-        message.success('Download initiated. Check your downloads folder.');
-        return;
-      }
-
-      throw new Error('Browser does not support file downloads');
-      
+      await downloadGenericFile({
+        downloadUrl: downloadUrl,
+        url: downloadUrl,
+        name: fileName
+      });
     } catch (error) {
       console.error('Download error:', error);
-      hideLoading();
-      
-      // Ultimate fallback - copy download link
-      if (navigator.clipboard) {
-        try {
-          await navigator.clipboard.writeText(downloadUrl);
-          message.warning('Download failed. Download URL copied to clipboard. You can paste it in a new tab.');
-        } catch {
-          message.error('Download failed. Please try a different browser or contact support.');
-        }
-      } else {
-        message.error('Download failed. Please try a different browser or contact support.');
-      }
+      // Error handling is already done in downloadGenericFile
     }
-  };
-
-  // Strategy 1: Modern fetch + blob approach (Best for all browsers including Edge)
-  const downloadWithFetch = async (downloadUrl, fileName, token) => {
-    const response = await fetch(downloadUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`);
-    }
-
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fixVietnameseEncoding(fileName) || 'download';
-    link.style.display = 'none';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up
-    setTimeout(() => {
-      window.URL.revokeObjectURL(blobUrl);
-    }, 100);
-  };
-
-  // Strategy 2: Fallback approach for edge cases
-  const downloadWithWindowOpen = async (downloadUrl, fileName, token) => {
-    // For older browsers or special cases, open in new window
-    // Note: This might open as preview in some browsers but still works
-    const newWindow = window.open('', '_blank');
-    newWindow.location.href = `${downloadUrl}?t=${Date.now()}`;
-    
-    // Try to set document title for better UX
-    setTimeout(() => {
-      if (newWindow.document) {
-        newWindow.document.title = `Downloading ${fileName}`;
-      }
-    }, 100);
   };
 
   const [loading, setLoading] = useState(true);
@@ -164,20 +85,7 @@ const StudentAssignmentDetail = () => {
   const [submission, setSubmission] = useState(null);
   const [submitModalVisible, setSubmitModalVisible] = useState(false);
 
-  // Browser compatibility detection
-  const getBrowserInfo = () => {
-    const userAgent = navigator.userAgent;
-    const isModernBrowser = !!(window.fetch && window.Blob && window.URL?.createObjectURL);
-    
-    let browserName = 'Unknown';
-    if (userAgent.includes('Edge')) browserName = 'Edge';
-    else if (userAgent.includes('Chrome')) browserName = 'Chrome';
-    else if (userAgent.includes('Firefox')) browserName = 'Firefox';
-    else if (userAgent.includes('Safari')) browserName = 'Safari';
-    else if (userAgent.includes('Opera')) browserName = 'Opera';
-    
-    return { browserName, isModernBrowser };
-  };
+
 
   useEffect(() => {
     if (assignmentId) {
