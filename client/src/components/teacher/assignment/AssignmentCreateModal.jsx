@@ -164,6 +164,7 @@ const AssignmentCreateModal = ({
       onOk={handleOk}
       onCancel={handleCancel}
       confirmLoading={loading}
+      centered
       width={`85vw`}
       okText={mode === 'create' ? 'Tạo bài tập' : 'Cập nhật'}
       cancelText="Hủy"
