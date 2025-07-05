@@ -8,6 +8,7 @@ const requestRoutes = require('./request.route.js');
 const streamRoutes = require('./stream.route.js');
 const videoWatchRoutes = require('./videoWatch.route.js');
 const fileRoutes = require('./file.route.js');
+const materialRoutes = require('./material.route.js');
 
 const initRoutes = (app) => {
   app.use('/api/auth', authRoutes);
@@ -20,6 +21,7 @@ const initRoutes = (app) => {
   app.use('/api/stream', streamRoutes);
   app.use('/api/video-watch', videoWatchRoutes);
   app.use('/api/files', fileRoutes);
+  app.use('/api/materials', materialRoutes);
 };
 
 module.exports = initRoutes;
