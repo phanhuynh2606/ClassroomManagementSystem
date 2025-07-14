@@ -9,6 +9,12 @@ const quizSchema = new mongoose.Schema(
       trim: true,
       index: true
     },
+    category: {
+      type: String,
+      enum: ['PROGRESS_TEST', 'FINAL_EXAM', 'ASSIGNMENT', 'MID_TERM_EXAM'],
+      required: true,
+      index: true
+    },
     description: {
       type: String,
       trim: true,
@@ -31,7 +37,7 @@ const quizSchema = new mongoose.Schema(
       index: true
     }],
     duration: {
-      type: Number, // in minutes
+      type: Number,
       required: true,
     },
     startTime: {

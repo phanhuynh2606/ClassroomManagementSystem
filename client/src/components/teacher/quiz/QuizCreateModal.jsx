@@ -244,6 +244,8 @@ const QuizCreateModal = ({
         startTime: values.startTime?.toISOString(),
         endTime: values.endTime?.toISOString()
       };
+
+      console.log('Finished:', quizData);
       
       onOk(quizData);
     }).catch(error => {
