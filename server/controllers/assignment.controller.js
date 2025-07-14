@@ -4,7 +4,7 @@ const User = require('../models/user.model');
 const Stream = require('../models/stream.model');
 const cloudinary = require('../config/cloudinary.config');
 const fs = require('fs');
-
+const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
 // Create assignment
 const createAssignment = async (req, res) => {
   try {
@@ -91,6 +91,14 @@ const createAssignment = async (req, res) => {
         allowedFileTypes: [],
         textSubmissionRequired: false,
         fileSubmissionRequired: false
+      },
+      missingSubmissionPolicy: req.body.missingSubmissionPolicy || {
+        autoGradeWhenOverdue: false,
+        autoGradeValue: 0,
+        daysAfterDueForAutoGrade: 1,
+        allowBulkGrading: true,
+        notifyStudentsOfMissingSubmission: true,
+        reminderDaysBeforeDue: [3, 1]
       }
     });
 
@@ -204,7 +212,12 @@ const getClassroomAssignments = async (req, res) => {
         );
         assignmentObj.userSubmission = userSubmission || null;
       }
-      
+      assignmentObj.attachments = assignment.attachments.map(attachment => ({
+        name: attachment.name,
+        fileType: attachment.fileType,
+        fileSize: attachment.fileSize,
+      }));
+      delete assignmentObj.submissions;
       return assignmentObj;
     });
 
@@ -273,6 +286,22 @@ const getAssignmentDetail = async (req, res) => {
       assignment.submissions = assignment.submissions.filter(
         sub => sub.student._id.toString() === req.user._id.toString()
       );
+
+      // Hide grade and feedback if hideGradeFromStudent is true
+      assignment.submissions = assignment.submissions.map(submission => {
+        if (submission.hideGradeFromStudent) {
+          const submissionObj = submission.toObject();
+          // Hide grade and feedback information
+          submissionObj.grade = null;
+          submissionObj.feedback = null;
+          submissionObj.gradedAt = null;
+          submissionObj.gradedBy = null;
+          submissionObj.status = submissionObj.status === 'graded' ? 'submitted' : submissionObj.status;
+          // Keep allowResubmit flag for frontend logic
+          return submissionObj;
+        }
+        return submission;
+      });
     }
 
     // Add statistics
@@ -293,7 +322,6 @@ const getAssignmentDetail = async (req, res) => {
     const assignmentData = assignment.toObject();
     
     // Replace attachment URLs with secure download links (token will be sent via Authorization header)
-    const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
     if (assignmentData.attachments && assignmentData.attachments.length > 0) {
       assignmentData.attachments = assignmentData.attachments.map((attachment, index) => ({
         name: attachment.name,
@@ -301,7 +329,7 @@ const getAssignmentDetail = async (req, res) => {
         fileSize: attachment.fileSize,
         // Secure download endpoints (authentication via header)
         downloadUrl: `${serverUrl}/api/files/assignment/${assignmentId}/attachment/${index}`,
-        previewUrl: `${serverUrl}/api/files/preview/${assignmentId}/${index}`,
+        previewUrl: `${serverUrl}/api/files/assignment/${assignmentId}/attachment/${index}?preview=true`,
         index: index
       }));
     }
@@ -315,6 +343,7 @@ const getAssignmentDetail = async (req, res) => {
             fileType: attachment.fileType,
             fileSize: attachment.fileSize,
             downloadUrl: `${serverUrl}/api/files/submission/${assignmentId}/${submission._id}/${index}`,
+            previewUrl: `${serverUrl}/api/files/submission/${assignmentId}/${submission._id}/${index}?preview=true`,
             index: index
           }));
         }
@@ -361,6 +390,52 @@ const updateAssignment = async (req, res) => {
       });
     }
 
+    // Restrict certain fields if assignment is published and has submissions
+    const hasSubmissions = assignment.submissions && assignment.submissions.length > 0;
+    const isPublished = assignment.visibility === 'published';
+    
+    if (isPublished && hasSubmissions) {
+      // Fields that cannot be changed after students have submitted
+      const restrictedFields = [];
+      
+      // Check submission type change
+      if (updateData.submissionSettings && 
+          updateData.submissionSettings.type && 
+          updateData.submissionSettings.type !== assignment.submissionSettings?.type) {
+        restrictedFields.push('submission type');
+      }
+      
+      // Check due date change (only allow extending, not shortening)
+      if (updateData.dueDate) {
+        const newDueDate = new Date(updateData.dueDate);
+        const currentDueDate = new Date(assignment.dueDate);
+        if (newDueDate < currentDueDate) {
+          restrictedFields.push('due date (cannot be moved earlier)');
+        }
+      }
+      
+      // Check total points change (only allow increasing for fairness)
+      if (updateData.totalPoints && updateData.totalPoints < assignment.totalPoints) {
+        const hasGradedSubmissions = assignment.submissions.some(sub => sub.grade !== null && sub.grade !== undefined);
+        if (hasGradedSubmissions) {
+          restrictedFields.push('total points (cannot be decreased when submissions are graded)');
+        }
+      }
+      
+      if (restrictedFields.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot modify ${restrictedFields.join(', ')} after assignment is published and has submissions`,
+          details: {
+            restrictedFields,
+            hasSubmissions,
+            isPublished,
+            submissionCount: assignment.submissions.length
+          }
+        });
+      }
+    }
+
     // Parse submissionSettings if it's a string (from FormData)
     if (updateData.submissionSettings && typeof updateData.submissionSettings === 'string') {
       try {
@@ -369,6 +444,17 @@ const updateAssignment = async (req, res) => {
         console.error('Error parsing submissionSettings in update:', error);
         // Keep existing submissionSettings if parsing fails
         delete updateData.submissionSettings;
+      }
+    }
+
+    // Parse missingSubmissionPolicy if it's a string (from FormData)
+    if (updateData.missingSubmissionPolicy && typeof updateData.missingSubmissionPolicy === 'string') {
+      try {
+        updateData.missingSubmissionPolicy = JSON.parse(updateData.missingSubmissionPolicy);
+      } catch (error) {
+        console.error('Error parsing missingSubmissionPolicy in update:', error);
+        // Keep existing missingSubmissionPolicy if parsing fails
+        delete updateData.missingSubmissionPolicy;
       }
     }
 
@@ -495,9 +581,51 @@ const submitAssignment = async (req, res) => {
     );
 
     if (existingSubmission) {
-      return res.status(400).json({
-        success: false,
-        message: 'You have already submitted this assignment'
+      // Check if resubmission is allowed
+      if (!existingSubmission.allowResubmit) {
+        return res.status(400).json({
+          success: false,
+          message: 'You have already submitted this assignment and resubmission is not allowed'
+        });
+      }
+      
+      // If resubmission is allowed, increment resubmission count
+      existingSubmission.resubmissionCount = (existingSubmission.resubmissionCount || 0) + 1;
+      existingSubmission.submittedAt = new Date();
+      existingSubmission.content = content || '';
+      existingSubmission.attachments = [];
+      
+      // Handle file attachments for resubmission
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+          existingSubmission.attachments.push({
+            name: file.originalname,
+            url: file.path,
+            fileType: file.mimetype,
+            fileSize: file.size
+          });
+        }
+      }
+      
+      // Update status
+      const now = new Date();
+      const dueDate = new Date(assignment.dueDate);
+      const isLate = now > dueDate;
+      existingSubmission.status = isLate ? 'late' : 'submitted';
+      
+      // Clear previous grading if resubmitted
+      existingSubmission.grade = null;
+      existingSubmission.feedback = null;
+      existingSubmission.gradedAt = null;
+      existingSubmission.gradedBy = null;
+      existingSubmission.allowResubmit = false; // Reset allow resubmit flag
+      
+      await assignment.save();
+      
+      return res.status(200).json({
+        success: true,
+        message: `Assignment resubmitted successfully (Resubmission #${existingSubmission.resubmissionCount})`,
+        data: existingSubmission
       });
     }
 
@@ -918,6 +1046,17 @@ const getAssignmentSubmissions = async (req, res) => {
           latestChangeType: null
         };
       }
+
+      if (submissionObj.attachments) {
+        submissionObj.attachments = submissionObj.attachments.map((attachment, index) => ({
+          name: attachment.name,
+          fileType: attachment.fileType,
+          fileSize: attachment.fileSize,
+          downloadUrl: `${serverUrl}/api/files/submission/${assignment._id}/${submissionObj._id}/${index}`,
+          previewUrl: `${serverUrl}/api/files/submission/${assignment._id}/${submissionObj._id}/${index}?preview=true`,
+          index: index
+        }));
+      }
       
       return submissionObj;
     });
@@ -1009,6 +1148,330 @@ const getAssignmentSubmissions = async (req, res) => {
   }
 };
 
+// Auto-grade missing submissions when assignment is overdue
+const autoGradeMissingSubmissions = async (req, res) => {
+  try {
+    const { assignmentId } = req.params;
+    
+    const assignment = await Assignment.findById(assignmentId)
+      .populate('classroom', 'teacher students')
+      .populate('createdBy', 'fullName');
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assignment not found'
+      });
+    }
+
+    // Check if user is teacher
+    if (assignment.classroom.teacher.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to grade this assignment'
+      });
+    }
+
+    // Check if assignment is overdue
+    const now = new Date();
+    const dueDate = new Date(assignment.dueDate);
+    const isOverdue = now > dueDate;
+
+    if (!isOverdue) {
+      return res.status(400).json({
+        success: false,
+        message: 'Assignment is not yet overdue. Auto-grading only available for overdue assignments.'
+      });
+    }
+
+    // Find students who haven't submitted
+    const submittedStudentIds = assignment.submissions.map(sub => sub.student.toString());
+    const allStudents = assignment.classroom.students || [];
+    
+    const missingStudents = allStudents.filter(student => 
+      !submittedStudentIds.includes(student.student.toString())
+    );
+
+    if (missingStudents.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No missing submissions found. All students have submitted.',
+        data: {
+          gradedCount: 0,
+          message: 'All students have already submitted'
+        }
+      });
+    }
+
+    // Get teacher info
+    const teacher = await User.findById(req.user._id).select('fullName');
+    const daysOverdue = Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24));
+
+    // Create submissions with grade 0 for missing students
+    const newSubmissions = [];
+    
+    for (const student of missingStudents) {
+      const gradingEntry = {
+        grade: 0,
+        originalGrade: 0,
+        feedback: `No submission received. Assignment was due ${daysOverdue} day(s) ago. Automatically graded as 0.`,
+        rubricGrades: new Map(),
+        annotations: [],
+        gradedAt: now,
+        gradedBy: req.user._id,
+        gradedByName: teacher?.fullName || 'Teacher',
+        isLatest: true,
+        gradeReason: `Auto-graded for missing submission (${daysOverdue} days overdue)`,
+        previousGrade: null,
+        changeType: 'initial',
+        latePenalty: {
+          applied: false,
+          percentage: 0,
+          daysLate: 0,
+          penaltyAmount: 0
+        }
+      };
+
+      const newSubmission = {
+        student: student.student._id || student.student,
+        submittedAt: null, // No submission
+        content: null,
+        attachments: [],
+        submissionType: 'both',
+        grade: 0,
+        originalGrade: 0,
+        feedback: gradingEntry.feedback,
+        status: 'graded',
+        gradedAt: now,
+        gradedBy: req.user._id,
+        latePenaltyInfo: {
+          applied: false,
+          percentage: 0,
+          daysLate: 0,
+          penaltyAmount: 0,
+          calculatedAt: now
+        },
+        gradingHistory: [gradingEntry],
+        allowResubmit: false,
+        hideGradeFromStudent: false,
+        resubmissionCount: 0,
+        lastModified: now
+      };
+
+      assignment.submissions.push(newSubmission);
+      newSubmissions.push(newSubmission);
+    }
+
+    // Save assignment
+    await assignment.save();
+
+    // Populate for response
+    await assignment.populate('submissions.student', 'fullName email image');
+    await assignment.populate('submissions.gradedBy', 'fullName email');
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully auto-graded ${missingStudents.length} missing submission(s) with grade 0`,
+      data: {
+        gradedCount: missingStudents.length,
+        gradedStudents: newSubmissions.map(sub => ({
+          studentId: sub.student,
+          studentName: missingStudents.find(s => s.student._id.toString() === sub.student.toString())?.student?.fullName || 'Unknown',
+          grade: sub.grade,
+          feedback: sub.feedback
+        })),
+        daysOverdue: daysOverdue,
+        autoGradedAt: now
+      }
+    });
+
+  } catch (error) {
+    console.error('Error auto-grading missing submissions:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// Bulk grade missing submissions (manual teacher action)
+const bulkGradeMissingSubmissions = async (req, res) => {
+  try {
+    const { assignmentId } = req.params;
+    const { 
+      grade = 0, 
+      feedback = 'No submission received.', 
+      studentIds = [], // Specific students to grade, empty means all missing
+      allowResubmit = false,
+      hideGradeFromStudent = false 
+    } = req.body;
+
+    // Validate grade
+    const numericGrade = Number(grade);
+    if (isNaN(numericGrade) || numericGrade < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Grade must be a valid non-negative number'
+      });
+    }
+
+    const assignment = await Assignment.findById(assignmentId)
+      .populate('classroom', 'teacher students')
+      .populate('createdBy', 'fullName');
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assignment not found'
+      });
+    }
+
+    // Check if user is teacher
+    if (assignment.classroom.teacher.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to grade this assignment'
+      });
+    }
+
+    // Validate grade against assignment max points
+    const maxPoints = assignment.totalPoints || 100;
+    if (numericGrade > maxPoints) {
+      return res.status(400).json({
+        success: false,
+        message: `Grade cannot exceed assignment max points (${maxPoints})`
+      });
+    }
+
+    // Find students who haven't submitted
+    const submittedStudentIds = assignment.submissions.map(sub => sub.student.toString());
+    const allStudents = assignment.classroom.students || [];
+    
+    let targetStudents;
+    if (studentIds.length > 0) {
+      // Grade specific students
+      targetStudents = allStudents.filter(student => 
+        studentIds.includes(student.student._id.toString()) &&
+        !submittedStudentIds.includes(student.student._id.toString())
+      );
+    } else {
+      // Grade all missing students
+      targetStudents = allStudents.filter(student => 
+        !submittedStudentIds.includes(student.student.toString())
+      );
+    }
+
+    if (targetStudents.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No eligible students found for bulk grading.',
+        data: {
+          gradedCount: 0,
+          message: 'All specified students have already submitted or are not found'
+        }
+      });
+    }
+
+    // Get teacher info
+    const teacher = await User.findById(req.user._id).select('fullName');
+    const now = new Date();
+    const dueDate = new Date(assignment.dueDate);
+    const isOverdue = now > dueDate;
+    const daysOverdue = isOverdue ? Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24)) : 0;
+
+    // Create submissions for missing students
+    const newSubmissions = [];
+    
+    for (const student of targetStudents) {
+      const gradingEntry = {
+        grade: numericGrade,
+        originalGrade: numericGrade,
+        feedback: feedback || (isOverdue ? 
+          `No submission received. Assignment was due ${daysOverdue} day(s) ago. Graded by teacher.` :
+          'No submission received. Graded by teacher.'
+        ),
+        rubricGrades: new Map(),
+        annotations: [],
+        gradedAt: now,
+        gradedBy: req.user._id,
+        gradedByName: teacher?.fullName || 'Teacher',
+        isLatest: true,
+        gradeReason: `Bulk graded for missing submission${isOverdue ? ` (${daysOverdue} days overdue)` : ''}`,
+        previousGrade: null,
+        changeType: 'initial',
+        latePenalty: {
+          applied: false,
+          percentage: 0,
+          daysLate: 0,
+          penaltyAmount: 0
+        }
+      };
+
+      const newSubmission = {
+        student: student.student._id || student.student,
+        submittedAt: null, // No submission
+        content: null,
+        attachments: [],
+        submissionType: 'both',
+        grade: numericGrade,
+        originalGrade: numericGrade,
+        feedback: gradingEntry.feedback,
+        status: 'graded',
+        gradedAt: now,
+        gradedBy: req.user._id,
+        latePenaltyInfo: {
+          applied: false,
+          percentage: 0,
+          daysLate: 0,
+          penaltyAmount: 0,
+          calculatedAt: now
+        },
+        gradingHistory: [gradingEntry],
+        allowResubmit: allowResubmit,
+        hideGradeFromStudent: hideGradeFromStudent,
+        resubmissionCount: 0,
+        lastModified: now
+      };
+
+      assignment.submissions.push(newSubmission);
+      newSubmissions.push(newSubmission);
+    }
+
+    // Save assignment
+    await assignment.save();
+
+    // Populate for response
+    await assignment.populate('submissions.student', 'fullName email image');
+    await assignment.populate('submissions.gradedBy', 'fullName email');
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully bulk graded ${targetStudents.length} missing submission(s)`,
+      data: {
+        gradedCount: targetStudents.length,
+        gradedStudents: newSubmissions.map(sub => ({
+          studentId: sub.student,
+          studentName: targetStudents.find(s => s.student._id.toString() === sub.student.toString())?.student?.fullName || 'Unknown',
+          grade: sub.grade,
+          feedback: sub.feedback
+        })),
+        grade: numericGrade,
+        maxPoints: maxPoints,
+        isOverdue: isOverdue,
+        daysOverdue: daysOverdue,
+        bulkGradedAt: now
+      }
+    });
+
+  } catch (error) {
+    console.error('Error bulk grading missing submissions:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   createAssignment,
   getClassroomAssignments,
@@ -1017,5 +1480,7 @@ module.exports = {
   deleteAssignment,
   submitAssignment,
   gradeSubmission,
-  getAssignmentSubmissions
+  getAssignmentSubmissions,
+  autoGradeMissingSubmissions,
+  bulkGradeMissingSubmissions
 }; 

@@ -55,11 +55,26 @@ router.get('/:assignmentId/submissions',
   ctrls.getAssignmentSubmissions
 );
 
+// Grade submission
 router.put('/:assignmentId/submissions/:submissionId/grade', 
   protect, 
   authorize('teacher', 'admin'), 
   resolveClassroomId,  // For future file upload needs in grading
   ctrls.gradeSubmission
+);
+
+// Auto-grade missing submissions when overdue
+router.post('/:assignmentId/auto-grade-missing', 
+  protect, 
+  authorize('teacher', 'admin'), 
+  ctrls.autoGradeMissingSubmissions
+);
+
+// Bulk grade missing submissions
+router.post('/:assignmentId/bulk-grade-missing', 
+  protect, 
+  authorize('teacher', 'admin'), 
+  ctrls.bulkGradeMissingSubmissions
 );
 
 module.exports = router; 

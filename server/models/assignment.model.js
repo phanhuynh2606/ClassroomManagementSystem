@@ -180,6 +180,12 @@ const assignmentSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    maxLateDays: {
+      type: Number,
+      default: 7, // Maximum days allowed for late submission
+      min: 1,
+      max: 30
+    },
     latePenalty: {
       type: Number,
       default: 0
@@ -235,7 +241,53 @@ const assignmentSchema = new mongoose.Schema(
       enum: ['draft', 'published', 'scheduled'],
       default: 'draft'
     },
-    publishDate: Date
+    publishDate: Date,
+    // Policy for handling missing submissions
+    missingSubmissionPolicy: {
+      autoGradeWhenOverdue: {
+        type: Boolean,
+        default: false
+      },
+      autoGradeValue: {
+        type: Number,
+        default: 0
+      },
+      daysAfterDueForAutoGrade: {
+        type: Number,
+        default: 1 // Auto-grade 1 day after due date
+      },
+      allowBulkGrading: {
+        type: Boolean,
+        default: true
+      },
+      notifyStudentsOfMissingSubmission: {
+        type: Boolean,
+        default: true
+      },
+      reminderDaysBeforeDue: {
+        type: [Number],
+        default: [3, 1] // Send reminders 3 and 1 days before due
+      }
+    },
+    // History of auto-grading actions
+    autoGradeHistory: [{
+      autoGradedAt: {
+        type: Date,
+        default: Date.now
+      },
+      studentsAutoGraded: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }],
+      gradeValue: {
+        type: Number,
+        default: 0
+      },
+      reason: {
+        type: String,
+        default: 'Scheduled auto-grade for missing submissions'
+      }
+    }]
   },
   {
     timestamps: true,

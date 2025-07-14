@@ -49,7 +49,7 @@ const { TextArea } = Input;
 const { Option } = Select;
 
 // Utility function to truncate text
-const truncateText = (text, maxLength = 150) => {
+const truncateText = (text, maxLength = 100) => {
   if (!text) return '';
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength).trim() + '...';
@@ -82,6 +82,7 @@ const TruncatedText = ({
       <Text 
         className={className}
         title={titleText}
+        style={{ fontSize: '12px' ,fontWeight: 'normal' ,marginBottom: '0px' }}
       >
         {truncateText(displayText, maxLength)}
       </Text>
@@ -98,7 +99,7 @@ const TruncatedText = ({
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        lineHeight: '1.5em',
+        lineHeight: '1.2em',
         maxHeight: `${lines * 1.2}em`
       }}
       title={titleText}
@@ -240,11 +241,52 @@ const ClassworkTab = ({ classId: propClassId }) => {
     const now = moment();
     
     if (date.isBefore(now)) {
-      return <Text type="danger">Due {date.format('HH:mm DD/MM/YYYY')}</Text>;
+      // Đã quá hạn
+      const overdueDays = now.diff(date, 'days');
+      return (
+        <Space size="small">
+          <Tag color="red" icon={<ClockCircleOutlined />}>
+            {overdueDays === 0 
+              ? 'Quá hạn hôm nay' 
+              : `Quá hạn ${overdueDays} ngày`
+            }
+          </Tag>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            {date.format('HH:mm DD/MM/YYYY')}
+          </Text>
+        </Space>
+      );
     } else if (date.diff(now, 'days') <= 7) {
-      return <Text type="warning">Due {date.format('HH:mm DD/MM/YYYY')}</Text>;
+      // Sắp đến hạn (trong 7 ngày)
+      const daysLeft = date.diff(now, 'days');
+      const hoursLeft = date.diff(now, 'hours') % 24;
+      
+      return (
+        <Space size="small">
+          <Tag color="orange" icon={<CalendarOutlined />}>
+            {daysLeft === 0 
+              ? `Hết hạn trong ${hoursLeft}h`
+              : `Còn ${daysLeft} ngày`
+            }
+          </Tag>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            {date.format('HH:mm DD/MM/YYYY')}
+          </Text>
+        </Space>
+      );
     } else {
-      return <Text>Due {date.format('HH:mm DD/MM/YYYY')}</Text>;
+      // Còn nhiều thời gian
+      const daysLeft = date.diff(now, 'days');
+      return (
+        <Space size="small">
+          <Tag color="green" icon={<CalendarOutlined />}>
+            Còn {daysLeft} ngày
+          </Tag>
+          <Text type="secondary" style={{ fontSize: '12px' }}>
+            {date.format('HH:mm DD/MM/YYYY')}
+          </Text>
+        </Space>
+      );
     }
   };
 
@@ -433,11 +475,6 @@ const ClassworkTab = ({ classId: propClassId }) => {
         // Show grading statistics if available
         if (response.data.gradingStats) {
           const stats = response.data.gradingStats;
-          console.log('Grading Statistics:', {
-            totalAttempts: stats.totalGradingAttempts,
-            hasBeenRevised: stats.hasBeenRevised,
-            gradeChange: stats.gradeChange
-          });
         }
         
         // Don't close modal, just show success and let user continue grading
@@ -456,7 +493,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <Title level={3} className="mb-0">Classwork</Title>
+        <Title level={3} className="mb-0">Assignments</Title>
         <Dropdown 
           menu={{ items: createMenuItems }}
           placement="bottomRight"
@@ -508,8 +545,11 @@ const ClassworkTab = ({ classId: propClassId }) => {
                 <div className="flex-1">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <Title level={4} className="mb-1">
+                      <Title level={4} className="mb-1" style={{ fontSize: '14px',marginBottom: '0px', marginTop: '0px' }}>
                         {item.title}
+                      </Title>
+                      <Title level={5} style={{ fontSize: '14px',marginBottom: '5px', marginTop: '5px' ,fontWeight: 'normal' }} type='secondary'>
+                        Ngày tạo:  {moment(item.createdAt).format('DD/MM/YYYY HH:mm')}
                       </Title>
                       <Space>
                         <Tag color="blue" className="capitalize">
@@ -579,7 +619,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
                   </div>
 
                   {item.description && (
-                    <div className="mb-3">
+                    <div className="mb-0" style={{ fontSize: '12px' ,fontWeight: 'normal' ,marginBottom: '0px' }}>
                       <TruncatedText 
                         text={item.description}
                         maxLength={10}
@@ -594,8 +634,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
                       {item.dueDate && (
-                        <div className="flex items-center gap-1">
-                          <CalendarOutlined className="text-gray-500" />
+                        <div className="flex items-center">
                           {formatDueDate(item.dueDate)}
                         </div>
                       )}

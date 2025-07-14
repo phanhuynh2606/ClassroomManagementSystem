@@ -15,6 +15,16 @@ const normalizeAssignmentData = (assignment) => {
       fileSubmissionRequired: false,
       ...assignment.submissionSettings
     },
+    // Ensure missingSubmissionPolicy has default values
+    missingSubmissionPolicy: {
+      autoGradeWhenOverdue: false,
+      autoGradeValue: 0,
+      daysAfterDueForAutoGrade: 1,
+      allowBulkGrading: true,
+      notifyStudentsOfMissingSubmission: true,
+      reminderDaysBeforeDue: [3, 1],
+      ...assignment.missingSubmissionPolicy
+    },
     // Ensure attachments is array
     attachments: assignment.attachments || [],
     // Ensure submissions is array  
@@ -66,31 +76,20 @@ const assignmentAPI = {
   // Create new assignment
   create: (classroomId, assignmentData) => {
     const formData = new FormData();
-    // Add basic assignment data
-    console.log('Creating assignment with data:', assignmentData);
     
     Object.keys(assignmentData).forEach(key => {
       if (key === 'attachments') {
         // Handle file attachments
         if (assignmentData.attachments && assignmentData.attachments.length > 0) {
           assignmentData.attachments.forEach((file, index) => {
-            console.log(`Processing attachment ${index}:`, {
-              name: file.name,
-              originFileObj: file.originFileObj?.name,
-              size: file.originFileObj?.size
-            });
             
             if (file.originFileObj) {
-              // Log file details
-              console.log('File name:', JSON.stringify(file.originFileObj.name));
-              console.log('File name char codes:', [...file.originFileObj.name].map(c => c.charCodeAt(0)));
-              
               formData.append('attachments', file.originFileObj);
             }
           });
         }
-      } else if (key === 'submissionSettings') {
-        // Handle nested object - stringify for FormData
+      } else if (key === 'submissionSettings' || key === 'missingSubmissionPolicy') {
+        // Handle nested objects - stringify for FormData
         formData.append(key, JSON.stringify(assignmentData[key]));
       } else if (key === 'tags' && Array.isArray(assignmentData[key])) {
         // Handle array fields
@@ -102,16 +101,7 @@ const assignmentAPI = {
       }
     });
     
-    // Log FormData contents
-    console.log("FormData entries:");
-    for (let [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
-        console.log(`File name char codes:`, [...value.name].map(c => c.charCodeAt(0)));
-      } else {
-        console.log(`${key}:`, value);
-      }
-    }
+    
     
     return handleResponse(
       axiosClient.post(`/assignments/classroom/${classroomId}`, formData, {
@@ -126,26 +116,19 @@ const assignmentAPI = {
   update: (assignmentId, assignmentData) => {
     const formData = new FormData();
     
-    console.log('Updating assignment with data:', assignmentData);
-    
     Object.keys(assignmentData).forEach(key => {
       if (key === 'attachments') {
         // Handle file attachments
         if (assignmentData.attachments && assignmentData.attachments.length > 0) {
           assignmentData.attachments.forEach((file, index) => {
-            console.log(`Processing attachment ${index}:`, {
-              name: file.name,
-              originFileObj: file.originFileObj?.name,
-              size: file.originFileObj?.size
-            });
             
             if (file.originFileObj) {
               formData.append('attachments', file.originFileObj);
             }
           });
         }
-      } else if (key === 'submissionSettings') {
-        // Handle nested object - stringify for FormData
+      } else if (key === 'submissionSettings' || key === 'missingSubmissionPolicy') {
+        // Handle nested objects - stringify for FormData
         formData.append(key, JSON.stringify(assignmentData[key]));
       } else if (key === 'tags' && Array.isArray(assignmentData[key])) {
         // Handle array fields
@@ -156,16 +139,6 @@ const assignmentAPI = {
         formData.append(key, assignmentData[key]);
       }
     });
-
-    // Log FormData contents for debugging
-    console.log("FormData entries for update:");
-    for (let [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        console.log(`${key}: File(${value.name}, ${value.size} bytes)`);
-      } else {
-        console.log(`${key}:`, value);
-      }
-    }
 
     return handleResponse(
       axiosClient.put(`/assignments/${assignmentId}`, formData, {
@@ -239,6 +212,17 @@ const assignmentAPI = {
   // Bulk operations
   bulkGrade: (assignmentId, gradesData) => {
     return axiosClient.post(`/assignments/${assignmentId}/bulk-grade`, gradesData);
+  },
+
+  // Missing Submission Policy Operations
+  // Auto-grade missing submissions when assignment is overdue
+  autoGradeMissingSubmissions: (assignmentId) => {
+    return axiosClient.post(`/assignments/${assignmentId}/auto-grade-missing`);
+  },
+
+  // Bulk grade missing submissions (manual) - based on assignment's missingSubmissionPolicy.allowBulkGrading
+  bulkGradeMissingSubmissions: (assignmentId, gradingData) => {
+    return axiosClient.post(`/assignments/${assignmentId}/bulk-grade-missing`, gradingData);
   },
 
   // Export assignment data

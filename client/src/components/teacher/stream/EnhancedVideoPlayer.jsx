@@ -83,12 +83,6 @@ const EnhancedVideoPlayer = forwardRef(({
 
   // Initialize watch tracking
   useEffect(() => {
-    console.log('🔍 Tracking initialization check:', {
-      enableTracking,
-      classroomId,
-      videoData: !!videoData,
-      videoDataKeys: videoData ? Object.keys(videoData) : null
-    });
     
     if (enableTracking && classroomId && videoData) {
       console.log('✅ Starting tracking initialization...');
@@ -103,14 +97,12 @@ const EnhancedVideoPlayer = forwardRef(({
 
     // Cleanup on unmount
     return () => {
-      console.log('🧹 Component unmounting - cleaning up tracking...');
       if (progressUpdateIntervalRef.current) {
         clearInterval(progressUpdateIntervalRef.current);
       }
       // End session when component unmounts (only if not already ending)
       const current = latestValuesRef.current;
       if (current.watchId && current.sessionStartTime && !current.isEndingSession) {
-        console.log('📤 Component unmount: ending watch session...');
         endWatchSession();
       } else if (current.isEndingSession) {
         console.log('ℹ️ Watch session already being ended - skipping cleanup');
@@ -167,16 +159,8 @@ const EnhancedVideoPlayer = forwardRef(({
         streamItemId
       );
 
-      console.log('📡 API Response:', response);
-
       if (response.success) {
         const { watchId: newWatchId, currentTime, progressPercent } = response.data;
-        console.log('✅ Tracking initialized successfully:', {
-          watchId: newWatchId,
-          currentTime,
-          progressPercent,
-          shouldResume: currentTime > 0
-        });
         
         setWatchId(newWatchId);
         setSessionStartTime(Date.now());
@@ -186,18 +170,15 @@ const EnhancedVideoPlayer = forwardRef(({
         
         // Restore previous position if exists (unless skipResume is true)
         if (currentTime > 0 && playerRef.current && !skipResume) {
-          console.log(`🔄 Resuming video from ${currentTime} seconds (${progressPercent}%)`);
           
           // Add delay to ensure player is ready
           setTimeout(() => {
             if (playerRef.current) {
-              console.log('⏯️ Seeking to position:', currentTime);
               playerRef.current.seekTo(currentTime);
               message.info(`Resuming from ${formatTime(currentTime)}`);
             }
           }, 1000);
         } else if (skipResume) {
-          console.log('🔄 Replay mode - starting from beginning (skipping resume)');
           // Ensure we start from 0
           setTimeout(() => {
             if (playerRef.current) {
@@ -224,14 +205,6 @@ const EnhancedVideoPlayer = forwardRef(({
       return;
     }
     
-    console.log("🔚 Ending watch session with data:", {
-      watchId: current.watchId,
-      hasWatchId: !!current.watchId,
-      currentTime: current.played * current.duration,
-      duration: current.duration,
-      sessionStartTime: current.sessionStartTime
-    });
-    
     if (!current.watchId) {
       console.log('⚠️ No watchId available for ending session');
       return;
@@ -248,12 +221,6 @@ const EnhancedVideoPlayer = forwardRef(({
       // Calculate actual watched seconds for this session
       const actualWatchedSeconds = Math.min(sessionTime, currentTime);
 
-      console.log('📤 Sending end session request:', {
-        watchId: current.watchId,
-        currentTime: currentTime.toFixed(2),
-        actualWatchedSeconds: actualWatchedSeconds.toFixed(2)
-      });
-
       await videoWatchAPI.endWatching(
         current.watchId,
         currentTime,
@@ -268,7 +235,6 @@ const EnhancedVideoPlayer = forwardRef(({
       latestValuesRef.current.watchId = null;
       latestValuesRef.current.sessionStartTime = null;
       
-      console.log('✅ Watch session ended successfully - cleared watchId');
     } catch (error) {
       console.error('❌ Error ending watch session:', error);
       // Reset flag on error so it can be retried
@@ -278,15 +244,9 @@ const EnhancedVideoPlayer = forwardRef(({
 
   // Setup progress tracking interval
   useEffect(() => {
-    console.log('🔄 Progress interval check:', {
-      playing,
-      watchId: !!watchId,
-      hasInterval: !!progressUpdateIntervalRef.current
-    });
     
     // Clear existing interval first
     if (progressUpdateIntervalRef.current) {
-      console.log('🧹 Clearing existing interval');
       clearInterval(progressUpdateIntervalRef.current);
       progressUpdateIntervalRef.current = null;
     }
@@ -299,7 +259,6 @@ const EnhancedVideoPlayer = forwardRef(({
         console.log('⏰ Progress interval triggered - updating...');
         
         if (!current.watchId || !current.duration || current.seeking) {
-          console.log('⚠️ Skipping progress update - conditions not met');
           return;
         }
 
@@ -310,11 +269,6 @@ const EnhancedVideoPlayer = forwardRef(({
           
           sessionWatchTimeRef.current = Math.min(sessionTime, currentTime);
 
-          console.log('📡 Sending progress update:', {
-            watchId: current.watchId,
-            currentTime: currentTime.toFixed(2),
-            sessionWatchTime: sessionWatchTimeRef.current.toFixed(2)
-          });
 
           const response = await videoWatchAPI.updateProgress(
             current.watchId,
@@ -361,7 +315,6 @@ const EnhancedVideoPlayer = forwardRef(({
   useEffect(() => {
     const handleBeforeUnload = () => {
       const current = latestValuesRef.current;
-      console.log('🚨 Page unloading - saving progress...');
       
       if (current.watchId && current.sessionStartTime) {
         // Use sendBeacon for reliable request when page unloads
@@ -373,11 +326,6 @@ const EnhancedVideoPlayer = forwardRef(({
         const token = localStorage.getItem('token');
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         
-        console.log('📡 Sending beacon end request:', {
-          watchId: current.watchId,
-          currentTime: currentTime.toFixed(2),
-          actualWatchedSeconds: actualWatchedSeconds.toFixed(2)
-        });
         
         // Try sendBeacon first, fallback to fetch with keepalive
         const success = navigator.sendBeacon(

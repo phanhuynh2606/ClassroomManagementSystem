@@ -1,60 +1,141 @@
-import React, { Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { Spin } from 'antd';
+import React, { Suspense, lazy } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { Spin } from "antd";
 
 // Layouts
-import AdminLayout from '../layouts/AdminLayout';
-import TeacherLayout from '../layouts/TeacherLayout';
-import StudentLayout from '../layouts/StudentLayout';
-import MainLayout from '../layouts/MainLayout';
+import AdminLayout from "../layouts/AdminLayout";
+import TeacherLayout from "../layouts/TeacherLayout";
+import StudentLayout from "../layouts/StudentLayout";
+import MainLayout from "../layouts/MainLayout";
 
 // Auth Pages
-import Login from '../pages/auth/Login';
-import Register from '../pages/auth/Register';
-import ForgotPassword from '../pages/auth/ForgotPassword';
-import ResetPassword from '../pages/auth/ResetPassword';
+import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import ResetPassword from "../pages/auth/ResetPassword";
 
 // Admin Pages
-import AdminDashboard from '../pages/admin/AdminDashboard';
-import UserManagement from '../pages/admin/components/UserManagement';
-import ClassroomManagement from '../pages/admin/components/ClassroomManagement';
-import AdminClassroomDetail from '../pages/admin/components/AdminClassroomDetail';
-import QuizManagement from '../pages/admin/components/QuizManagement';
-import QuestionManagement from '../pages/admin/components/question/QuestionManagement';
-import NotificationManagement from '../pages/admin/components/NotificationManagement';
-import AdminRequestManagement from '../pages/admin/components/AdminRequestManagement';
-import AdminProfile from '../pages/admin/AdminProfile';
+import AdminProfile from "../pages/admin/AdminProfile";
 
 // Teacher Pages
-import TeacherDashboard from '../pages/teacher/TeacherDashboard';
-import TeacherClassroomManagement from '../pages/teacher/ClassroomManagement';
-import TeacherClassroomDetail from '../pages/teacher/ClassroomDetail';
-import EditClassForm from '../pages/teacher/EditClassForm';
-import TeacherProfile from '../pages/teacher/TeacherProfile';
-import TeacherRequestManagement from '../pages/teacher/TeacherRequestManagement';
-import TeacherTodo from '../pages/teacher/TeacherTodo';
-import TeacherMaterials from '../pages/teacher/TeacherMaterials';
-import TeacherSettings from '../pages/teacher/TeacherSettings';
-import TeacherNotifications from '../pages/teacher/TeacherNotifications';
-import AssignmentDetail from '../pages/teacher/AssignmentDetail';
-import AssignmentEdit from '../pages/teacher/AssignmentEdit';
-import GradingSystemDemo from '../pages/teacher/GradingSystemDemo';
-import BackgroundDemo from '../pages/teacher/BackgroundDemo';
-import CreateClassForm from '../pages/teacher/CreateClassForm';
+import TeacherProfile from "../pages/teacher/TeacherProfile";
+import TeacherSettings from "../pages/teacher/TeacherSettings";
+import TeacherNotifications from "../pages/teacher/TeacherNotifications";
+import TeacherTodo from "../pages/teacher/TeacherTodo";
+import TeacherMaterials from "../pages/teacher/TeacherMaterials";
+import TeacherRequestManagement from "../pages/teacher/TeacherRequestManagement";
+import CreateClassForm from "../pages/teacher/CreateClassForm";
+import EditClassForm from "../pages/teacher/EditClassForm";
+import GradingSystemDemo from "../pages/teacher/GradingSystemDemo";
+import BackgroundDemo from "../pages/teacher/BackgroundDemo";
 
 // Student Pages
-import StudentProfile from '../pages/student/StudentProfile';
-import StudentClassroomManagement from '../pages/student/StudentClassroomManagement';
-import StudentDashboard from '../pages/student/StudentDashboard';
-import StudentClassroomDetail from '../pages/student/StudentClassroomDetail';
-import StudentAssignmentList from '../pages/student/StudentAssignmentList';
-import StudentAssignmentDetail from '../pages/student/StudentAssignmentDetail';
-import StudentQuizList from '../pages/student/StudentQuizList';
-import QuizPage from '../pages/student/QuizPage';
-import StudentGrades from '../pages/student/StudentGrades';
+import StudentProfile from "../pages/student/StudentProfile";
+import StudentClassroomManagement from "../pages/student/StudentClassroomManagement";
+import StudentAssignmentList from "../pages/student/StudentAssignmentList";
+import StudentQuizList from "../pages/student/StudentQuizList";
+import StudentGrades from "../pages/student/StudentGrades";
 
-// Demo Components
+// 🚀 LAZY LOAD HEAVY COMPONENTS
+// Heavy Admin Pages
+const AdminDashboard = lazy(() => import("../pages/admin/AdminDashboard"));
+const UserManagement = lazy(() =>
+  import("../pages/admin/components/UserManagement")
+);
+const ClassroomManagement = lazy(() =>
+  import("../pages/admin/components/ClassroomManagement")
+);
+const AdminClassroomDetail = lazy(() =>
+  import("../pages/admin/components/AdminClassroomDetail")
+);
+const QuizManagement = lazy(() =>
+  import("../pages/admin/components/QuizManagement")
+);
+const QuestionManagement = lazy(() =>
+  import("../pages/admin/components/question/QuestionManagement")
+);
+const NotificationManagement = lazy(() =>
+  import("../pages/admin/components/NotificationManagement")
+);
+const AdminRequestManagement = lazy(() =>
+  import("../pages/admin/components/AdminRequestManagement")
+);
+
+// Heavy Teacher Pages
+const TeacherDashboard = lazy(() =>
+  import("../pages/teacher/TeacherDashboard")
+);
+const TeacherClassroomManagement = lazy(() =>
+  import("../pages/teacher/ClassroomManagement")
+);
+const TeacherClassroomDetail = lazy(() =>
+  import("../pages/teacher/ClassroomDetail")
+);
+const AssignmentDetail = lazy(() =>
+  import("../pages/teacher/AssignmentDetail")
+);
+const AssignmentEdit = lazy(() => import("../pages/teacher/AssignmentEdit"));
+
+// Heavy Student Pages
+const StudentDashboard = lazy(() =>
+  import("../pages/student/StudentDashboard")
+);
+const StudentClassroomDetail = lazy(() =>
+  import("../pages/student/StudentClassroomDetail")
+);
+const StudentAssignmentDetail = lazy(() =>
+  import("../pages/student/StudentAssignmentDetail")
+);
+const QuizPage = lazy(() => import("../pages/student/QuizPage"));
+
+// Loading Components
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="text-center">
+      <Spin size="large" />
+      <div className="mt-4 text-gray-600 text-lg">Loading page...</div>
+    </div>
+  </div>
+);
+
+const DashboardLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="text-center">
+      <Spin size="large" />
+      <div className="mt-4 text-gray-600 text-lg">Loading dashboard...</div>
+    </div>
+  </div>
+);
+
+const ClassroomLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
+    <div className="text-center">
+      <Spin size="large" />
+      <div className="mt-4 text-gray-600 text-lg">Loading classroom...</div>
+    </div>
+  </div>
+);
+
+const AssignmentLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
+    <div className="text-center">
+      <Spin size="large" />
+      <div className="mt-4 text-gray-600 text-lg">Loading assignment...</div>
+    </div>
+  </div>
+);
+
+const ManagementLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
+    <div className="text-center">
+      <Spin size="large" />
+      <div className="mt-4 text-gray-600 text-lg">
+        Loading management panel...
+      </div>
+    </div>
+  </div>
+);
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -108,42 +189,140 @@ const AppRouter = () => {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <AdminLayout />
             </ProtectedRoute>
           }
         >
-          <Route index element={<AdminDashboard />} />
+          <Route
+            index
+            element={
+              <Suspense fallback={<DashboardLoader />}>
+                <AdminDashboard />
+              </Suspense>
+            }
+          />
           <Route path="profile" element={<AdminProfile />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="classrooms" element={<ClassroomManagement />} />
-          <Route path="classrooms/:classroomId" element={<AdminClassroomDetail />} />
-          <Route path="quizzes" element={<QuizManagement />} />
-          <Route path="questions" element={<QuestionManagement />} />
-          <Route path="notifications" element={<NotificationManagement />} />
-          <Route path="requests" element={<AdminRequestManagement />} />
+          <Route
+            path="users"
+            element={
+              <Suspense fallback={<ManagementLoader />}>
+                <UserManagement />
+              </Suspense>
+            }
+          />
+          <Route
+            path="classrooms"
+            element={
+              <Suspense fallback={<ManagementLoader />}>
+                <ClassroomManagement />
+              </Suspense>
+            }
+          />
+          <Route
+            path="classrooms/:classroomId"
+            element={
+              <Suspense fallback={<ClassroomLoader />}>
+                <AdminClassroomDetail />
+              </Suspense>
+            }
+          />
+          <Route
+            path="quizzes"
+            element={
+              <Suspense fallback={<ManagementLoader />}>
+                <QuizManagement />
+              </Suspense>
+            }
+          />
+          <Route
+            path="questions"
+            element={
+              <Suspense fallback={<ManagementLoader />}>
+                <QuestionManagement />
+              </Suspense>
+            }
+          />
+          <Route
+            path="notifications"
+            element={
+              <Suspense fallback={<ManagementLoader />}>
+                <NotificationManagement />
+              </Suspense>
+            }
+          />
+          <Route
+            path="requests"
+            element={
+              <Suspense fallback={<ManagementLoader />}>
+                <AdminRequestManagement />
+              </Suspense>
+            }
+          />
         </Route>
 
         {/* Teacher Routes */}
         <Route
           path="/teacher"
           element={
-            <ProtectedRoute allowedRoles={['teacher']}>
+            <ProtectedRoute allowedRoles={["teacher"]}>
               <TeacherLayout />
             </ProtectedRoute>
           }
         >
           {/* Dashboard */}
-          <Route index element={<TeacherDashboard />} />
-          <Route path="dashboard" element={<TeacherDashboard />} />
+          <Route
+            index
+            element={
+              <Suspense fallback={<DashboardLoader />}>
+                <TeacherDashboard />
+              </Suspense>
+            }
+          />
+          <Route
+            path="dashboard"
+            element={
+              <Suspense fallback={<DashboardLoader />}>
+                <TeacherDashboard />
+              </Suspense>
+            }
+          />
 
           {/* Classroom Management */}
-          <Route path="classroom" element={<TeacherClassroomManagement />} />
+          <Route
+            path="classroom"
+            element={
+              <Suspense fallback={<ManagementLoader />}>
+                <TeacherClassroomManagement />
+              </Suspense>
+            }
+          />
           <Route path="classroom/create" element={<CreateClassForm />} />
-          <Route path="classroom/:classId" element={<TeacherClassroomDetail />} />
+          <Route
+            path="classroom/:classId"
+            element={
+              <Suspense fallback={<ClassroomLoader />}>
+                <TeacherClassroomDetail />
+              </Suspense>
+            }
+          />
           <Route path="classroom/edit/:classId" element={<EditClassForm />} />
-          <Route path="classroom/:classId/assignment/:assignmentId" element={<AssignmentDetail />} />
-          <Route path="classroom/:classId/assignment/:assignmentId/edit" element={<AssignmentEdit />} />
+          <Route
+            path="classroom/:classId/assignment/:assignmentId"
+            element={
+              <Suspense fallback={<AssignmentLoader />}>
+                <AssignmentDetail />
+              </Suspense>
+            }
+          />
+          <Route
+            path="classroom/:classId/assignment/:assignmentId/edit"
+            element={
+              <Suspense fallback={<AssignmentLoader />}>
+                <AssignmentEdit />
+              </Suspense>
+            }
+          />
 
           {/* Core Features */}
           <Route path="todo" element={<TeacherTodo />} />
@@ -156,7 +335,7 @@ const AppRouter = () => {
           {/* Settings & Profile */}
           <Route path="settings" element={<TeacherSettings />} />
           <Route path="profile" element={<TeacherProfile />} />
-          
+
           {/* Demo & Help */}
           <Route path="grading-demo" element={<GradingSystemDemo />} />
           <Route path="background-demo" element={<BackgroundDemo />} />
@@ -166,20 +345,55 @@ const AppRouter = () => {
         <Route
           path="/student"
           element={
-            <ProtectedRoute allowedRoles={['student']}>
+            <ProtectedRoute allowedRoles={["student"]}>
               <StudentLayout />
             </ProtectedRoute>
           }
         >
-          <Route index element={<StudentDashboard />} />
-          <Route path="dashboard" element={<StudentDashboard />} />
+          <Route
+            index
+            element={
+              <Suspense fallback={<DashboardLoader />}>
+                <StudentDashboard />
+              </Suspense>
+            }
+          />
+          <Route
+            path="dashboard"
+            element={
+              <Suspense fallback={<DashboardLoader />}>
+                <StudentDashboard />
+              </Suspense>
+            }
+          />
           <Route path="profile" element={<StudentProfile />} />
           <Route path="classrooms" element={<StudentClassroomManagement />} />
-          <Route path="classroom/:classroomId" element={<StudentClassroomDetail />} />
+          <Route
+            path="classroom/:classroomId"
+            element={
+              <Suspense fallback={<ClassroomLoader />}>
+                <StudentClassroomDetail />
+              </Suspense>
+            }
+          />
           {/* Upcoming Student Features */}
-          
-          <Route path="classrooms/:classroomId/assignments/:assignmentId" element={<StudentAssignmentDetail />} />
-          <Route path="classrooms/:classroomId/quizzes/:quizId" element={<QuizPage/>} />
+
+          <Route
+            path="classrooms/:classroomId/assignments/:assignmentId"
+            element={
+              <Suspense fallback={<AssignmentLoader />}>
+                <StudentAssignmentDetail />
+              </Suspense>
+            }
+          />
+          <Route
+            path="classrooms/:classroomId/quizzes/:quizId"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <QuizPage />
+              </Suspense>
+            }
+          />
           <Route path="grades" element={<StudentGrades />} />
           <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
         </Route>
@@ -189,9 +403,9 @@ const AppRouter = () => {
           path="/"
           element={
             <ProtectedRoute>
-              {user?.role === 'admin' ? (
+              {user?.role === "admin" ? (
                 <Navigate to="/admin" />
-              ) : user?.role === 'teacher' ? (
+              ) : user?.role === "teacher" ? (
                 <Navigate to="/teacher" />
               ) : (
                 <Navigate to="/student" />
@@ -201,25 +415,29 @@ const AppRouter = () => {
         />
 
         {/* 404 Route */}
-        <Route 
-          path="*" 
+        <Route
+          path="*"
           element={
             <div className="flex flex-col items-center justify-center h-screen text-center">
               <div className="text-9xl text-gray-300 mb-4">404</div>
-              <h1 className="text-4xl font-bold text-gray-600 mb-2">Trang không tìm thấy</h1>
-              <p className="text-gray-500 mb-6">Trang bạn đang tìm kiếm không tồn tại</p>
-              <button 
+              <h1 className="text-4xl font-bold text-gray-600 mb-2">
+                Trang không tìm thấy
+              </h1>
+              <p className="text-gray-500 mb-6">
+                Trang bạn đang tìm kiếm không tồn tại
+              </p>
+              <button
                 onClick={() => window.history.back()}
                 className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
               >
                 Quay lại
               </button>
             </div>
-          } 
+          }
         />
       </Routes>
     </Suspense>
   );
 };
 
-export default AppRouter; 
+export default AppRouter;
