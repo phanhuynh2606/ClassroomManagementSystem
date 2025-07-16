@@ -123,15 +123,43 @@ const deleteQuiz = async (req, res) => {
         if (!quiz) {
             return res.status(404).json({ message: 'Quiz not found' });
         }
-        res.status(200).json({ message: 'Quiz deleted successfully', quiz });
+        res.status(200).json({ success: 'Quiz deleted successfully', quiz });
     } catch (error) {
         res.status(400).json({ message: 'Error deleting quiz', error: error.message });
     }
 }
+
+const changeQuizVisibility = async (req, res) => {
+    try {
+        const { visibility } = req.body;
+
+        const validVisibilities = ['draft', 'published', 'scheduled'];
+        if (!validVisibilities.includes(visibility)) {
+            return res.status(400).json({ message: `Invalid visibility value. Must be one of: ${validVisibilities.join(', ')}` });
+        }
+
+        const quiz = await Quiz.findByIdAndUpdate(
+            req.params.id,
+            { visibility },
+            { new: true, runValidators: true }
+        );
+
+        if (!quiz) {
+            return res.status(404).json({ message: 'Quiz not found' });
+        }
+
+        res.status(200).json({ success: true, message: 'Quiz visibility updated successfully', quiz });
+    } catch (error) {
+        console.error('Error updating quiz visibility:', error);
+        res.status(400).json({ message: 'Error updating quiz visibility', error: error.message });
+    }
+};
+
 module.exports = {
     createQuiz,
     getQuizzes,
     getQuizById,
     updateQuiz,
-    deleteQuiz
+    deleteQuiz,
+    changeQuizVisibility
 };

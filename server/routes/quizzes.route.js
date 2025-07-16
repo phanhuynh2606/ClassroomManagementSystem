@@ -8,5 +8,6 @@ router.get('/', protect, authorize('teacher' || 'student'), quizCtrl.getQuizzes)
 router.get('/:id', protect, authorize('teacher' || 'student'), quizCtrl.getQuizById);
 router.patch('/:id', protect, authorize('teacher'), quizCtrl.updateQuiz);
 router.delete('/:id', protect, authorize('teacher'), quizCtrl.deleteQuiz);
+router.patch('/:id/visibility', protect, authorize('teacher'), quizCtrl.changeQuizVisibility);
 
 module.exports = router;

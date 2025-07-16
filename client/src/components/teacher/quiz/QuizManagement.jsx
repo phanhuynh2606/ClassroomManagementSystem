@@ -1,15 +1,15 @@
 import React, { useState, memo, useEffect } from 'react';
-import { 
-  Card, 
-  Button, 
-  List, 
-  Typography, 
-  Space, 
-  Tag, 
-  Modal, 
-  Form, 
-  Input, 
-  DatePicker, 
+import {
+  Card,
+  Button,
+  List,
+  Typography,
+  Space,
+  Tag,
+  Modal,
+  Form,
+  Input,
+  DatePicker,
   Select,
   Divider,
   Empty,
@@ -150,7 +150,7 @@ const QuizManagement = ({ classId }) => {
     if (!dateString) return null;
     const date = moment(dateString);
     const now = moment();
-    
+
     if (date.isBefore(now)) {
       return <Text type="danger">{date.format('MMM D, YYYY HH:mm')}</Text>;
     } else if (date.diff(now, 'hours') <= 24) {
@@ -164,7 +164,7 @@ const QuizManagement = ({ classId }) => {
     const now = moment();
     const start = moment(startTime);
     const end = moment(endTime);
-    
+
     return now.isBetween(start, end);
   };
 
@@ -172,13 +172,14 @@ const QuizManagement = ({ classId }) => {
     const now = moment();
     const startTime = moment(quiz.startTime);
     const endTime = moment(quiz.endTime);
-    
+
     if (quiz.visibility === 'draft') return 'draft';
     if (quiz.visibility === 'published' && (!quiz.startTime || !quiz.endTime)) return 'published';
+    if (quiz.visibility === 'scheduled' && isQuizActive(quiz.startTime, quiz.endTime)) return 'scheduled';
     if (now.isBefore(startTime)) return 'scheduled';
     if (now.isBetween(startTime, endTime)) return 'active';
     if (now.isAfter(endTime)) return 'completed';
-    
+
     return quiz.visibility;
   };
 
@@ -188,7 +189,7 @@ const QuizManagement = ({ classId }) => {
     const totalAttempts = quiz.questions?.reduce((sum, q) => sum + (q.statistics?.totalAttempts || 0), 0) || 0;
     const correctAttempts = quiz.questions?.reduce((sum, q) => sum + (q.statistics?.correctAttempts || 0), 0) || 0;
     const averageScore = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
-    
+
     return {
       totalQuestions,
       totalPoints,
@@ -200,7 +201,7 @@ const QuizManagement = ({ classId }) => {
 
   const handleQuizCreate = async (quizData) => {
     setLoading(true);
-    
+
     await new Promise(resolve => setTimeout(resolve, 1000));
     const newQuiz = {
       title: quizData.title,
@@ -224,10 +225,10 @@ const QuizManagement = ({ classId }) => {
       isActive: quizData.isActive || true,
       visibility: 'draft'
     };
-    
+
     try {
       const response = await quizAPI.create(newQuiz);
-      
+
       if (response.success) {
         setQuizCreateVisible(false);
         message.success('Quiz created successfully!');
@@ -262,9 +263,11 @@ const QuizManagement = ({ classId }) => {
       cancelText: 'Cancel',
       onOk: async () => {
         try {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          message.success('Quiz deleted successfully');
-          fetchQuizzes();
+          const response = await quizAPI.delete(quiz._id);
+          if (response.success) {
+            message.success('Quiz deleted successfully!');
+            fetchQuizzes();
+          }
         } catch (error) {
           message.error('Failed to delete quiz');
         }
@@ -272,12 +275,14 @@ const QuizManagement = ({ classId }) => {
     });
   };
 
-  const handlePublishQuiz = async (quiz) => {
+  const handleChangeVisibilityQuiz = async (id, visibility) => {
     try {
       setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      message.success('Quiz published successfully!');
-      fetchQuizzes();
+      const response = await quizAPI.changeVisibility(id, { visibility });
+      if (response.success) {
+        message.success(`Quiz visibility changed to ${visibility}`);
+        fetchQuizzes();
+      }
     } catch (error) {
       message.error('Failed to publish quiz');
     } finally {
@@ -294,8 +299,8 @@ const QuizManagement = ({ classId }) => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <Title level={3} className="mb-0">Quiz Management</Title>
-        <Button 
-          type="primary" 
+        <Button
+          type="primary"
           icon={<PlusOutlined />}
           onClick={() => setQuizCreateVisible(true)}
         >
@@ -307,39 +312,39 @@ const QuizManagement = ({ classId }) => {
       <Row gutter={16}>
         <Col span={6}>
           <Card>
-            <Statistic 
-              title="Total Quizzes" 
-              value={quizItems?.length || 0} 
-              prefix={<QuestionCircleOutlined />} 
+            <Statistic
+              title="Total Quizzes"
+              value={quizItems?.length || 0}
+              prefix={<QuestionCircleOutlined />}
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic 
-              title="Published" 
-              value={publishedQuizzes.length} 
-              prefix={<CheckCircleOutlined />} 
+            <Statistic
+              title="Published"
+              value={publishedQuizzes.length}
+              prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#3f8600' }}
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic 
-              title="Draft" 
-              value={draftQuizzes.length} 
-              prefix={<EditOutlined />} 
+            <Statistic
+              title="Draft"
+              value={draftQuizzes.length}
+              prefix={<EditOutlined />}
               valueStyle={{ color: '#cf1322' }}
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic 
-              title="Scheduled" 
-              value={scheduledQuizzes.length} 
-              prefix={<CalendarOutlined />} 
+            <Statistic
+              title="Scheduled"
+              value={scheduledQuizzes.length}
+              prefix={<CalendarOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
@@ -349,7 +354,7 @@ const QuizManagement = ({ classId }) => {
       {/* Quiz Items */}
       {quizItems.length === 0 ? (
         <Card>
-          <Empty 
+          <Empty
             description="No quizzes created yet"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
@@ -361,14 +366,14 @@ const QuizManagement = ({ classId }) => {
           renderItem={(quiz) => {
             const stats = calculateQuizStats(quiz);
             const status = getQuizStatus(quiz);
-            
+
             return (
               <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-start gap-4">
                   <div className="mt-1 text-xl">
                     {getCategoryIcon(quiz.category)}
                   </div>
-                  
+
                   <div className="flex-1">
                     <div className="flex justify-between items-start mb-3">
                       <div>
@@ -387,53 +392,65 @@ const QuizManagement = ({ classId }) => {
                           <Text type="secondary">{quiz.duration} minutes</Text>
                         </Space>
                       </div>
-                      
+
                       <Space>
                         <Tooltip title="View Details">
-                          <Button 
-                            type="text" 
+                          <Button
+                            type="text"
                             icon={<EyeOutlined />}
                             size="small"
                             onClick={() => handleViewQuizDetail(quiz)}
                           />
                         </Tooltip>
-                        
+
                         <Tooltip title="Edit Quiz">
-                          <Button 
-                            type="text" 
+                          <Button
+                            type="text"
                             icon={<EditOutlined />}
                             size="small"
                             onClick={() => handleEditQuiz(quiz)}
                           />
                         </Tooltip>
-                        
+
                         {quiz.visibility === 'published' && (
                           <Tooltip title="View Results">
-                            <Button 
-                              type="text" 
+                            <Button
+                              type="text"
                               icon={<BarChartOutlined />}
                               size="small"
-                              onClick={() => handleViewResults(quiz)}
+                              onClick={() => handleViewResults(quiz?._id, "draft")}
                               className="text-blue-600 hover:text-blue-700"
                             />
                           </Tooltip>
                         )}
-                        
+
+                        {(quiz.visibility === 'published' || quiz.visibility === 'scheduled')  && (
+                          <Tooltip title="Schedule Quiz">
+                            <Button
+                              type="text"
+                              icon={<StopOutlined />}
+                              size="small"
+                              onClick={() => handleChangeVisibilityQuiz(quiz?._id, "draft")}
+                              className="text-red-600 hover:text-red-700"
+                            />
+                          </Tooltip>
+                        )}
+
                         {quiz.visibility === 'draft' && (
                           <Tooltip title="Publish Quiz">
-                            <Button 
-                              type="text" 
+                            <Button
+                              type="text"
                               icon={<PlayCircleOutlined />}
                               size="small"
-                              onClick={() => handlePublishQuiz(quiz)}
+                              onClick={() => handleChangeVisibilityQuiz(quiz?._id, "published")}
                               className="text-green-600 hover:text-green-700"
                             />
                           </Tooltip>
                         )}
-                        
+
                         <Tooltip title="Delete Quiz">
-                          <Button 
-                            type="text" 
+                          <Button
+                            type="text"
                             icon={<DeleteOutlined />}
                             size="small"
                             danger
@@ -457,7 +474,7 @@ const QuizManagement = ({ classId }) => {
                           {formatDateTime(quiz.startTime)}
                         </div>
                       )}
-                      
+
                       {quiz.endTime && (
                         <div className="flex items-center gap-2">
                           <CalendarOutlined className="text-gray-500" />
@@ -465,24 +482,24 @@ const QuizManagement = ({ classId }) => {
                           {formatDateTime(quiz.endTime)}
                         </div>
                       )}
-                      
+
                       <div className="flex items-center gap-2">
                         <ClockCircleOutlined className="text-gray-500" />
                         <Text type="secondary">Duration: {quiz.duration} minutes</Text>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <TrophyOutlined className="text-gray-500" />
                         <Text type="secondary">Passing Score: {quiz.passingScore}%</Text>
                       </div>
-                      
+
                       {quiz.maxAttempts && (
                         <div className="flex items-center gap-2">
                           <TeamOutlined className="text-gray-500" />
                           <Text type="secondary">Max Attempts: {quiz.maxAttempts}</Text>
                         </div>
                       )}
-                      
+
                       {stats.totalAttempts > 0 && (
                         <div className="flex items-center gap-2">
                           <BarChartOutlined className="text-gray-500" />
@@ -517,7 +534,7 @@ const QuizManagement = ({ classId }) => {
                           <Tag color="red" size="small">Tab Monitoring</Tag>
                         )}
                       </Space>
-                      
+
                       <Space direction="vertical" size="small" className="text-right">
                         <Text type="secondary">
                           Created by: {quiz.createdBy?.email || 'Unknown'}
@@ -534,7 +551,7 @@ const QuizManagement = ({ classId }) => {
           }}
         />
       )}
-      
+
       <CreateQuizModal
         visible={quizCreateVisible}
         onCancel={() => setQuizCreateVisible(false)}
