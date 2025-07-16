@@ -7,27 +7,32 @@ const createQuiz = async (req, res) => {
             category,
             description,
             classroom,
-            createdBy,
             duration,
             passingScore,
             maxAttempts,
             startTime,
             endTime,
             questions = [],
-            allowReview = true,
-            showResults = true,
-            randomizeQuestions = false,
+            allowReview,
+            showResults,
+            shuffleQuestions,
+            shuffleOptions,
+            fullScreen,
+            copyAllowed,
+            checkTab,
+            randomizeQuestions,
             visibility = 'draft',
-            publishDate,
-            tags = []
+            isActive = true,
         } = req.body;
+
+        const createdBy = req.user._id;
 
         const quiz = new Quiz({
             title,
             category,
             description,
             classroom,
-            createdBy,
+            createdBy: createdBy,
             duration,
             passingScore,
             maxAttempts,
@@ -36,16 +41,22 @@ const createQuiz = async (req, res) => {
             questions,
             allowReview,
             showResults,
+            shuffleQuestions,
+            shuffleOptions,
+            fullScreen,
+            copyAllowed,
+            checkTab,
             randomizeQuestions,
             visibility,
-            publishDate,
-            tags
+            isActive,
+            submissions: [],
+            createdAt: new Date(),
         });
 
         await quiz.save();
 
         res.status(201).json({
-            message: 'Quiz created successfully',
+            success: 'Quiz created successfully',
             quiz
         });
     } catch (error) {
@@ -60,10 +71,15 @@ const getQuizzes = async (req, res) => {
     try {
         const quizzes = await Quiz.find({ isActive: true, deleted: false })
             .populate('createdBy', 'name email')
-            .populate('classroom', 'name').populate('questions')
+            .populate('classroom', 'name').populate('questions').
+            populate('submissions.student')
+            .populate('submissions.answers.question')
             .sort({ createdAt: -1 });
 
-        res.status(200).json(quizzes);
+        res.status(200).json({
+            success: 'Quizzes fetched successfully',
+            data: quizzes
+        });
     } catch (error) {
         res.status(500).json({
             message: 'Lỗi khi lấy danh sách quiz',
@@ -74,7 +90,12 @@ const getQuizzes = async (req, res) => {
 
 const getQuizById = async (req, res) => {
     try {
-        const quiz = await Quiz.findById(req.params.id).populate('createdBy', 'name email').populate('classroom', 'name').populate('questions');
+        const quiz = await Quiz.findById(req.params.id)
+            .populate('createdBy', 'name email')
+            .populate('classroom', 'name')
+            .populate('questions')
+            .populate('submissions.student')
+            .populate('submissions.answers.question');
         if (!quiz) {
             return res.status(404).json({ message: 'Quiz not found' });
         }

@@ -58,7 +58,27 @@ const quizSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    shuffleQuestions: {
+      type: Boolean,
+      default: false,
+    },
+    shuffleOptions: {
+      type: Boolean,
+      default: false,
+    },
     randomizeQuestions: {
+      type: Boolean,
+      default: false,
+    },
+    fullScreen: {
+      type: Boolean,
+      default: false,
+    },
+    copyAllowed: {
+      type: Boolean,
+      default: false,
+    },
+    checkTab: {
       type: Boolean,
       default: false,
     },
@@ -111,11 +131,11 @@ const quizSchema = new mongoose.Schema(
       enum: ['draft', 'published', 'scheduled'],
       default: 'draft'
     },
-    publishDate: Date,
-    tags: [{
-      type: String,
-      trim: true
-    }],
+    // publishDate: Date,
+    // tags: [{
+    //   type: String,
+    //   trim: true
+    // }],
     deleted: {
       type: Boolean,
       default: false,
