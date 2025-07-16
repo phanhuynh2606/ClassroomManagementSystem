@@ -184,3 +184,86 @@
     margin-left: 0 !important;
   }
 } 
+
+/* Unread Count Badge Animations */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+/* Badge styling improvements */
+.chat-badge {
+  animation: fadeIn 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+
+.chat-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(255, 77, 79, 0.4) !important;
+}
+
+.chat-badge-collapsed {
+  animation: fadeIn 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+
+.chat-badge-collapsed:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(255, 77, 79, 0.4) !important;
+}
+
+.chat-badge-pulse {
+  animation: pulse 2s infinite;
+}
+
+.chat-badge-bounce {
+  animation: bounce 1s ease-in-out;
+}
+
+/* Responsive design for badges */
+@media (max-width: 768px) {
+  .chat-badge {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+    min-width: 18px !important;
+  }
+  
+  .chat-badge-collapsed {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 9px !important;
+  }
+} 

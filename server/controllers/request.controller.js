@@ -9,8 +9,6 @@ const getAllRequests = async (req, res) => {
     const skip = (page - 1) * limit;
     const { status, type, search, startDate, endDate } = req.query;
 
-    console.log('getAllRequests filters:', { status, type, search, startDate, endDate });
-
     // Build filter
     const filter = {};
     if (status) filter.status = status;

@@ -2,6 +2,7 @@ const Classroom = require("../models/classroom.model");
 const User = require("../models/user.model");
 const Notification = require("../models/notification.model");
 const Request = require("../models/request.model");
+const Chat = require("../models/chat.model");
 
 // Helper function to generate unique classroom code
 const generateClassroomCode = async () => {
@@ -32,6 +33,26 @@ const sendNotification = async (title, content, type, sender, recipients, classr
     await notification.save();
   } catch (error) {
     console.error('Error sending notification:', error);
+  }
+};
+
+// Helper function to create classroom chat
+const createClassroomChat = async (classroom, teacherId) => {
+  try {
+    const chat = new Chat({
+      name: `${classroom.name} - Chat`,
+      type: 'classroom',
+      classroom: classroom._id,
+      createdBy: teacherId,
+      members: [
+        { user: teacherId, role: 'teacher' }
+      ]
+    });
+    await chat.save();
+    return chat;
+  } catch (error) {
+    console.error('Error creating classroom chat:', error);
+    return null;
   }
 };
 
@@ -312,6 +333,9 @@ const createClassroom = async (req, res) => {
       isActive: req.user.role === 'admin', // Admin created classrooms are active immediately
       status: req.user.role === 'admin' ? 'active' : 'pending_creation' // Set initial status based on model
     });
+
+    // Create chat for the classroom
+    await createClassroomChat(newClassroom, req.user._id);
 
     // If teacher created, create approval request
     if (req.user.role === 'teacher') {
@@ -1130,6 +1154,17 @@ const joinClassroom = async (req, res) => {
 
     await classroom.save();
 
+    // Add student to classroom chat
+    const classroomChat = await Chat.findOne({
+      type: 'classroom',
+      classroom: classroom._id,
+      deleted: false
+    });
+
+    if (classroomChat) {
+      await classroomChat.addMember(req.user._id, 'student');
+    }
+
     // Notify teacher
     await sendNotification(
       'New Student Joined',
@@ -1186,6 +1221,17 @@ const leaveClassroom = async (req, res) => {
 
     classroom.students.splice(studentIndex, 1);
     await classroom.save();
+
+    // Remove student from classroom chat
+    const classroomChat = await Chat.findOne({
+      type: 'classroom',
+      classroom: classroom._id,
+      deleted: false
+    });
+
+    if (classroomChat) {
+      await classroomChat.removeMember(req.user._id);
+    }
 
     // Notify teacher
     await sendNotification(

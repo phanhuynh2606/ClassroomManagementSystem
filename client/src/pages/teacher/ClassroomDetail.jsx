@@ -431,7 +431,7 @@ const ClassroomDetail = () => {
         onCancel={handleCancel}
         footer={null}
         width={500}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={banForm}

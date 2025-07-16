@@ -13,11 +13,13 @@ import {
   CalendarOutlined,
   BellOutlined,
   BookOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  MessageOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
+import useUnreadCount from '../hooks/useUnreadCount';
 
 const { Header, Sider, Content } = Layout;
 
@@ -27,6 +29,7 @@ const TeacherLayout = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { unreadChatsCount } = useUnreadCount();
 
   const {
     token: { colorBgContainer, borderRadiusLG },
@@ -50,6 +53,7 @@ const TeacherLayout = () => {
     if (path.startsWith('/teacher/schedule')) return 'schedule';
     if (path.startsWith('/teacher/requests')) return 'requests';
     if (path.startsWith('/teacher/notifications')) return 'notifications';
+    if (path.startsWith('/teacher/chat')) return 'chat';
     if (path.startsWith('/teacher/profile')) return 'profile';
     return 'dashboard';
   };
@@ -58,7 +62,7 @@ const TeacherLayout = () => {
     {
       key: 'dashboard',
       icon: <DashboardOutlined />,
-      label: 'Tổng quan',
+      label: 'Dashboard',
       onClick: () => navigate('/teacher/dashboard'),
     },
     {
@@ -66,31 +70,31 @@ const TeacherLayout = () => {
     },
     {
       key: 'teaching',
-      label: 'Giảng dạy',
+      label: 'Teaching',
       type: 'group',
     },
     {
       key: 'classrooms',
       icon: <TeamOutlined />,
-      label: 'Quản lý lớp học',
+      label: 'Classroom Management',
       onClick: () => navigate('/teacher/classroom'),
     },
     {
       key: 'assignments',
       icon: <BookOutlined />,
-      label: 'Bài tập',
+      label: 'Assignments',
       onClick: () => navigate('/teacher/assignments'),
     },
     {
       key: 'quizzes',
       icon: <FileTextOutlined />,
-      label: 'Bài kiểm tra',
+      label: 'Quizzes',
       onClick: () => navigate('/teacher/quizzes'),
     },
     {
       key: 'grades',
       icon: <LineChartOutlined />,
-      label: 'Chấm điểm',
+      label: 'Grading',
       onClick: () => navigate('/teacher/grades'),
     },
     {
@@ -98,40 +102,101 @@ const TeacherLayout = () => {
     },
     {
       key: 'management',
-      label: 'Quản lý',
+      label: 'Management',
       type: 'group',
     },
     {
       key: 'students',
       icon: <UserOutlined />,
-      label: 'Học sinh',
+      label: 'Students',
       onClick: () => navigate('/teacher/students'),
     },
     {
       key: 'schedule',
       icon: <CalendarOutlined />,
-      label: 'Lịch học',
+      label: 'Schedule',
       onClick: () => navigate('/teacher/schedule'),
     },
     {
       key: 'reports',
       icon: <BarChartOutlined />,
-      label: 'Báo cáo',
+      label: 'Reports',
       onClick: () => navigate('/teacher/reports'),
     },
     {
       key: 'requests',
       icon: <CheckSquareOutlined />,
-      label: 'Quản lý yêu cầu',
+      label: 'Request Management',
       onClick: () => navigate('/teacher/requests'),
     },
     {
       type: 'divider',
     },
     {
+      key: 'chat',
+      icon: <MessageOutlined />,
+      label: collapsed ? (
+        <div style={{ position: 'relative' }}>
+          <span>Chat</span>
+          {unreadChatsCount > 0 && (
+            <span className="chat-badge-collapsed chat-badge-pulse" style={{ 
+              position: 'absolute',
+              top: '-8px',
+              right: '-8px',
+              backgroundColor: '#ff4d4f',
+              color: 'white',
+              borderRadius: '50%',
+              width: '18px',
+              height: '18px',
+              fontSize: '10px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid #001529',
+              minWidth: '18px',
+              boxShadow: '0 2px 4px rgba(255, 77, 79, 0.3)'
+            }}>
+              {unreadChatsCount > 99 ? '99+' : unreadChatsCount}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          width: '100%'
+        }}>
+          <span>Chat</span>
+          {unreadChatsCount > 0 && (
+            <span className="chat-badge chat-badge-pulse" style={{ 
+              backgroundColor: '#ff4d4f', 
+              color: 'white', 
+              borderRadius: '50px', 
+              padding: '4px 8px', 
+              fontSize: '11px',
+              fontWeight: '600',
+              minWidth: '20px',
+              height: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              boxShadow: '0 2px 4px rgba(255, 77, 79, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              {unreadChatsCount > 99 ? '99+' : unreadChatsCount}
+            </span>
+          )}
+        </div>
+      ),
+      onClick: () => navigate('/teacher/chat'),
+    },
+    {
       key: 'notifications',
       icon: <BellOutlined />,
-      label: 'Thông báo',
+      label: 'Notifications',
       onClick: () => navigate('/teacher/notifications'),
     },
   ];
@@ -200,7 +265,7 @@ const TeacherLayout = () => {
               }} 
               onClick={() => navigate('/teacher/profile')}
             >
-              👨‍🏫 {user?.fullName || 'Giáo viên'}
+              👨‍🏫 {user?.fullName || 'Teacher'}
             </span>
             <Button
               type="text"
@@ -210,16 +275,19 @@ const TeacherLayout = () => {
                 color: '#1565C0'
               }}
             >
-              Đăng xuất
+              Logout
             </Button>
           </div>
         </Header>
         <Content
           style={{
-            padding: 0,
+            padding: location.pathname.includes('/chat') ? 0 : 24,
             background: colorBgContainer,
             borderRadius: borderRadiusLG,
-            overflow: 'hidden'
+            overflow: 'hidden',
+            height: location.pathname.includes('/chat') ? 'calc(100vh - 90px)' : 'auto',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
           <Outlet />

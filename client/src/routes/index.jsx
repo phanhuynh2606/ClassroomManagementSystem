@@ -42,6 +42,15 @@ import StudentClassroomDetail from '../pages/student/StudentClassroomDetail';
 // import MyGrades from '../pages/student/MyGrades';
 // import MyProgress from '../pages/student/MyProgress';
 
+// Chat Component
+import ChatWindow from '../components/chat/ChatWindow';
+
+
+// Chat Pages
+import AdminChat from '../pages/admin/AdminChat';
+import TeacherChat from '../pages/teacher/TeacherChat';
+import StudentChat from '../pages/student/StudentChat';
+
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
@@ -95,6 +104,7 @@ const AppRouter = () => {
         <Route path="questions" element={<QuestionManagement />} />
         <Route path="notifications" element={<NotificationManagement />} />
         <Route path="requests" element={<AdminRequestManagement />} />
+        <Route path="chat" element={<AdminChat />} />
       </Route>
 
       {/* Teacher Routes */}
@@ -129,6 +139,7 @@ const AppRouter = () => {
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
         <Route path="students" element={<ComingSoon title="Quản lý Học sinh" />} />
         <Route path="notifications" element={<ComingSoon title="Thông báo" />} />
+        <Route path="chat" element={<TeacherChat />} />
       </Route>
 
       {/* Student Routes */}
@@ -149,6 +160,7 @@ const AppRouter = () => {
         <Route path="assignments" element={<ComingSoon title="Bài tập" />} />
         <Route path="grades" element={<ComingSoon title="Điểm số" />} />
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
+        <Route path="chat" element={<StudentChat />} />
       </Route>
 
       {/* Default Route - Redirect based on user role */}

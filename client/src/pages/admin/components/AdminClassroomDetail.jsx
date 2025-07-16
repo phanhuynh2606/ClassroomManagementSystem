@@ -566,7 +566,7 @@ const AdminClassroomDetail = () => {
       onCancel={handleEditCancel}
       footer={null}
       width={600}
-      destroyOnClose
+      destroyOnHidden
       afterOpenChange={(open) => {
         if (open && classroom) {
           // Re-populate form when modal opens to ensure data is current
@@ -864,7 +864,7 @@ const AdminClassroomDetail = () => {
       onCancel={handleBanCancel}
       footer={null}
       width={500}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={banForm}

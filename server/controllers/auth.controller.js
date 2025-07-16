@@ -10,9 +10,12 @@ const axios = require('axios');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Generate access token
-  const generateAccessToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-      expiresIn: '15m', // Access token expires in 15 minutes
+  const generateAccessToken = (user) => {
+    return jwt.sign({ 
+      id: user._id || user.id, 
+      role: user.role 
+    }, process.env.JWT_SECRET, {
+      expiresIn: '1d', // Access token expires in 1 day (for development)
     });
   };
 
@@ -73,7 +76,7 @@ const registerUser = async (req, res) => {
     }
     if (user) {
       // Generate tokens
-      const accessToken = generateAccessToken(user._id);
+      const accessToken = generateAccessToken(user);
       const deviceInfo = {
         device: req.headers['user-agent'],
         ipAddress: req.ip,
@@ -143,7 +146,7 @@ const loginUser = async (req, res) => {
     }
 
     // Generate tokens
-    const accessToken = generateAccessToken(user._id);
+    const accessToken = generateAccessToken(user);
     const deviceInfo = extractDeviceInfo(req);
     const refreshToken = generateRefreshToken(user._id, deviceInfo);
 
@@ -325,9 +328,7 @@ const refreshAccessToken = async (req, res) => {
       }
 
       // Generate new access token
-      const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: "1m"
-      });
+      const newAccessToken = generateAccessToken(user);
 
       res.status(200).json({
         message: "Token refreshed successfully",
@@ -510,7 +511,7 @@ const googleLogin = async (req, res) => {
     }
 
     // Generate tokens
-    const accessToken = generateAccessToken(user._id);
+    const accessToken = generateAccessToken(user);
     const deviceInfo = extractDeviceInfo(req);
     const refreshToken = generateRefreshToken(user._id, deviceInfo);
 
@@ -776,7 +777,7 @@ const facebookLogin = async (req, res) => {
       }
 
       // Generate tokens
-      const accessTokenJWT = generateAccessToken(user._id);
+      const accessTokenJWT = generateAccessToken(user);
       const deviceInfo = extractDeviceInfo(req);
       const refreshToken = generateRefreshToken(user._id, deviceInfo);
 
