@@ -89,9 +89,9 @@ const MaterialList = ({ classId, classData }) => {
             pdf: 'red',
             slide: 'blue',
             video: 'green',
-            other: 'default'
+            other: 'yellow'
         };
-        return colors[type] || 'default';
+        return colors[type] || 'yellow';
     };
 
     const handleCreateMaterial = () => {
@@ -251,7 +251,7 @@ const MaterialList = ({ classId, classData }) => {
             title: 'Type',
             dataIndex: 'type',
             key: 'type',
-            width: 100,
+            width: 130,
             render: (type) => (
                 <Badge
                     color={getTypeBadgeColor(type)}
