@@ -21,4 +21,10 @@ router.delete('/teacher/:classroomId/:materialId',
   ctrls.deleteMaterial
 );
 
+router.get('/download/:materialId', 
+  protect,
+  authorize('student', 'teacher'),
+  ctrls.downloadMaterial
+);
+
 module.exports = router;

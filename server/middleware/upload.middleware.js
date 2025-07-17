@@ -2,7 +2,7 @@
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinary.config');
-
+const path = require('path');
 
 const createUploadMiddleware = (folderPath = 'messages', maxCount = 5) => {
   // Configure Cloudinary storage for multer
@@ -65,9 +65,10 @@ const createMaterialUploadMiddleware = (folderPath = 'materials', maxCount = 1) 
       const fileNameWithoutExt = file.originalname.split('.')[0]
         .replace(/[^a-zA-Z0-9]/g, '_') // sanitize filename
         .trim(); // Remove any leading/trailing whitespace
+      const originalExtension = path.extname(file.originalname).toLowerCase();
 
       // Don't add extension to public_id - let Cloudinary handle it
-      const publicId = `${fileNameWithoutExt}-${uniqueSuffix}`;
+      const publicId = `${fileNameWithoutExt}-${uniqueSuffix}${originalExtension}`;
 
       const baseParams = {
         folder: folderStructure,
@@ -103,7 +104,7 @@ const createMaterialUploadMiddleware = (folderPath = 'materials', maxCount = 1) 
       }
     }
   });
-  
+
   const fileFilter = (req, file, cb) => {
     const allowedMimeTypes = {
       // Documents

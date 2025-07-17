@@ -1,5 +1,6 @@
 const Material = require('../models/material.model');
 const Classroom = require('../models/classroom.model');
+const axios = require('axios');
 
 const getMaterials = async (req, res) => {
     try {
@@ -22,7 +23,7 @@ const getMaterials = async (req, res) => {
                 message: 'You are not enrolled in this classroom'
             });
         }
-        const materials = await Material.find({ classroom: classroomId, deleted: false })
+        const materials = await Material.find({ classroom: classroomId, deleted: false, isPublic: true })
             .populate('uploadedBy', 'fullName email role')
             .populate('classroom', 'name subject')
             .sort({ createdAt: -1 });
@@ -87,6 +88,7 @@ const uploadMaterial = async (req, res) => {
                 message: 'Please provide a title for the material'
             });
         }
+
         const classroom = await Classroom.findById(classroomId);
         if (!classroom) {
             return res.status(404).json({
@@ -168,23 +170,6 @@ const uploadMaterial = async (req, res) => {
         });
     } catch (error) {
         console.error('Error uploading material:', error);
-        if (req.file && req.file.path) {
-            const publicId = extractPublicId(req.file.path);
-            if (publicId) { 
-                const resourceType = getResourceTypeFromMimeType(req.file.mimetype);
-                deleteFromCloudinary(publicId, resourceType, req.file.mimetype).catch(cleanupError => {
-                    console.error('Failed to cleanup uploaded file:', cleanupError);
-                });
-            }
-        }
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                success: false,
-                error: 'Validation failed',
-                message: error.message,
-                details: error.errors
-            });
-        }
         return res.status(500).json({
             success: false,
             error: 'Internal server error',
@@ -196,7 +181,7 @@ const uploadMaterial = async (req, res) => {
 const deleteMaterial = async (req, res) => {
     try {
         const { classroomId, materialId } = req.params;
-        const currentUser = req.user; 
+        const currentUser = req.user;
 
         const material = await Material.findById(materialId).populate('classroom');
         if (!material) {
@@ -205,7 +190,7 @@ const deleteMaterial = async (req, res) => {
                 error: 'Material not found',
                 message: 'The specified material does not exist'
             });
-        } 
+        }
         if (material.classroom._id.toString() !== classroomId) {
             return res.status(400).json({
                 success: false,
@@ -214,7 +199,7 @@ const deleteMaterial = async (req, res) => {
             });
         }
 
- 
+
         const canDelete = currentUser.role === 'admin' ||
             (currentUser.role === 'teacher' && material.classroom.teacher.toString() === currentUser._id.toString()) ||
             material.uploadedBy.toString() === currentUser._id.toString();
@@ -242,7 +227,7 @@ const deleteMaterial = async (req, res) => {
         res.json({
             success: true,
             message: 'Material deleted successfully'
-        }); 
+        });
         console.log(`Material deleted: ${material.title} by ${currentUser.fullName}`);
     } catch (error) {
         console.error('Error deleting material:', error);
@@ -319,8 +304,93 @@ const deleteFromCloudinary = async (publicId, resourceType = null, mimeType = nu
         throw error;
     }
 };
+const downloadMaterial = async (req, res) => {
+    try {
+        const { materialId } = req.params;
+        const currentUser = req.user;
+        const material = await Material.findById(materialId)
+            .populate('classroom', 'teacher students')
+            .populate('uploadedBy', 'fullName');
+
+        if (!material) {
+            return res.status(404).json({
+                success: false,
+                error: 'Material not found'
+            });
+        }
+
+        const hasAccess = checkDownloadPermission(material, currentUser);
+        if (!hasAccess) {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied'
+            });
+        }
+
+        const response = await axios({
+            method: 'GET',
+            url: material.fileUrl,
+            responseType: 'arraybuffer',  
+            timeout: 30000,
+            headers: {
+                'Accept': '*/*',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            }
+        });
+
+        if (response.status !== 200) {
+            throw new Error(`Failed to fetch file from cloud storage. Status: ${response.status}`);
+        }
+ 
+        const filename = material.originalFileName || material.title;
+        const cleanFilename = filename.replace(/[^\w\s.-]/g, '_');  
+                console.log(`Sending file with filename: ${cleanFilename}`);
+
+        // Set correct headers
+        res.setHeader('Content-Type', material.fileType || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${cleanFilename}"`);
+        res.setHeader('Content-Length', response.data.byteLength);
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Pragma', 'no-cache');
+
+        // Convert ArrayBuffer to Buffer và send
+        const buffer = Buffer.from(response.data);
+        res.send(buffer);
+
+        // Update download count after successful response
+        material.downloadCount += 1;
+        await material.save();
+        console.log(`Material downloaded successfully: ${material.title}`);
+
+    } catch (error) {
+        console.error('Error downloading material:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Download failed'
+        });
+    }
+};
+
+const checkDownloadPermission = (material, user) => {
+    //check pulic
+    if (material.isPublic) return true;
+
+    //check user upload
+    if (material.uploadedBy._id.toString() === user._id.toString()) return true;
+
+    //check user teacher
+    if (material.classroom.teacher.toString() === user._id.toString()) return true;
+
+    // check user in classroom
+    const isStudent = material.classroom.students.some(
+        student => student.toString() === user._id.toString()
+    );
+
+    return isStudent;
+};
 module.exports = {
     uploadMaterial,
     deleteMaterial,
-    getMaterials
+    getMaterials,
+    downloadMaterial
 }

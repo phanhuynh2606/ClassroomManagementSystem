@@ -129,7 +129,7 @@ const MaterialList = ({ classId, classData }) => {
                 message.success(respone.message || 'Material deleted successfully');
                 setMaterialDeleteModalVisible(false);
                 setSelectedMaterial(null);
-                fetchMaterialsData(); 
+                fetchMaterialsData();
             }
 
         } catch (error) {
@@ -140,21 +140,68 @@ const MaterialList = ({ classId, classData }) => {
     };
 
     const handleDownloadMaterial = async (material) => {
-        try {
-            const respone = await classroomAPI.downloadMaterial(material._id);
-            message.success('Download started');
-            // Update download count
-            setMaterialsData(prev =>
-                prev.map(m =>
-                    m._id === material._id
-                        ? { ...m, downloadCount: m.downloadCount + 1 }
-                        : m
-                )
-            );
-        } catch (error) {
-            message.error('Download failed');
+    try {
+        console.log('Starting download for material:', material._id);
+        
+        const response = await materialAPI.downloadMaterial(material._id);
+        
+        // DEBUG: Log response details
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        console.log('Response data type:', typeof response.data);
+        console.log('Response data size:', response.data?.size);
+        console.log('Response data:', response.data);
+        
+        // Kiểm tra response
+        if (!response.data) {
+            throw new Error('No data received from server');
         }
-    };
+        
+        if (response.data.size === 0) {
+            throw new Error('Empty file received - file size is 0');
+        }
+        
+        // Lấy filename từ response header
+        let filename = material.originalFileName || material.title || 'download';
+        
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+            const matches = contentDisposition.match(/filename="(.+)"/);
+            if (matches && matches[1]) {
+                filename = matches[1];
+            }
+        }
+        
+        console.log('Download filename:', filename);
+        
+        // Tạo URL và download
+        const url = window.URL.createObjectURL(response.data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        window.URL.revokeObjectURL(url);
+        
+        message.success('Download completed');
+        
+        // Update download count
+        setMaterialsData(prev =>
+            prev.map(m =>
+                m._id === material._id
+                    ? { ...m, downloadCount: m.downloadCount + 1 }
+                    : m
+            )
+        );
+        
+    } catch (error) {
+        console.error('Download error:', error);
+        message.error(`Download failed: ${error.message}`);
+    }
+};
 
     const handleSubmitMaterial = async (values) => {
         if (!isEditMode && fileList.length === 0) {
