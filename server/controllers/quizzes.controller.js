@@ -21,8 +21,6 @@ const createQuiz = async (req, res) => {
             copyAllowed,
             checkTab,
             randomizeQuestions,
-            visibility = 'draft',
-            isActive = true,
         } = req.body;
 
         const createdBy = req.user._id;
@@ -47,8 +45,8 @@ const createQuiz = async (req, res) => {
             copyAllowed,
             checkTab,
             randomizeQuestions,
-            visibility,
-            isActive,
+            visibility: 'draft',
+            isActive: true,
             submissions: [],
             createdAt: new Date(),
         });

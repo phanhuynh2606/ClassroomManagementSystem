@@ -200,39 +200,16 @@ const QuizManagement = ({ classId }) => {
   };
 
   const handleQuizCreate = async (quizData) => {
-    setLoading(true);
-
-    await new Promise(resolve => setTimeout(resolve, 1000));
     const newQuiz = {
-      title: quizData.title,
-      category: quizData.category,
-      description: quizData.description || '',
+      ...quizData,
       classroom: classId,
-      duration: quizData.duration,
-      passingScore: quizData.passingScore,
-      maxAttempts: quizData.maxAttempts,
-      startTime: quizData.startTime || null,
-      endTime: quizData.endTime || null,
-      questions: quizData.questions || [],
-      allowReview: quizData.allowReview || false,
-      showResults: quizData.showResults || false,
-      shuffleQuestions: quizData.shuffleQuestions || false,
-      shuffleOptions: quizData.shuffleOptions || false,
-      fullScreen: quizData.fullScreen || false,
-      copyAllowed: quizData.copyAllowed || false,
-      checkTab: quizData.checkTab || false,
-      randomizeQuestions: quizData.randomizeQuestions || false,
-      isActive: quizData.isActive || true,
-      visibility: 'draft'
     };
-
     try {
       const response = await quizAPI.create(newQuiz);
-
       if (response.success) {
         setQuizCreateVisible(false);
         message.success('Quiz created successfully!');
-        fetchQuizzes(); // Refresh the list
+        fetchQuizzes();
       }
     } catch (error) {
       message.error('Failed to create quiz');
@@ -424,8 +401,8 @@ const QuizManagement = ({ classId }) => {
                           </Tooltip>
                         )}
 
-                        {(quiz.visibility === 'published' || quiz.visibility === 'scheduled')  && (
-                          <Tooltip title="Schedule Quiz">
+                        {(quiz.visibility === 'published' || quiz.visibility === 'scheduled') && (
+                          <Tooltip title="Unpublish Quiz">
                             <Button
                               type="text"
                               icon={<StopOutlined />}

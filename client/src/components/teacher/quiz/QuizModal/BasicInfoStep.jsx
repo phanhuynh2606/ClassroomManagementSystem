@@ -29,10 +29,10 @@ const QuizStepBasicInfo = () => (
           rules={[{ required: true, message: 'Vui lòng chọn danh mục' }]}
         >
           <Select placeholder="Chọn danh mục">
-            <Option value="midterm">Kiểm tra giữa kỳ</Option>
-            <Option value="final">Kiểm tra cuối kỳ</Option>
-            <Option value="quiz">Bài kiểm tra nhỏ</Option>
-            <Option value="practice">Luyện tập</Option>
+            <Option value="MID_TERM_EXAM">Kiểm tra giữa kỳ</Option>
+            <Option value="FINAL_EXAM">Kiểm tra cuối kỳ</Option>
+            <Option value="PROGRESS_TEST">Bài kiểm tra nhỏ</Option>
+            <Option value="ASSIGNMENT">Luyện tập</Option>
           </Select>
         </Form.Item>
       </Col>

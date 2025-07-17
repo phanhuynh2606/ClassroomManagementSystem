@@ -21,78 +21,6 @@ const CreateQuizModal = ({
 
   // Question management states
   const [questionSource, setQuestionSource] = useState('manual');
-  const [manualQuestion, setManualQuestion] = useState({
-    content: '',
-    options: [
-      { content: '', isCorrect: false },
-      { content: '', isCorrect: false },
-      { content: '', isCorrect: false },
-      { content: '', isCorrect: false }
-    ],
-    difficulty: 'medium',
-    points: 1
-  });
-  const [searchText, setSearchText] = useState('');
-  const [selectedQuestions, setSelectedQuestions] = useState([]);
-  const [aiGenerating, setAiGenerating] = useState(false);
-  const [aiProgress, setAiProgress] = useState(0);
-
-  // Mock data for question bank
-  const questionBankData = [
-    {
-      id: 1,
-      content: "React là gì?",
-      difficulty: "easy",
-      points: 1,
-      options: [
-        { content: "Thư viện JavaScript", isCorrect: true },
-        { content: "Framework CSS", isCorrect: false },
-        { content: "Database", isCorrect: false },
-        { content: "Server", isCorrect: false }
-      ]
-    },
-    {
-      id: 2,
-      content: "useState hook dùng để làm gì?",
-      difficulty: "medium",
-      points: 2,
-      options: [
-        { content: "Quản lý state", isCorrect: true },
-        { content: "Gọi API", isCorrect: false },
-        { content: "Xử lý form", isCorrect: false },
-        { content: "Routing", isCorrect: false }
-      ]
-    }
-  ];
-
-  const questionBankColumns = [
-    {
-      title: 'Câu hỏi',
-      dataIndex: 'content',
-      key: 'content',
-      ellipsis: true,
-    },
-    {
-      title: 'Độ khó',
-      dataIndex: 'difficulty',
-      key: 'difficulty',
-      render: (difficulty) => {
-        const colors = { easy: 'green', medium: 'orange', hard: 'red' };
-        const labels = { easy: 'Dễ', medium: 'Trung bình', hard: 'Khó' };
-        return <span style={{ color: colors[difficulty] }}>{labels[difficulty]}</span>;
-      }
-    },
-    {
-      title: 'Điểm',
-      dataIndex: 'points',
-      key: 'points',
-      width: 80,
-    }
-  ];
-
-  const filteredQuestionBank = questionBankData.filter(q =>
-    q.content.toLowerCase().includes(searchText.toLowerCase())
-  );
 
   const steps = [
     { title: 'Thông tin cơ bản', content: 'Thiết lập thông tin bài thi' },
@@ -115,132 +43,6 @@ const CreateQuizModal = ({
     }
   }, [visible, initialValues, form]);
 
-  // Reset manual question form
-  const resetManualQuestion = () => {
-    setManualQuestion({
-      content: '',
-      options: [
-        { content: '', isCorrect: false },
-        { content: '', isCorrect: false },
-        { content: '', isCorrect: false },
-        { content: '', isCorrect: false }
-      ],
-      difficulty: 'medium',
-      points: 1
-    });
-  };
-
-  // Handle manual question addition
-  const handleAddManualQuestion = () => {
-    // Validate manual question
-    if (!manualQuestion.content.trim()) {
-      message.error('Vui lòng nhập nội dung câu hỏi');
-      return;
-    }
-
-    // Check if all options are filled
-    const emptyOptions = manualQuestion.options.filter(opt => !opt.content.trim());
-    if (emptyOptions.length > 0) {
-      message.error('Vui lòng điền đầy đủ các đáp án');
-      return;
-    }
-
-    // Check if there's at least one correct answer
-    const hasCorrectAnswer = manualQuestion.options.some(opt => opt.isCorrect);
-    if (!hasCorrectAnswer) {
-      message.error('Vui lòng chọn ít nhất một đáp án đúng');
-      return;
-    }
-
-    // Add question to list
-    const newQuestion = {
-      id: Date.now(),
-      content: manualQuestion.content,
-      options: manualQuestion.options,
-      difficulty: manualQuestion.difficulty,
-      points: manualQuestion.points,
-      source: 'manual'
-    };
-
-    setQuizQuestions(prev => [...prev, newQuestion]);
-    resetManualQuestion();
-    message.success('Đã thêm câu hỏi thành công');
-  };
-
-  // Handle adding selected questions from bank
-  const handleAddSelectedQuestions = () => {
-    const questionsToAdd = questionBankData
-      .filter(q => selectedQuestions.includes(q.id))
-      .map(q => ({
-        ...q,
-        source: 'bank'
-      }));
-
-    setQuizQuestions(prev => [...prev, ...questionsToAdd]);
-    setSelectedQuestions([]);
-    message.success(`Đã thêm ${questionsToAdd.length} câu hỏi từ ngân hàng`);
-  };
-
-  // Handle AI question generation
-  const handleGenerateAIQuestions = async () => {
-    setAiGenerating(true);
-    setAiProgress(0);
-
-    try {
-      // Simulate AI generation process
-      const interval = setInterval(() => {
-        setAiProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Mock AI generated questions
-      const aiQuestions = [
-        {
-          id: Date.now(),
-          content: "React Component lifecycle có bao nhiều giai đoạn chính?",
-          options: [
-            { content: "3 giai đoạn", isCorrect: true },
-            { content: "2 giai đoạn", isCorrect: false },
-            { content: "4 giai đoạn", isCorrect: false },
-            { content: "5 giai đoạn", isCorrect: false }
-          ],
-          difficulty: 'medium',
-          points: 2,
-          source: 'ai'
-        },
-        {
-          id: Date.now() + 1,
-          content: "JSX là viết tắt của gì?",
-          options: [
-            { content: "JavaScript XML", isCorrect: true },
-            { content: "JavaScript Extension", isCorrect: false },
-            { content: "Java Syntax Extension", isCorrect: false },
-            { content: "JavaScript External", isCorrect: false }
-          ],
-          difficulty: 'easy',
-          points: 1,
-          source: 'ai'
-        }
-      ];
-
-      setQuizQuestions(prev => [...prev, ...aiQuestions]);
-      setAiProgress(100);
-      message.success(`AI đã tạo ${aiQuestions.length} câu hỏi thành công`);
-    } catch (error) {
-      message.error('Lỗi khi tạo câu hỏi với AI');
-    } finally {
-      setAiGenerating(false);
-      setTimeout(() => setAiProgress(0), 1000);
-    }
-  };
 
   // Step navigation with validation
   const handleNext = async () => {
@@ -297,7 +99,7 @@ const handleFinish = async () => {
       maxAttempts: values.maxAttempts,
       startTime: values.startTime?.toISOString() || null,
       endTime: values.endTime?.toISOString() || null,
-      questions: quizQuestions,
+      questions: quizQuestions.map(q => ({_id: q._id})),
       allowReview: values.allowReview ?? true,
       showResults: values.showResults ?? true,
       shuffleQuestions: values.shuffleQuestions ?? false,
@@ -306,16 +108,12 @@ const handleFinish = async () => {
       copyAllowed: values.preventCopyPaste ?? false,
       checkTab: values.detectTabSwitch ?? false,
       randomizeQuestions: values.randomizeQuestions ?? false,
-      publishDate: values.publishDate?.toISOString() || null,
     };
 
     form.resetFields();
     setCurrentStep(0);
     setQuizQuestions([]);
-    setSelectedQuestions([]);
-    resetManualQuestion();
     setQuestionSource('manual');
-    setSearchText('');
 
     onOk(quizData);
   } catch (error) {
@@ -330,10 +128,7 @@ const handleFinish = async () => {
     form.resetFields();
     setCurrentStep(0);
     setQuizQuestions([]);
-    setSelectedQuestions([]);
-    resetManualQuestion();
     setQuestionSource('manual');
-    setSearchText('');
     onCancel();
   };
 
@@ -372,23 +167,10 @@ const handleFinish = async () => {
         {/* Step 2: Question Management */}
         <div style={{ display: currentStep === 1 ? 'block' : 'none' }}>
           <QuizStepQuestions
-            quizQuestions={quizQuestions}
-            setQuizQuestions={setQuizQuestions}
+            questionDataRendered ={quizQuestions}
+            setQuestionDataRendered={setQuizQuestions}
             questionSource={questionSource}
             setQuestionSource={setQuestionSource}
-            manualQuestion={manualQuestion}
-            setManualQuestion={setManualQuestion}
-            handleAddManualQuestion={handleAddManualQuestion}
-            searchText={searchText}
-            setSearchText={setSearchText}
-            selectedQuestions={selectedQuestions}
-            setSelectedQuestions={setSelectedQuestions}
-            questionBankColumns={questionBankColumns}
-            filteredQuestionBank={filteredQuestionBank}
-            handleAddSelectedQuestions={handleAddSelectedQuestions}
-            handleGenerateAIQuestions={handleGenerateAIQuestions}
-            aiGenerating={aiGenerating}
-            aiProgress={aiProgress}
           />
         </div>
 
