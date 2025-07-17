@@ -326,7 +326,6 @@ class YouTubeAPI {
 
   // Get video info after upload using direct API call
   async getVideoInfo(videoId, maxRetries = 8) {
-    console.log(`[YouTube API] Getting video info for: ${videoId}`);
     
     try {
       if (!this.gapi) {
@@ -336,7 +335,6 @@ class YouTubeAPI {
       // Retry logic for processing videos with longer waits
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-          console.log(`[YouTube API] Attempt ${attempt + 1}/${maxRetries} for video ${videoId}`);
           
           // Method 1: Try using gapi.client first
           let video = null;
@@ -346,11 +344,8 @@ class YouTubeAPI {
               id: videoId
             });
             
-            console.log(`[YouTube API] GAPI Response:`, response);
-            
             if (response.result.items && response.result.items.length > 0) {
               video = response.result.items[0];
-              console.log(`[YouTube API] Video found via GAPI:`, video);
             }
           } catch (gapiError) {
             console.warn(`[YouTube API] GAPI failed, trying REST API:`, gapiError);
@@ -365,11 +360,9 @@ class YouTubeAPI {
               
               if (restResponse.ok) {
                 const restData = await restResponse.json();
-                console.log(`[YouTube API] REST Response:`, restData);
                 
                 if (restData.items && restData.items.length > 0) {
                   video = restData.items[0];
-                  console.log(`[YouTube API] Video found via REST API:`, video);
                 }
               }
             } catch (restError) {
@@ -380,7 +373,6 @@ class YouTubeAPI {
           if (video) {
             // Parse duration from ISO 8601 format
             const parseDuration = (duration) => {
-              console.log(`[YouTube API] Parsing duration:`, duration);
               
               if (!duration || typeof duration !== 'string') {
                 console.warn('[YouTube API] No duration provided or invalid format:', duration);
@@ -409,25 +401,15 @@ class YouTubeAPI {
             const rawDuration = video.contentDetails?.duration;
             const duration = parseDuration(rawDuration);
             
-            console.log(`[YouTube API] Raw duration: "${rawDuration}" -> Parsed: "${duration}"`);
             
             // Check if we have essential data
             const hasEssentialData = video.snippet?.title && 
                                    video.snippet?.thumbnails &&
                                    video.contentDetails;
-            
-            console.log(`[YouTube API] Has essential data:`, {
-              hasTitle: !!video.snippet?.title,
-              hasThumbnails: !!video.snippet?.thumbnails,
-              hasContentDetails: !!video.contentDetails,
-              hasDuration: !!rawDuration,
-              processingStatus: video.status?.uploadStatus
-            });
 
             // If duration is missing but other data is there, continue retrying
             if (!duration && attempt < maxRetries - 1) {
               const waitTime = Math.min((attempt + 1) * 3000, 15000); // Max 15 seconds
-              console.log(`[YouTube API] Duration not available yet, retrying in ${waitTime/1000}s... (processing may still be ongoing)`);
               await new Promise(resolve => setTimeout(resolve, waitTime));
               continue;
             }
@@ -456,14 +438,12 @@ class YouTubeAPI {
               }
             };
 
-            console.log(`[YouTube API] Final video info:`, videoInfo);
             return videoInfo;
           }
 
           // If no video found, wait and retry
           if (attempt < maxRetries - 1) {
             const waitTime = Math.min((attempt + 1) * 3000, 10000);
-            console.log(`[YouTube API] Video not found, retrying in ${waitTime/1000}s... (${attempt + 1}/${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
             continue;
           }
@@ -471,7 +451,6 @@ class YouTubeAPI {
           console.error(`[YouTube API] Attempt ${attempt + 1} failed:`, error);
           if (attempt < maxRetries - 1) {
             const waitTime = Math.min((attempt + 1) * 2000, 8000);
-            console.log(`[YouTube API] Error occurred, retrying in ${waitTime/1000}s...`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
             continue;
           }

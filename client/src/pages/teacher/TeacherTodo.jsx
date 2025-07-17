@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { 
   Card, 
   List, 
@@ -11,7 +11,9 @@ import {
   Tabs,
   Empty,
   Tooltip,
-  Progress
+  Progress,
+  Spin,
+  message
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -21,10 +23,13 @@ import {
   BookOutlined,
   FileTextOutlined,
   UserOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
+import { teacherTodoAPI } from '../../services/api';
+import { HtmlContent } from '../../components/common';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -32,80 +37,70 @@ const { TabPane } = Tabs;
 const TeacherTodo = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('assignments');
-
-  // Mock data for to-do items
-  const assignments = [
-    {
-      id: '1',
-      title: 'Programming Assignment 1',
-      classroomName: 'Web Development',
-      classroomId: 'class1',
-      submissionsCount: 15,
-      totalStudents: 25,
-      dueDate: '2024-01-25T23:59:00Z',
-      priority: 'high',
-      type: 'assignment'
-    },
-    {
-      id: '2', 
-      title: 'Chapter Quiz 1-3',
-      classroomName: 'Programming Fundamentals',
-      classroomId: 'class2',
-      submissionsCount: 22,
-      totalStudents: 30,
-      dueDate: '2024-01-20T15:00:00Z',
-      priority: 'medium',
-      type: 'quiz'
-    },
-    {
-      id: '3',
-      title: 'Final Project Proposal',
-      classroomName: 'Advanced Web Dev',
-      classroomId: 'class3',
-      submissionsCount: 8,
-      totalStudents: 20,
-      dueDate: '2024-01-28T23:59:00Z',
-      priority: 'low',
-      type: 'assignment'
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [data, setData] = useState({
+    assignments: [],
+    questions: [],
+    stats: {
+      pendingAssignments: 0,
+      pendingQuestions: 0,
+      totalSubmissions: 0,
+      totalGradedSubmissions: 0,
+      completionRate: 0
     }
-  ];
+  });
 
-  const questions = [
-    {
-      id: '1',
-      student: 'Alice Johnson',
-      question: 'I need help with the React hooks assignment',
-      classroomName: 'Web Development',
-      classroomId: 'class1',
-      createdAt: '2024-01-18T10:30:00Z',
-      isAnswered: false
-    },
-    {
-      id: '2',
-      student: 'Bob Smith', 
-      question: 'When is the next assignment due?',
-      classroomName: 'Programming Fundamentals',
-      classroomId: 'class2',
-      createdAt: '2024-01-17T14:20:00Z',
-      isAnswered: false
-    },
-    {
-      id: '3',
-      student: 'Carol Davis',
-      question: 'Can you explain the concept of closures again?',
-      classroomName: 'Advanced Web Dev',
-      classroomId: 'class3',
-      createdAt: '2024-01-16T09:15:00Z',
-      isAnswered: true
+  // Fetch teacher todos
+  const fetchTeacherTodos = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await teacherTodoAPI.getTeacherTodos();
+      
+      if (response.success) {
+        setData(response.data);
+      } else {
+        message.error(response.message || 'Không thể tải dữ liệu');
+      }
+    } catch (error) {
+      console.error('Error fetching teacher todos:', error);
+      message.error('Lỗi khi tải dữ liệu');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchTeacherTodos();
+  }, []);
+
+  const handleRefresh = () => {
+    fetchTeacherTodos(true);
+  };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
+      case 'overdue': return 'red';
       case 'high': return 'red';
       case 'medium': return 'orange';
       case 'low': return 'green';
       default: return 'default';
+    }
+  };
+
+  const getPriorityText = (priority) => {
+    switch (priority) {
+      case 'overdue': return 'Quá hạn';
+      case 'high': return 'Cao';
+      case 'medium': return 'Trung bình';
+      case 'low': return 'Thấp';
+      default: return 'Không xác định';
     }
   };
 
@@ -122,19 +117,32 @@ const TeacherTodo = () => {
   };
 
   const handleGradeAssignment = (assignment) => {
-    navigate(`/teacher/classroom/${assignment.classroomId}?tab=grades&assignment=${assignment.id}`);
+    navigate(`/teacher/classroom/${assignment.classroomId}/assignment/${assignment.id}`);
   };
 
   const handleAnswerQuestion = (question) => {
-    navigate(`/teacher/classroom/${question.classroomId}?tab=stream&question=${question.id}`);
+    if (question.type === 'student_post') {
+      navigate(`/teacher/classroom/${question.classroomId}?tab=stream&post=${question.id}`);
+    } else {
+      navigate(`/teacher/classroom/${question.classroomId}?tab=stream&comment=${question.id}`);
+    }
   };
 
   const getProgressPercentage = (submitted, total) => {
+    if (total === 0) return 0;
     return Math.round((submitted / total) * 100);
   };
 
-  const pendingAssignments = assignments.filter(a => a.submissionsCount < a.totalStudents);
-  const pendingQuestions = questions.filter(q => !q.isAnswered);
+  const pendingAssignments = data.assignments || [];
+  const pendingQuestions = data.questions || [];
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -142,6 +150,13 @@ const TeacherTodo = () => {
       <div className="flex justify-between items-center">
         <Title level={2} className="mb-0">Việc cần làm</Title>
         <Space>
+          <Button 
+            icon={<ReloadOutlined />} 
+            onClick={handleRefresh}
+            loading={refreshing}
+          >
+            Làm mới
+          </Button>
           <Badge count={pendingAssignments.length} color="red">
             <Button icon={<BookOutlined />}>
               Bài tập cần chấm
@@ -156,11 +171,11 @@ const TeacherTodo = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <div className="text-center">
             <div className="text-3xl font-bold text-red-500 mb-2">
-              {pendingAssignments.length}
+              {data.stats.pendingAssignments}
             </div>
             <Text type="secondary">Bài tập cần chấm</Text>
           </div>
@@ -168,7 +183,7 @@ const TeacherTodo = () => {
         <Card>
           <div className="text-center">
             <div className="text-3xl font-bold text-orange-500 mb-2">
-              {pendingQuestions.length}
+              {data.stats.pendingQuestions}
             </div>
             <Text type="secondary">Câu hỏi chưa trả lời</Text>
           </div>
@@ -176,9 +191,17 @@ const TeacherTodo = () => {
         <Card>
           <div className="text-center">
             <div className="text-3xl font-bold text-green-500 mb-2">
-              {assignments.reduce((sum, a) => sum + a.submissionsCount, 0)}
+              {data.stats.totalGradedSubmissions}
             </div>
-            <Text type="secondary">Bài đã nộp</Text>
+            <Text type="secondary">Bài đã chấm</Text>
+          </div>
+        </Card>
+        <Card>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-500 mb-2">
+              {data.stats.completionRate}%
+            </div>
+            <Text type="secondary">Tỷ lệ hoàn thành</Text>
           </div>
         </Card>
       </div>
@@ -211,7 +234,7 @@ const TeacherTodo = () => {
                         type="primary" 
                         onClick={() => handleGradeAssignment(assignment)}
                       >
-                        Chấm điểm
+                        Chấm điểm ({assignment.ungradedCount || 0})
                       </Button>
                     ]}
                   >
@@ -221,7 +244,7 @@ const TeacherTodo = () => {
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{assignment.title}</span>
                           <Tag color={getPriorityColor(assignment.priority)} className="capitalize">
-                            {assignment.priority} priority
+                            {getPriorityText(assignment.priority)}
                           </Tag>
                         </div>
                       }
@@ -231,10 +254,10 @@ const TeacherTodo = () => {
                           <div className="flex items-center gap-4">
                             <Text type="secondary">
                               <CalendarOutlined className="mr-1" />
-                              Due {moment(assignment.dueDate).format('MMM DD, YYYY')}
+                              Hạn nộp: {moment(assignment.dueDate).format('DD/MM/YYYY HH:mm')}
                             </Text>
                             <Text type="secondary">
-                              {assignment.submissionsCount}/{assignment.totalStudents} submitted
+                              {assignment.submissionsCount}/{assignment.totalStudents} đã nộp
                             </Text>
                           </div>
                           <Progress 
@@ -284,17 +307,24 @@ const TeacherTodo = () => {
                   >
                     <List.Item.Meta
                       avatar={
-                        <Avatar icon={<UserOutlined />} size={40} />
+                        <Avatar src={question.studentAvatar} icon={<UserOutlined />} size={40} />
                       }
                       title={
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{question.student}</span>
-                          <Tag color="orange">Chưa trả lời</Tag>
+                          <Tag color="orange">
+                            {question.type === 'student_post' ? 'Bài viết' : 'Bình luận'}
+                          </Tag>
                         </div>
                       }
                       description={
                         <Space direction="vertical" size={2} className="w-full">
-                          <Text className="text-gray-700">{question.question}</Text>
+                          <HtmlContent 
+                            content={question.content || question.question}
+                            className="text-gray-700 -mt-4"
+                            ellipsis={true}
+                            maxLines={2}
+                          />
                           <div className="flex items-center gap-4">
                             <Text type="secondary">{question.classroomName}</Text>
                             <Text type="secondary">
@@ -316,16 +346,78 @@ const TeacherTodo = () => {
           tab={
             <span>
               <CheckCircleOutlined />
-              Đã hoàn thành
+              Thống kê tổng quan
             </span>
           } 
-          key="completed"
+          key="overview"
         >
           <Card>
-            <Empty 
-              description="Lịch sử công việc đã hoàn thành"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Text type="secondary">Tổng số lớp học</Text>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {data.stats.totalClassrooms || 0}
+                      </div>
+                    </div>
+                    <BookOutlined className="text-blue-500 text-2xl" />
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Text type="secondary">Tổng bài nộp</Text>
+                      <div className="text-2xl font-bold text-green-600">
+                        {data.stats.totalSubmissions || 0}
+                      </div>
+                    </div>
+                    <FileTextOutlined className="text-green-500 text-2xl" />
+                  </div>
+                </div>
+                
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Text type="secondary">Đã chấm điểm</Text>
+                      <div className="text-2xl font-bold text-purple-600">
+                        {data.stats.totalGradedSubmissions || 0}
+                      </div>
+                    </div>
+                    <CheckCircleOutlined className="text-purple-500 text-2xl" />
+                  </div>
+                </div>
+                
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Text type="secondary">Tỷ lệ hoàn thành</Text>
+                      <div className="text-2xl font-bold text-orange-600">
+                        {data.stats.completionRate || 0}%
+                      </div>
+                    </div>
+                    <ExclamationCircleOutlined className="text-orange-500 text-2xl" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <Title level={4}>Tiến độ chấm điểm</Title>
+                <Progress 
+                  percent={data.stats.completionRate || 0}
+                  status="active"
+                  strokeColor={{
+                    '0%': '#108ee9',
+                    '100%': '#87d068',
+                  }}
+                />
+                <Text type="secondary" className="mt-2 block">
+                  Đã chấm {data.stats.totalGradedSubmissions || 0} / {data.stats.totalSubmissions || 0} bài nộp
+                </Text>
+              </div>
+            </div>
           </Card>
         </TabPane>
       </Tabs>

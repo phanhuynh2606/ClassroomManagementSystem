@@ -39,7 +39,6 @@ const PeopleTab = ({ studentsData, teachersData, studentsLoading, searchText, se
   const [removeModalVisible, setRemoveModalVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [activeTab, setActiveTab] = useState('students');
-  console.log("teachersData", teachersData);
 
   const handleRemoveStudent = (student) => {
     setSelectedStudent(student);

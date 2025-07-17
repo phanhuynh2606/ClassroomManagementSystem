@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Modal, 
   Button, 
@@ -23,6 +23,8 @@ import {
   PictureOutlined,
   EyeOutlined
 } from '@ant-design/icons';
+import { downloadGenericFile } from '../../../utils/fileUtils';
+import { useSelector } from 'react-redux';
 import { fixVietnameseEncoding } from '../../../utils/convertStr';
 // Import react-doc-viewer
 import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
@@ -42,13 +44,69 @@ const FileViewer = ({
   const [viewerError, setViewerError] = useState(false);
   const [textContent, setTextContent] = useState('');
   const [loadingText, setLoadingText] = useState(false);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loadingBlob, setLoadingBlob] = useState(false);
+
+  // Add user selector for secure downloads
+  const { token } = useSelector((state) => state.auth);
+
+  // Check if file is secure (needs authentication)
+  const isSecureFile = useCallback(() => {
+    if (!file) return false;
+    const fileUrl = file.url || file.previewUrl || file.downloadUrl;
+    return token && (
+      fileUrl?.includes('/api/files/') || 
+      file.downloadUrl || 
+      fileUrl?.includes('downloadUrl')
+    );
+  }, [file, token]);
 
   // Reset error when file changes (hook must be before early returns)
   React.useEffect(() => {
     if (file) {
       setViewerError(false);
+      setBlobUrl(null);
     }
   }, [file]);
+
+  // Create blob URL for secure files that need preview (PDF, images)
+  React.useEffect(() => {
+    if (!file || !visible || !isSecureFile()) return;
+    
+    // Only create blob URLs for files that need visual preview
+    if (!isPDF() && !isImage()) return;
+    
+    setLoadingBlob(true);
+    const fileUrl = file.url || file.previewUrl || file.downloadUrl;
+    
+    fetch(fileUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': '*/*'
+      }
+    })
+    .then(response => {
+      if (!response.ok) throw new Error('Failed to fetch file for preview');
+      return response.blob();
+    })
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      setBlobUrl(url);
+      setLoadingBlob(false);
+    })
+    .catch(error => {
+      console.error('Error creating blob URL for preview:', error);
+      setLoadingBlob(false);
+    });
+
+    // Cleanup blob URL when component unmounts or file changes
+    return () => {
+      if (blobUrl) {
+        window.URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [file, visible, token, isSecureFile]);
 
   // Load text content for text files, CSV files, and JSON files
   React.useEffect(() => {
@@ -56,7 +114,23 @@ const FileViewer = ({
       setLoadingText(true);
       setTextContent('');
       
-      fetch(file.url || file.previewUrl)
+      // Use downloadUrl as fallback for secure files
+      const fileUrl = file.url || file.previewUrl || file.downloadUrl;
+      const fetchOptions = {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/plain,*/*'
+        }
+      };
+
+      // Add authorization header if token is available and URL looks like a secure endpoint
+      if (token && (fileUrl.includes('/api/files/') || fileUrl.includes('downloadUrl'))) {
+        fetchOptions.headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        fetchOptions.credentials = 'include';
+      }
+      
+      fetch(fileUrl, fetchOptions)
         .then(response => {
           if (!response.ok) throw new Error('Failed to fetch');
           return response.text();
@@ -71,7 +145,7 @@ const FileViewer = ({
           setLoadingText(false);
         });
     }
-  }, [file, visible]);
+  }, [file, visible, token]);
 
   if (!file || !visible) return null;
 
@@ -94,13 +168,25 @@ const FileViewer = ({
     return ext === 'json';
   };
 
+  const isImage = () => {
+    const ext = getFileExtension();
+    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+  };
+
+  const isPDF = () => {
+    return getFileExtension() === 'pdf';
+  };
+
+  const isOfficeDoc = () => {
+    const ext = getFileExtension();
+    return ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv'].includes(ext);
+  };
+
   // Fix Vietnamese filename encoding
   
 
   const handleDownload = async () => {
     try {
-      const fileUrl = file.url || file.downloadUrl;
-      
       // Fix filename encoding
       const fixedFileName = fixVietnameseEncoding(file.name);
       
@@ -118,48 +204,15 @@ const FileViewer = ({
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
+        
+        message.success(`Download started: ${fixedFileName}`);
       } else {
-        // For other files, try direct download
-        try {
-          // Try fetch with credentials for CORS
-          const response = await fetch(fileUrl, {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-              'Accept': '*/*',
-            }
-          });
-          
-          if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fixedFileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-          } else {
-            throw new Error('Fetch failed');
-          }
-        } catch (fetchError) {
-          // Fallback to direct link method
-          const link = document.createElement('a');
-          link.href = fileUrl;
-          link.download = fixedFileName;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+        // For other files, use the utility function
+        await downloadGenericFile(file, token);
       }
-      
-      message.success(`Đang tải xuống ${fixedFileName}`);
     } catch (error) {
       console.error('Download error:', error);
-      message.error('Không thể tải xuống file');
+      message.error(error.message || 'Download failed. Please try again.');
     }
   };
 
@@ -195,57 +248,73 @@ const FileViewer = ({
     }
   };
 
-  const isImage = () => {
-    const ext = getFileExtension();
-    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
-  };
-
-  const isPDF = () => {
-    return getFileExtension() === 'pdf';
-  };
-
-  const isOfficeDoc = () => {
-    const ext = getFileExtension();
-    return ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv'].includes(ext);
-  };
-
   const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 25, 300));
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 25, 25));
   const handleRotate = () => setRotation(prev => prev + 90);
 
   // Prepare docs for react-doc-viewer (after getFileExtension is defined)
+  const getPreviewUrl = () => {
+    if (isSecureFile() && blobUrl) {
+      return blobUrl;
+    }
+    return file.url || file.previewUrl || file.downloadUrl;
+  };
+
   const docs = [{
-    uri: file.url || file.previewUrl,
+    uri: getPreviewUrl(),
     fileName: fixVietnameseEncoding(file.name),
     fileType: getFileExtension(),
   }];
 
-  const renderPDFViewer = () => (
-    <div>
-      <div className="mb-2 text-center">
-        <Text className="text-sm text-gray-600">
-          {getFileIcon()} PDF Viewer - {fixVietnameseEncoding(file.name)}
-        </Text>
+  const renderPDFViewer = () => {
+    // For secure files, use blob URL if available
+    const previewUrl = isSecureFile() ? blobUrl : (file.url || file.previewUrl || file.downloadUrl);
+    
+    return (
+      <div>
+        <div className="mb-2 text-center">
+          <Text className="text-sm text-gray-600">
+            {getFileIcon()} PDF Viewer - {fixVietnameseEncoding(file.name)}
+          </Text>
+        </div>
+        <div style={{ 
+          height: '70vh', 
+          border: '1px solid #d9d9d9', 
+          borderRadius: '6px',
+          overflow: 'hidden'
+        }}>
+          {isSecureFile() && loadingBlob ? (
+            <div className="flex items-center justify-center h-full">
+              <Spin size="large" />
+              <Text className="ml-2">Loading secure preview...</Text>
+            </div>
+          ) : previewUrl ? (
+            <iframe
+              src={`${previewUrl}#view=FitH&toolbar=1&navpanes=1&scrollbar=1`}
+              width="100%"
+              height="100%"
+              title={file.name}
+              style={{ border: 'none' }}
+              onError={() => {
+                message.error('Cannot preview PDF - Please download to view');
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <Text type="secondary">PDF preview not available</Text>
+                <div className="mt-2">
+                  <Button type="primary" onClick={handleDownload}>
+                    Download to view
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-      <div style={{ 
-        height: '70vh', 
-        border: '1px solid #d9d9d9', 
-        borderRadius: '6px',
-        overflow: 'hidden'
-      }}>
-        <iframe
-          src={`${file.url || file.previewUrl}#view=FitH&toolbar=1&navpanes=1&scrollbar=1`}
-          width="100%"
-          height="100%"
-          title={file.name}
-          style={{ border: 'none' }}
-          onError={() => {
-            message.error('Không thể tải PDF - Vui lòng tải xuống');
-          }}
-        />
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderTextViewer = () => (
     <div>
@@ -492,22 +561,45 @@ const FileViewer = ({
     );
   };
 
-  const renderImageViewer = () => (
-    <div className="text-center">
-      <Image
-        src={file.url || file.previewUrl}
-        alt={file.name}
-        style={{ 
-          maxWidth: '100%',
-          maxHeight: '70vh',
-          transform: `scale(${zoomLevel / 100}) rotate(${rotation}deg)`,
-          transition: 'transform 0.3s ease'
-        }}
-        preview={false}
-        onError={() => message.error('Không thể tải hình ảnh')}
-      />
-    </div>
-      );
+  const renderImageViewer = () => {
+    // For secure files, use blob URL if available
+    const previewUrl = isSecureFile() ? blobUrl : (file.url || file.previewUrl || file.downloadUrl);
+
+    return (
+      <div className="text-center">
+        {isSecureFile() && loadingBlob ? (
+          <div className="flex items-center justify-center" style={{ height: '70vh' }}>
+            <Spin size="large" />
+            <Text className="ml-2">Loading secure preview...</Text>
+          </div>
+        ) : previewUrl ? (
+          <Image
+            src={previewUrl}
+            alt={file.name}
+            style={{ 
+              maxWidth: '100%',
+              maxHeight: '70vh',
+              transform: `scale(${zoomLevel / 100}) rotate(${rotation}deg)`,
+              transition: 'transform 0.3s ease'
+            }}
+            preview={false}
+            onError={() => message.error('Cannot load image')}
+          />
+        ) : (
+          <div className="flex items-center justify-center" style={{ height: '70vh' }}>
+            <div className="text-center">
+              <Text type="secondary">Image preview not available</Text>
+              <div className="mt-2">
+                <Button type="primary" onClick={handleDownload}>
+                  Download to view
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const isDocViewerSupported = () => {
     const ext = getFileExtension();

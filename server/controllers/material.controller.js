@@ -1,18 +1,6 @@
 const Material = require('../models/material.model');
 const Classroom = require('../models/classroom.model');
 
-function extractPublicId(cloudinaryUrl) {
-    const urlParts = cloudinaryUrl.split('/');
-    const uploadIndex = urlParts.findIndex(part => part === 'upload');
-
-    if (uploadIndex !== -1 && uploadIndex + 2 < urlParts.length) {
-        const pathParts = urlParts.slice(uploadIndex + 2);
-        const publicId = pathParts.join('/');
-        return publicId.replace(/\.[^/.]+$/, '');
-    }
-    return null;
-}
-
 const getMaterials = async (req, res) => {
     try {
         const { classroomId } = req.params;
@@ -26,7 +14,7 @@ const getMaterials = async (req, res) => {
                 error: 'Classroom not found',
                 message: 'The specified classroom does not exist'
             });
-        } 
+        }
         if (currentUser.role === 'student' && !classroom.students.some(student => student._id.toString() === currentUser._id.toString())) {
             return res.status(403).json({
                 success: false,
@@ -84,6 +72,7 @@ const uploadMaterial = async (req, res) => {
         const { title, description, isPublic, tags } = req.body;
         const uploadedFile = req.file;
         const currentUser = req.user;
+        console.log('file uploaded:', uploadedFile);
         if (!uploadedFile) {
             return res.status(400).json({
                 success: false,
@@ -129,7 +118,7 @@ const uploadMaterial = async (req, res) => {
             }
         }
         //Determine material type from file if not provided
-        const materialType = type || getMaterialType(uploadedFile.mimetype);
+        const materialType = getMaterialType(uploadedFile.mimetype);
 
         // Extract public ID from Cloudinary URL for future reference
         const publicId = extractPublicId(uploadedFile.path);
@@ -181,8 +170,9 @@ const uploadMaterial = async (req, res) => {
         console.error('Error uploading material:', error);
         if (req.file && req.file.path) {
             const publicId = extractPublicId(req.file.path);
-            if (publicId) {
-                deleteFromCloudinary(publicId, 'raw').catch(cleanupError => {
+            if (publicId) { 
+                const resourceType = getResourceTypeFromMimeType(req.file.mimetype);
+                deleteFromCloudinary(publicId, resourceType, req.file.mimetype).catch(cleanupError => {
                     console.error('Failed to cleanup uploaded file:', cleanupError);
                 });
             }
@@ -206,9 +196,8 @@ const uploadMaterial = async (req, res) => {
 const deleteMaterial = async (req, res) => {
     try {
         const { classroomId, materialId } = req.params;
-        const currentUser = req.user;
+        const currentUser = req.user; 
 
-        // Find the material
         const material = await Material.findById(materialId).populate('classroom');
         if (!material) {
             return res.status(404).json({
@@ -216,9 +205,7 @@ const deleteMaterial = async (req, res) => {
                 error: 'Material not found',
                 message: 'The specified material does not exist'
             });
-        }
-
-        // Check if material belongs to the specified classroom
+        } 
         if (material.classroom._id.toString() !== classroomId) {
             return res.status(400).json({
                 success: false,
@@ -227,7 +214,7 @@ const deleteMaterial = async (req, res) => {
             });
         }
 
-        // Check permissions
+ 
         const canDelete = currentUser.role === 'admin' ||
             (currentUser.role === 'teacher' && material.classroom.teacher.toString() === currentUser._id.toString()) ||
             material.uploadedBy.toString() === currentUser._id.toString();
@@ -239,32 +226,24 @@ const deleteMaterial = async (req, res) => {
                 message: 'You are not authorized to delete this material'
             });
         }
-
-        // Perform soft delete
         material.deleted = true;
         material.deletedAt = new Date();
         material.deletedBy = currentUser._id;
         material.isActive = false;
         await material.save();
 
-        // Optional: Delete from Cloudinary (uncomment if you want permanent deletion)
-        /*
-        if (material.cloudinaryPublicId) {
-            const deleteResult = await deleteFromCloudinary(material.cloudinaryPublicId, 'raw');
-            if (!deleteResult.success) {
-                console.warn('Failed to delete file from Cloudinary:', deleteResult.error);
-            }
-        }
-        */
+        // if (material.cloudinaryPublicId) {
+        //     const deleteResult = await deleteFromCloudinary(material.cloudinaryPublicId, 'raw');
+        //     if (!deleteResult.success) {
+        //         console.warn('Failed to delete file from Cloudinary:', deleteResult.error);
+        //     }
+        // }
 
         res.json({
             success: true,
             message: 'Material deleted successfully'
-        });
-
-        // Log deletion for audit trail
+        }); 
         console.log(`Material deleted: ${material.title} by ${currentUser.fullName}`);
-
     } catch (error) {
         console.error('Error deleting material:', error);
         return res.status(500).json({
@@ -272,6 +251,72 @@ const deleteMaterial = async (req, res) => {
             error: 'Internal server error',
             message: 'Failed to delete material. Please try again later.'
         });
+    }
+};
+
+function extractPublicId(cloudinaryUrl) {
+    const urlParts = cloudinaryUrl.split('/');
+    const uploadIndex = urlParts.findIndex(part => part === 'upload');
+
+    if (uploadIndex !== -1 && uploadIndex + 2 < urlParts.length) {
+        const pathParts = urlParts.slice(uploadIndex + 2);
+        const publicId = pathParts.join('/');
+        return publicId.replace(/\.[^/.]+$/, '');
+    }
+    return null;
+}
+const getMaterialType = (mimeType) => {
+    if (mimeType.startsWith('image/')) {
+        return 'image';
+    } else if (mimeType.startsWith('video/')) {
+        return 'video';
+    } else if (mimeType.startsWith('audio/')) {
+        return 'audio';
+    } else if (mimeType === 'application/pdf') {
+        return 'pdf';
+    } else if (mimeType.includes('word') || mimeType.includes('document')) {
+        return 'document';
+    } else if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+        return 'presentation';
+    } else if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
+        return 'spreadsheet';
+    } else if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) {
+        return 'archive';
+    } else {
+        return 'other';
+    }
+};
+const deleteFromCloudinary = async (publicId, resourceType = null, mimeType = null) => {
+    if (!publicId) {
+        console.warn('No public ID provided for deletion');
+        return null;
+    }
+    try {
+        if (!resourceType && mimeType) {
+            resourceType = getResourceTypeFromMimeType(mimeType);
+        }
+        const typesToTry = resourceType ? [resourceType] : ['raw', 'image', 'video'];
+        let lastError = null;
+        for (const type of typesToTry) {
+            try {
+                const result = await cloudinary.uploader.destroy(publicId, {
+                    resource_type: type
+                });
+                // If successful deletion (result is 'ok') or file not found, consider it successful
+                if (result.result === 'ok' || result.result === 'not found') {
+                    return result;
+                }
+                lastError = new Error(`Deletion failed with result: ${result.result}`);
+            } catch (error) {
+                console.warn(`Failed to delete as ${type}:`, error.message);
+                lastError = error;
+                continue; // Try next resource type
+            }
+        }
+        throw lastError || new Error('All deletion attempts failed');
+    } catch (error) {
+        console.error('Error deleting from Cloudinary:', error);
+        throw error;
     }
 };
 module.exports = {

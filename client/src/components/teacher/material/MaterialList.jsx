@@ -56,8 +56,8 @@ const MaterialList = ({ classId, classData }) => {
     const fetchMaterialsData = async () => {
         setMaterialsLoading(true);
         try {
-            const response = await materialAPI.getMaterials(classId); 
-            setMaterialsData(response.data.materials || [] );
+            const response = await materialAPI.getMaterials(classId);
+            setMaterialsData(response.data.materials || []);
         } catch (error) {
             console.error('Error fetching materials:', error);
             message.error('Failed to fetch materials');
@@ -110,7 +110,7 @@ const MaterialList = ({ classId, classData }) => {
         setFileList([]);
         materialForm.setFieldsValue({
             title: material.title,
-            description: material.description, 
+            description: material.description,
             isPublic: material.isPublic
         });
         setCreateEditModalVisible(true);
@@ -124,11 +124,14 @@ const MaterialList = ({ classId, classData }) => {
     const confirmDeleteMaterial = async () => {
         setDeletingMaterial(true);
         try {
-            // await classroomAPI.deleteMaterial(selectedMaterial._id);
-            message.success('Material deleted successfully');
-            setMaterialDeleteModalVisible(false);
-            setSelectedMaterial(null);
-            fetchMaterialsData(); // Refresh data
+            const respone = await materialAPI.deleteMaterial(classId, selectedMaterial._id);
+            if (respone.success) {
+                message.success(respone.message || 'Material deleted successfully');
+                setMaterialDeleteModalVisible(false);
+                setSelectedMaterial(null);
+                fetchMaterialsData(); 
+            }
+
         } catch (error) {
             message.error('Failed to delete material');
         } finally {
@@ -138,7 +141,7 @@ const MaterialList = ({ classId, classData }) => {
 
     const handleDownloadMaterial = async (material) => {
         try {
-            // await classroomAPI.downloadMaterial(material._id);
+            const respone = await classroomAPI.downloadMaterial(material._id);
             message.success('Download started');
             // Update download count
             setMaterialsData(prev =>
@@ -166,17 +169,18 @@ const MaterialList = ({ classId, classData }) => {
             formData.append('description', values.description || '');
             formData.append('isPublic', values.isPublic);
             formData.append('tags', JSON.stringify(tags));
-            formData.append('classroom', classId); 
+            formData.append('classroom', classId);
             if (fileList.length > 0) {
-                const file = fileList[0].originFileObj || fileList[0].file || fileList[0]; 
+                const file = fileList[0].originFileObj || fileList[0].file || fileList[0];
                 formData.append('file', file);
-            } 
+            }
             if (isEditMode) {
                 await materialAPI.updateMaterial(selectedMaterial._id, formData);
                 message.success('Material updated successfully');
             } else {
-                const respone = await materialAPI.createMaterial(classId, formData); 
-                message.success('Material uploaded successfully');
+                const respone = await materialAPI.createMaterial(classId, formData);
+                console.log(respone);
+                //message.success('Material uploaded successfully');
             }
 
             setCreateEditModalVisible(false);
@@ -427,7 +431,7 @@ const MaterialList = ({ classId, classData }) => {
                             rows={3}
                             placeholder="Enter material description (optional)"
                         />
-                    </Form.Item> 
+                    </Form.Item>
 
                     {!isEditMode && (
                         <Form.Item

@@ -20,12 +20,28 @@ axiosClient.interceptors.response.use(
   (response) => response.data,
   async (error) => {
     const originalRequest = error.config;
-    const errorCode = error.response?.data?.code;
+    let errorData = error.response?.data;
+    let errorCode = null;
 
+    // Handle case where response.data is a Blob (when responseType: 'blob')
+    if (errorData instanceof Blob && errorData.type === 'application/json') {
+      try {
+        const text = await errorData.text();
+        errorData = JSON.parse(text);
+        errorCode = errorData?.code;
+      } catch (parseError) {
+        console.warn('Failed to parse error blob:', parseError);
+      }
+    } else {
+      errorCode = errorData?.code;
+    }
+
+    console.log("errorCode", errorCode, "errorData", errorData);
+    
     // If error is 401 and we haven't tried to refresh token yet
     if (error.response?.status === 401 && !originalRequest._retry && (errorCode === 'ACCESS_TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN')) {
       originalRequest._retry = true;
-
+      console.log("originalRequest", originalRequest)
       try {
         // Call refresh token endpoint
         const response = await axiosClient.post('/auth/refresh-token');
@@ -45,7 +61,6 @@ axiosClient.interceptors.response.use(
           return axiosClient(originalRequest);
         }
       } catch (refreshError) {
-        console.log("Refresh error:", refreshError.response?.data);
         if (refreshError.response?.data?.code === "REFRESH_TOKEN_EXPIRED" || refreshError.response?.data?.code === "NO_REFRESH_TOKEN") {
           localStorage.removeItem('token');
           localStorage.removeItem('persist:root');

@@ -36,12 +36,10 @@ const VideoPlayerModal = ({ visible, onCancel, videoData, classroomId, streamIte
     }
 
     try {
-      console.log('📊 Fetching view count for:', { videoId, classroomId });
       const response = await videoWatchAPI.getVideoViewCount(classroomId, videoId);
       
       if (response.success) {
         setRealViewCount(response.data.viewCount);
-        console.log('✅ Real view count fetched:', response.data.viewCount);
       } else {
         console.error('❌ Failed to fetch view count:', response);
       }
@@ -58,9 +56,8 @@ const VideoPlayerModal = ({ visible, onCancel, videoData, classroomId, streamIte
 
   // Callback when view is counted to refresh view count
   const handleViewCounted = () => {
-    console.log('🔄 View was counted, refreshing view count...');
     fetchViewCount();
-  };
+  };  
 
   // Reset view count when modal closes
   useEffect(() => {
@@ -81,7 +78,6 @@ const VideoPlayerModal = ({ visible, onCancel, videoData, classroomId, streamIte
                         (url && url.includes('youtu.be'));
 
   const handleModalClose = () => {
-    console.log('🚪 Modal closing - ending watch session...');
     // End watch session before closing modal
     if (playerRef.current && enableTracking) {
       playerRef.current.endWatchSession();

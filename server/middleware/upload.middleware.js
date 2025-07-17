@@ -19,7 +19,7 @@ const createUploadMiddleware = (folderPath = 'messages', maxCount = 5) => {
         { width: 1200, crop: 'limit' },
         { quality: 'auto', fetch_format: 'auto' }
       ],
-      
+
       // Add custom public_id for better organization
       public_id: (req, file) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -30,7 +30,6 @@ const createUploadMiddleware = (folderPath = 'messages', maxCount = 5) => {
     }
   });
 
-  // File filter to only allow images
   const fileFilter = (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -39,7 +38,6 @@ const createUploadMiddleware = (folderPath = 'messages', maxCount = 5) => {
     }
   };
 
-  // Configure multer with storage and limits
   const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
@@ -53,79 +51,74 @@ const createUploadMiddleware = (folderPath = 'messages', maxCount = 5) => {
 };
 
 const createMaterialUploadMiddleware = (folderPath = 'materials', maxCount = 1) => {
-  // Configure Cloudinary storage for materials
   const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: (req, file) => {
       // Determine resource type based on file type
       const isVideo = file.mimetype.startsWith('video/');
-      const isImage = file.mimetype.startsWith('image/'); 
+      const isImage = file.mimetype.startsWith('image/');
       const customFolder = req.body.customFolder || 'classmanagement';
       const classroomId = req.params.classId || req.body.classroomId || 'general';
       const folderStructure = `${customFolder}/${folderPath}/${classroomId}`;
 
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const fileNameWithoutExt = file.originalname.split('.')[0]
+        .replace(/[^a-zA-Z0-9]/g, '_') // sanitize filename
+        .trim(); // Remove any leading/trailing whitespace
+
+      // Don't add extension to public_id - let Cloudinary handle it
+      const publicId = `${fileNameWithoutExt}-${uniqueSuffix}`;
+
       const baseParams = {
         folder: folderStructure,
-        // Add custom public_id for better organization
-        public_id: () => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-          const fileNameWithoutExt = file.originalname.split('.')[0]
-            .replace(/[^a-zA-Z0-9]/g, '_'); // sanitize filename
-          return `${fileNameWithoutExt}-${uniqueSuffix}`;
-        }
+        public_id: publicId,
+        use_filename: false, // Don't use original filename
+        unique_filename: true // Ensure unique filenames
       };
+
+      console.log('Creating material upload params:', baseParams);
 
       if (isVideo) {
         return {
           ...baseParams,
           resource_type: 'video',
-          allowed_formats: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv'],
-          // Video-specific transformations (optional)
-          transformation: [
-            { quality: 'auto' },
-            { fetch_format: 'auto' }
-          ]
+          // Don't restrict allowed_formats for videos - let Cloudinary handle it
         };
       } else if (isImage) {
         return {
           ...baseParams,
           resource_type: 'image',
-          allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff'],
           transformation: [
             { width: 1200, crop: 'limit' },
             { quality: 'auto', fetch_format: 'auto' }
           ]
         };
       } else {
-        // For documents and other files
+        // For documents and other files - don't restrict formats
         return {
           ...baseParams,
-          resource_type: 'raw',
-          allowed_formats: [ 
-            'pdf', 'doc', 'docx', 'txt', 
-            'ppt', 'pptx', 'xls', 'xlsx',
-            'csv', 'zip', 'rar', '7z' 
-          ]
+          resource_type: 'raw'
+          // Remove allowed_formats to allow all file types
         };
       }
     }
   });
- 
-  const fileFilter = (req, file, cb) => { 
+  
+  const fileFilter = (req, file, cb) => {
     const allowedMimeTypes = {
       // Documents
       'application/pdf': 'pdf',
       'application/msword': 'doc',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-      'text/plain': 'txt', 
+      'text/plain': 'txt',
       // Presentations
       'application/vnd.ms-powerpoint': 'ppt',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx', 
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
 
       // Spreadsheets
       'application/vnd.ms-excel': 'xls',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx', 
-      'text/csv': 'csv', 
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+      'text/csv': 'csv',
       // Videos
       'video/mp4': 'mp4',
       'video/avi': 'avi',
@@ -139,7 +132,7 @@ const createMaterialUploadMiddleware = (folderPath = 'materials', maxCount = 1) 
       // Archives
       'application/zip': 'zip',
       'application/x-rar-compressed': 'rar',
-      'application/x-7z-compressed': '7z', 
+      'application/x-7z-compressed': '7z',
     };
 
     if (allowedMimeTypes[file.mimetype]) {
@@ -207,13 +200,10 @@ const createBackgroundUploadMiddleware = () => {
   return upload;
 };
 
-// Helper function to get file size limit based on file type
 function getFileSizeLimit() {
-  // Return a reasonable default (20MB for materials, 5MB for images)
   return 20 * 1024 * 1024; // 20MB
 }
 
-// Create attachment upload middleware for announcements
 const createAttachmentUploadMiddleware = () => {
   // Configure Cloudinary storage for attachments
   const storage = new CloudinaryStorage({
@@ -256,7 +246,7 @@ const createAttachmentUploadMiddleware = () => {
           ...baseParams,
           resource_type: 'raw',
           allowed_formats: [
-            'pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx', 
+            'pdf', 'doc', 'docx', 'txt', 'ppt', 'pptx',
             'xls', 'xlsx', 'csv', 'zip', 'rar', '7z'
           ]
         };
@@ -353,7 +343,7 @@ const createUploadAssignmentMiddleware = (folderPath = 'assignments', maxCount =
         }
         return []; // No transformation for non-image files
       },
-      
+
       // Add custom public_id for better organization
       public_id: (req, file) => {
         const timestamp = Date.now();
@@ -363,7 +353,7 @@ const createUploadAssignmentMiddleware = (folderPath = 'assignments', maxCount =
         return `${fileNameWithoutExt}_${timestamp}.${extension}`;
       },
       use_filename: true,
-      unique_filename: true, 
+      unique_filename: true,
     }
   });
 
@@ -372,12 +362,12 @@ const createUploadAssignmentMiddleware = (folderPath = 'assignments', maxCount =
     // Define allowed MIME types
     const allowedMimeTypes = [
       // Images
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
       'image/bmp', 'image/tiff', 'image/svg+xml',
       // Documents
-      'application/pdf', 'application/msword', 
+      'application/pdf', 'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel', 
+      'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-powerpoint',
       'application/vnd.openxmlformats-officedocument.presentationml.presentation',
@@ -386,10 +376,10 @@ const createUploadAssignmentMiddleware = (folderPath = 'assignments', maxCount =
       'video/mp4', 'video/avi', 'video/quicktime', 'video/x-msvideo',
       'video/x-flv', 'video/webm', 'video/x-matroska',
       // Audio
-      'audio/mpeg', 'audio/wav', 'audio/flac', 'audio/aac', 
+      'audio/mpeg', 'audio/wav', 'audio/flac', 'audio/aac',
       'audio/ogg', 'audio/x-ms-wma',
       // Archives
-      'application/zip', 'application/x-rar-compressed', 
+      'application/zip', 'application/x-rar-compressed',
       'application/x-7z-compressed', 'application/x-tar', 'application/gzip',
       // Others
       'text/csv', 'application/json', 'application/xml', 'text/xml',
@@ -409,8 +399,8 @@ const createUploadAssignmentMiddleware = (folderPath = 'assignments', maxCount =
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB limit per file (increased for various file types)
-      files: maxCount // Maximum number of files
+      fileSize: 10 * 1024 * 1024,
+      files: maxCount
     }
   });
 
@@ -421,6 +411,7 @@ const profileUpload = createUploadMiddleware('profiles', 1);
 const questionImageUpload = createUploadMiddleware('questions', 1);
 const backgroundImageUpload = createBackgroundUploadMiddleware();
 const attachmentUpload = createAttachmentUploadMiddleware();
+const materialUpload = createMaterialUploadMiddleware('materials', 1);
 
 // Assignment-related uploads - separated by purpose
 const assignmentUpload = createUploadAssignmentMiddleware("teacher", 5); // Teacher assignment materials
@@ -434,5 +425,5 @@ module.exports = {
   assignmentUpload,     // For teacher assignment attachments
   submissionUpload,     // For student submissions
   createUploadMiddleware, // Export factory function for custom use cases
-  createMaterialUploadMiddleware
+  materialUpload
 };

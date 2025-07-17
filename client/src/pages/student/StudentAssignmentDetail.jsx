@@ -45,12 +45,14 @@ import {
   EditOutlined,
   CloudUploadOutlined,
   StarOutlined,
+  EyeInvisibleOutlined,
+  RedoOutlined,
 } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import moment from "moment";
 import { assignmentAPI } from "../../services/api";
-import { formatFileSize } from "../../utils/fileUtils";
+import { formatFileSize, downloadGenericFile, getBrowserInfo } from "../../utils/fileUtils";
 import { fixVietnameseEncoding } from "../../utils/convertStr";
 import { StudentSubmissionModal } from "../../components/student/submission";
 
@@ -63,97 +65,18 @@ const StudentAssignmentDetail = () => {
   const { user, token } = useSelector((state) => state.auth);
   const [form] = Form.useForm();
 
-  // Universal file download function with fallback strategies for all browsers
+  // Simple file download using fileUtils
   const handleFileDownload = async (downloadUrl, fileName) => {
-    const hideLoading = message.loading('Downloading file...', 0);
-    
     try {
-      if (!token) {
-        message.error('Authentication required. Please login again.');
-        hideLoading();
-        return;
-      }
-
-      // Strategy 1: Modern Fetch + Blob (Works on all modern browsers)
-      if (window.fetch && window.Blob && window.URL?.createObjectURL) {
-        await downloadWithFetch(downloadUrl, fileName, token);
-        hideLoading();
-        message.success('File downloaded successfully!');
-        return;
-      }
-
-      // Strategy 2: Fallback for older browsers - Direct window open with auth
-      if (window.open) {
-        await downloadWithWindowOpen(downloadUrl, fileName, token);
-        hideLoading();
-        message.success('Download initiated. Check your downloads folder.');
-        return;
-      }
-
-      throw new Error('Browser does not support file downloads');
-      
+      await downloadGenericFile({
+        downloadUrl: downloadUrl,
+        url: downloadUrl,
+        name: fileName
+      });
     } catch (error) {
       console.error('Download error:', error);
-      hideLoading();
-      
-      // Ultimate fallback - copy download link
-      if (navigator.clipboard) {
-        try {
-          await navigator.clipboard.writeText(downloadUrl);
-          message.warning('Download failed. Download URL copied to clipboard. You can paste it in a new tab.');
-        } catch {
-          message.error('Download failed. Please try a different browser or contact support.');
-        }
-      } else {
-        message.error('Download failed. Please try a different browser or contact support.');
-      }
+      // Error handling is already done in downloadGenericFile
     }
-  };
-
-  // Strategy 1: Modern fetch + blob approach (Best for all browsers including Edge)
-  const downloadWithFetch = async (downloadUrl, fileName, token) => {
-    const response = await fetch(downloadUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`);
-    }
-
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fixVietnameseEncoding(fileName) || 'download';
-    link.style.display = 'none';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up
-    setTimeout(() => {
-      window.URL.revokeObjectURL(blobUrl);
-    }, 100);
-  };
-
-  // Strategy 2: Fallback approach for edge cases
-  const downloadWithWindowOpen = async (downloadUrl, fileName, token) => {
-    // For older browsers or special cases, open in new window
-    // Note: This might open as preview in some browsers but still works
-    const newWindow = window.open('', '_blank');
-    newWindow.location.href = `${downloadUrl}?t=${Date.now()}`;
-    
-    // Try to set document title for better UX
-    setTimeout(() => {
-      if (newWindow.document) {
-        newWindow.document.title = `Downloading ${fileName}`;
-      }
-    }, 100);
   };
 
   const [loading, setLoading] = useState(true);
@@ -162,20 +85,7 @@ const StudentAssignmentDetail = () => {
   const [submission, setSubmission] = useState(null);
   const [submitModalVisible, setSubmitModalVisible] = useState(false);
 
-  // Browser compatibility detection
-  const getBrowserInfo = () => {
-    const userAgent = navigator.userAgent;
-    const isModernBrowser = !!(window.fetch && window.Blob && window.URL?.createObjectURL);
-    
-    let browserName = 'Unknown';
-    if (userAgent.includes('Edge')) browserName = 'Edge';
-    else if (userAgent.includes('Chrome')) browserName = 'Chrome';
-    else if (userAgent.includes('Firefox')) browserName = 'Firefox';
-    else if (userAgent.includes('Safari')) browserName = 'Safari';
-    else if (userAgent.includes('Opera')) browserName = 'Opera';
-    
-    return { browserName, isModernBrowser };
-  };
+
 
   useEffect(() => {
     if (assignmentId) {
@@ -255,23 +165,43 @@ const StudentAssignmentDetail = () => {
   };
 
   const canSubmit = () => {
-    if (submission) return false; // Already submitted
     if (assignment.visibility !== "published") return false;
     if (!assignment.isActive) return false;
 
     // Check if late submission is allowed
     const isOverdue = moment().isAfter(moment(assignment.dueDate));
-    return !isOverdue || assignment.allowLateSubmission;
+    
+    // If no submission yet
+    if (!submission) {
+      return !isOverdue || assignment.allowLateSubmission;
+    }
+    
+    // If already submitted, check if resubmission is allowed
+    if (submission && submission.allowResubmit) {
+      return !isOverdue || assignment.allowLateSubmission;
+    }
+    
+    // Already submitted and no resubmission allowed
+    return false;
+  };
+
+  const canResubmit = () => {
+    return submission && submission.allowResubmit && canSubmit();
   };
 
   const handleSubmissionSubmit = async (submissionData) => {
     try {
       setSubmitting(true);
+      const isResubmission = canResubmit();
       
       const response = await assignmentAPI.submit(assignmentId, submissionData);
 
       if (response.success) {
-        message.success("Assignment submitted successfully!");
+        if (isResubmission) {
+          message.success("Assignment resubmitted successfully!");
+        } else {
+          message.success("Assignment submitted successfully!");
+        }
         setSubmitModalVisible(false);
         fetchAssignmentDetail();
       } else {
@@ -404,12 +334,12 @@ const StudentAssignmentDetail = () => {
               {canSubmit() && (
                 <Button 
                   type="primary" 
-                  icon={<SendOutlined />}
+                  icon={canResubmit() ? <RedoOutlined /> : <SendOutlined />}
                   onClick={() => setSubmitModalVisible(true)}
-                  className="bg-gradient-to-r from-green-500 to-green-600 border-0 hover:shadow-lg transition-all duration-300 px-6"
+                  className={`${canResubmit() ? 'bg-gradient-to-r from-orange-500 to-orange-600' : 'bg-gradient-to-r from-green-500 to-green-600'} border-0 hover:shadow-lg transition-all duration-300 px-6`}
                   size="large"
                 >
-                  Submit Assignment
+                  {canResubmit() ? 'Resubmit Assignment' : 'Submit Assignment'}
                 </Button>
               )}
             </div>
@@ -468,9 +398,9 @@ const StudentAssignmentDetail = () => {
               assignment.allowLateSubmission
                 ? `Due: ${moment(assignment.dueDate).format(
                     "DD/MM/YYYY HH:mm"
-                  )} - Late submission allowed with ${
-                    assignment.latePenalty
-                  }% penalty per day`
+                  )} - Late submission allowed${
+                    assignment.maxLateDays ? ` for up to ${assignment.maxLateDays} days` : ''
+                  } with ${assignment.latePenalty}% penalty per day`
                 : `Due: ${moment(assignment.dueDate).format(
                     "DD/MM/YYYY HH:mm"
                   )} - Late submission not allowed`
@@ -639,7 +569,7 @@ const StudentAssignmentDetail = () => {
                               <PaperClipOutlined className="text-green-600" />
                             </div>
                             <div className="flex-1">
-                              <Text strong>File {index + 1}</Text>
+                              <Text strong>{fixVietnameseEncoding(file.name)}</Text>
                             </div>
                             <Button
                               size="small"
@@ -655,7 +585,7 @@ const StudentAssignmentDetail = () => {
                   )}
 
                   {/* Grade Section */}
-                  {submission.status === "graded" && (
+                  {submission.status === "graded" && submission.grade !== null && submission.grade !== undefined && (
                     <div className="p-6 border-2 border-green-200 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50">
                       <div className="text-center mb-4">
                         <div className="flex items-center justify-center gap-4 mb-4">
@@ -697,6 +627,52 @@ const StudentAssignmentDetail = () => {
                           </div>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Grade Hidden Message */}
+                  {submission.status === "graded" && (submission.grade === null || submission.grade === undefined) && (
+                    <div className="p-6 border-2 border-blue-200 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+                      <div className="text-center">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <EyeInvisibleOutlined className="text-2xl text-blue-600" />
+                        </div>
+                        <Title level={4} className="text-blue-700 mb-2">Assignment Graded</Title>
+                        <Text className="text-blue-600">
+                          Your assignment has been graded by the teacher, but the grade is currently hidden. 
+                          Please contact your teacher for more information.
+                        </Text>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Resubmission Section */}
+                  {canResubmit() && (
+                    <div className="p-4 border-2 border-orange-200 rounded-lg bg-gradient-to-r from-orange-50 to-yellow-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                            <RedoOutlined className="text-orange-600" />
+                          </div>
+                          <div>
+                            <Text strong className="text-orange-700">Resubmission Allowed</Text>
+                            <div className="text-sm text-orange-600">
+                              Your teacher has allowed you to submit this assignment again.
+                              {submission.resubmissionCount > 0 && (
+                                <span> (This would be resubmission #{(submission.resubmissionCount || 0) + 1})</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Button 
+                          type="primary" 
+                          icon={<RedoOutlined />}
+                          onClick={() => setSubmitModalVisible(true)}
+                          className="bg-orange-500 border-orange-500 hover:bg-orange-600"
+                        >
+                          Resubmit
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -874,7 +850,7 @@ const StudentAssignmentDetail = () => {
               {assignment.allowLateSubmission && (
                 <Alert
                   message="Late Submission Allowed"
-                  description={`Penalty: ${assignment.latePenalty}% per day`}
+                  description={`${assignment.maxLateDays ? `Up to ${assignment.maxLateDays} days late. ` : ''}Penalty: ${assignment.latePenalty}% per day`}
                   type="info"
                   size="small"
                   showIcon
