@@ -70,7 +70,30 @@ const createQuiz = async (req, res) => {
 
 const getQuizzes = async (req, res) => {
     try {
-        const quizzes = await Quiz.find({ isActive: true, deleted: false })
+        const { classroomId } = req.params;
+        const quizzes = await Quiz.find({ classroom: classroomId })
+            .populate('createdBy', 'name email')
+            .populate('classroom', 'name').populate('questions').
+            populate('submissions.student')
+            .populate('submissions.answers.question')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: 'Quizzes fetched successfully',
+            data: quizzes
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: 'Lỗi khi lấy danh sách quiz',
+            error: error.message
+        });
+    }
+};
+
+const getQuizzesForStudent = async (req, res) => {
+    try {
+        const { classroomId } = req.params;
+        const quizzes = await Quiz.find({ classroom: classroomId, isActive: true, deleted: false })
             .populate('createdBy', 'name email')
             .populate('classroom', 'name').populate('questions').
             populate('submissions.student')
@@ -123,7 +146,7 @@ const updateQuiz = async (req, res) => {
 
 const deleteQuiz = async (req, res) => {
     try {
-        const quiz = await Quiz.findByIdAndUpdate(req.params.id, { deleted: true, deletedAt: new Date(), deletedBy: req.user._id }, { new: true });
+        const quiz = await Quiz.findByIdAndUpdate(req.params.id, { deleted: true, isActive: false, deletedAt: new Date(), deletedBy: req.user._id }, { new: true });
         if (!quiz) {
             return res.status(404).json({ message: 'Quiz not found' });
         }
@@ -161,8 +184,9 @@ const changeQuizVisibility = async (req, res) => {
 
 const takeQuizById = async (req, res) => {
     try {
-        const { id: quizId } = req.params;
+        const { quizId } = req.params;
         const studentId = req.user._id;
+        console.log(`Taking quiz with ID: ${quizId} for student ID: ${studentId}`);
 
         const quiz = await Quiz.findById(quizId)
             .populate('createdBy', 'name email')
@@ -225,7 +249,6 @@ const takeQuizById = async (req, res) => {
                 startedAt: now,
                 attempt: completedAttempts + 1,
                 status: 'in-progress',
-                questionsOrder: shuffledQuestions.map(q => q._id) // lưu lại thứ tự
             };
 
             quiz.submissions.push(newSubmission);
@@ -379,6 +402,7 @@ const submitQuiz = async (req, res) => {
 
 module.exports = {
     createQuiz,
+    getQuizzesForStudent,
     getQuizzes,
     getQuizById,
     updateQuiz,
