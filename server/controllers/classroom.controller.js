@@ -2,18 +2,19 @@ const Classroom = require("../models/classroom.model");
 const User = require("../models/user.model");
 const Notification = require("../models/notification.model");
 const Request = require("../models/request.model");
+const Material = require("../models/material.model");
 
 // Helper function to generate unique classroom code
 const generateClassroomCode = async () => {
   let code;
   let exists = true;
-  
+
   while (exists) {
     code = Math.random().toString(36).substring(2, 8).toUpperCase();
     const existingClassroom = await Classroom.findOne({ code });
     exists = !!existingClassroom;
   }
-  
+
   return code;
 };
 
@@ -36,89 +37,89 @@ const sendNotification = async (title, content, type, sender, recipients, classr
 };
 
 const getTeacherClassrooms = async (req, res) => {
-    try {
-        const classrooms = await Classroom.find({ 
-          teacher: req.user._id,
-          deleted: false 
+  try {
+    const classrooms = await Classroom.find({
+      teacher: req.user._id,
+      deleted: false
+    })
+      .populate('students.student', 'fullName email')
+      .populate('teacher', 'fullName email')
+      .sort({ createdAt: -1 });
+
+    // Get approval status for each classroom from Request table
+    const classroomsWithApproval = await Promise.all(
+      classrooms.map(async (classroom) => {
+        const latestRequest = await Request.findOne({
+          classroom: classroom._id,
+          type: 'classroom_creation'
         })
-        .populate('students.student', 'fullName email')
-        .populate('teacher', 'fullName email')
-        .sort({ createdAt: -1 });
-        
-        // Get approval status for each classroom from Request table
-        const classroomsWithApproval = await Promise.all(
-          classrooms.map(async (classroom) => {
-            const latestRequest = await Request.findOne({
-              classroom: classroom._id,
-              type: 'classroom_creation'
-            })
-            .populate('reviewedBy', 'fullName')
-            .sort({ createdAt: -1 });
+          .populate('reviewedBy', 'fullName')
+          .sort({ createdAt: -1 });
 
-            // Set classroom status based on approval status
-            let status = 'inactive';
-            if (latestRequest) {
-              if (latestRequest.status === 'approved') {
-                status = 'active';
-              } else if (latestRequest.status === 'pending') {
-                status = 'pending_creation';
-              } else if (latestRequest.status === 'rejected') {
-                status = 'inactive';
-              }
-            } else if (classroom.isActive) {
-              status = 'active';
-            }
+        // Set classroom status based on approval status
+        let status = 'inactive';
+        if (latestRequest) {
+          if (latestRequest.status === 'approved') {
+            status = 'active';
+          } else if (latestRequest.status === 'pending') {
+            status = 'pending_creation';
+          } else if (latestRequest.status === 'rejected') {
+            status = 'inactive';
+          }
+        } else if (classroom.isActive) {
+          status = 'active';
+        }
 
-            // Check for pending edit or delete requests
-            const pendingEditRequest = await Request.findOne({
-              classroom: classroom._id,
-              type: 'classroom_edit',
-              status: 'pending'
-            });
-
-            const pendingDeleteRequest = await Request.findOne({
-              classroom: classroom._id,
-              type: 'classroom_deletion',
-              status: 'pending'
-            });
-
-            if (pendingDeleteRequest) {
-              status = 'pending_delete';
-            } else if (pendingEditRequest) {
-              status = 'pending_edit';
-            }
-
-            // Update classroom status in database
-            if (classroom.status !== status) {
-              classroom.status = status;
-              await classroom.save();
-            }
-
-            return {
-              ...classroom.toObject(),
-              status: status,
-              approvalStatus: latestRequest?.status || 'approved',
-              approvedBy: latestRequest?.reviewedBy,
-              approvedAt: latestRequest?.reviewedAt,
-              rejectedBy: latestRequest?.reviewedBy,
-              rejectedAt: latestRequest?.reviewedAt,
-              rejectionReason: latestRequest?.reason
-            };
-          })
-        );
-        
-        res.status(200).json({
-          success: true,
-          data: classroomsWithApproval,
-          message: 'Teacher classrooms fetched successfully'
+        // Check for pending edit or delete requests
+        const pendingEditRequest = await Request.findOne({
+          classroom: classroom._id,
+          type: 'classroom_edit',
+          status: 'pending'
         });
-    } catch (error) {
-        console.error('Error fetching teacher classrooms:', error);
-        res.status(500).json({ 
-          success: false,
-          message: error.message 
+
+        const pendingDeleteRequest = await Request.findOne({
+          classroom: classroom._id,
+          type: 'classroom_deletion',
+          status: 'pending'
         });
-    }
+
+        if (pendingDeleteRequest) {
+          status = 'pending_delete';
+        } else if (pendingEditRequest) {
+          status = 'pending_edit';
+        }
+
+        // Update classroom status in database
+        if (classroom.status !== status) {
+          classroom.status = status;
+          await classroom.save();
+        }
+
+        return {
+          ...classroom.toObject(),
+          status: status,
+          approvalStatus: latestRequest?.status || 'approved',
+          approvedBy: latestRequest?.reviewedBy,
+          approvedAt: latestRequest?.reviewedAt,
+          rejectedBy: latestRequest?.reviewedBy,
+          rejectedAt: latestRequest?.reviewedAt,
+          rejectionReason: latestRequest?.reason
+        };
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      data: classroomsWithApproval,
+      message: 'Teacher classrooms fetched successfully'
+    });
+  } catch (error) {
+    console.error('Error fetching teacher classrooms:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
 };
 
 const getAllClassrooms = async (req, res) => {
@@ -134,15 +135,15 @@ const getAllClassrooms = async (req, res) => {
           classroom: classroom._id,
           type: 'classroom_creation'
         })
-        .populate('reviewedBy', 'fullName')
-        .sort({ createdAt: -1 });
+          .populate('reviewedBy', 'fullName')
+          .sort({ createdAt: -1 });
 
         const deletionRequest = await Request.findOne({
           classroom: classroom._id,
           type: 'classroom_deletion',
           status: 'pending'
         })
-        .populate('requestedBy', 'fullName');
+          .populate('requestedBy', 'fullName');
 
         return {
           ...classroom.toObject(),
@@ -342,8 +343,8 @@ const createClassroom = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: req.user.role === 'admin' 
-        ? 'Classroom created successfully' 
+      message: req.user.role === 'admin'
+        ? 'Classroom created successfully'
         : 'Classroom created and sent for admin approval',
       data: newClassroom,
     });
@@ -478,7 +479,7 @@ const updateClassroom = async (req, res) => {
       if (!classroom.settings) {
         classroom.settings = {};
       }
-      
+
       if (settings.allowStudentInvite !== undefined)
         classroom.settings.allowStudentInvite = settings.allowStudentInvite;
       if (settings.allowStudentPost !== undefined)
@@ -509,7 +510,7 @@ const approveDeletionRequest = async (req, res) => {
   try {
     const { classroomId } = req.params;
     const { reason } = req.body; // Optional approval reason
-    
+
     // Validate admin role (additional safety check)
     if (req.user.role !== 'admin') {
       return res.status(403).json({
@@ -517,7 +518,7 @@ const approveDeletionRequest = async (req, res) => {
         message: 'Only administrators can approve deletion requests',
       });
     }
-    
+
     // Find pending deletion request
     const request = await Request.findOne({
       classroom: classroomId,
@@ -605,7 +606,7 @@ const approveClassroom = async (req, res) => {
   try {
     const { classroomId } = req.params;
     const { reason } = req.body;
-    
+
     // Validate admin role (additional safety check)
     if (req.user.role !== 'admin') {
       return res.status(403).json({
@@ -613,7 +614,7 @@ const approveClassroom = async (req, res) => {
         message: 'Only administrators can approve classrooms',
       });
     }
-    
+
     // Find pending creation request
     const request = await Request.findOne({
       classroom: classroomId,
@@ -701,7 +702,7 @@ const rejectClassroom = async (req, res) => {
   try {
     const { classroomId } = req.params;
     const { reason } = req.body;
-    
+
     // Validate admin role (additional safety check)
     if (req.user.role !== 'admin') {
       return res.status(403).json({
@@ -717,7 +718,7 @@ const rejectClassroom = async (req, res) => {
         message: 'Rejection reason is required',
       });
     }
-    
+
     // Find pending creation request
     const request = await Request.findOne({
       classroom: classroomId,
@@ -795,7 +796,7 @@ const rejectDeletionRequest = async (req, res) => {
   try {
     const { classroomId } = req.params;
     const { reason } = req.body;
-    
+
     // Validate admin role (additional safety check)
     if (req.user.role !== 'admin') {
       return res.status(403).json({
@@ -811,7 +812,7 @@ const rejectDeletionRequest = async (req, res) => {
         message: 'Rejection reason is required',
       });
     }
-    
+
     // Find pending deletion request
     const request = await Request.findOne({
       classroom: classroomId,
@@ -890,7 +891,7 @@ const testApproveEditRequest = async (req, res) => {
   try {
     const { classroomId } = req.params;
     const { reason } = req.body;
-    
+
     // Simple validation
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({
@@ -930,7 +931,7 @@ const testApproveEditRequest = async (req, res) => {
           classroom[key] = requestData[key];
         }
       });
-      
+
       if (requestData.settings) {
         classroom.settings = { ...classroom.settings, ...requestData.settings };
       }
@@ -967,7 +968,7 @@ const rejectEditRequest = async (req, res) => {
   try {
     const { classroomId } = req.params;
     const { reason } = req.body;
-    
+
     // Validate admin role
     if (req.user.role !== 'admin') {
       return res.status(403).json({
@@ -983,7 +984,7 @@ const rejectEditRequest = async (req, res) => {
         message: 'Rejection reason is required',
       });
     }
-    
+
     // Find pending edit request
     const request = await Request.findOne({
       classroom: classroomId,
@@ -1069,10 +1070,10 @@ const joinClassroom = async (req, res) => {
       });
     }
 
-    const classroom = await Classroom.findOne({ 
-      code: code.toUpperCase(), 
+    const classroom = await Classroom.findOne({
+      code: code.toUpperCase(),
       deleted: false,
-      isActive: true 
+      isActive: true
     }).populate('teacher', 'fullName email');
 
     if (!classroom) {
@@ -1217,7 +1218,7 @@ const getStudentClassrooms = async (req, res) => {
 const getClassroomStudents = async (req, res) => {
   try {
     const { classroomId } = req.params;
-    
+
     const classroom = await Classroom.findById(classroomId)
       .populate('students.student', 'fullName email dateOfBirth phone image')
       .populate('teacher', 'fullName email image');
@@ -1271,7 +1272,7 @@ const getClassroomStudents = async (req, res) => {
 const getClassroomDetail = async (req, res) => {
   try {
     const { classroomId } = req.params;
-    
+
     const classroom = await Classroom.findById(classroomId)
       .populate('teacher', 'fullName email image')
       .populate('students.student', 'fullName email image');
@@ -1420,7 +1421,7 @@ const getClassroomDetail = async (req, res) => {
 const getClassroomMaterials = async (req, res) => {
   try {
     const { classroomId } = req.params;
-    
+
     const classroom = await Classroom.findById(classroomId)
       .populate('teacher', 'fullName email')
       .populate('students.student', 'fullName email');
@@ -1462,43 +1463,41 @@ const getClassroomMaterials = async (req, res) => {
       });
     }
 
-    // Mock materials data (to be replaced with actual materials system)
-    const materials = [
-      {
-        id: 1,
-        title: 'Introduction to React Hooks',
-        type: 'document',
-        fileUrl: '/files/syllabus.pdf',
-        fileSize: '2.3 MB',
-        uploadedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        uploadedBy: classroom.teacher
-      },
-      {
-        id: 2,
-        title: 'Lecture 1: Introduction',
-        type: 'presentation',
-        fileUrl: '/files/lecture1.pptx',
-        fileSize: '15.7 MB',
-        uploadedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
-        uploadedBy: classroom.teacher
-      },
-      {
-        id: 3,
-        title: 'Web Development Tutorial',
-        type: 'link',
-        links: [
-          { title: 'Official Documentation', url: 'https://example.com/docs' },
-          { title: 'Tutorial Videos', url: 'https://example.com/videos' }
-        ],
-        uploadedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
-        uploadedBy: classroom.teacher
-      }
-    ];
-
+    const materials = await Material.find({ classroom: classroomId, deleted: false })
+      .populate('uploadedBy', 'fullName email role')
+      .populate('classroom', 'name subject')
+      .sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
-      data: materials
-    });
+      message: 'Materials fetched successfully',
+      data: {
+        materials: materials.map(material => ({
+          _id: material._id,
+          title: material.title,
+          description: material.description,
+          type: material.type,
+          fileUrl: material.fileUrl,
+          fileSize: material.fileSize,
+          fileType: material.fileType,
+          isPublic: material.isPublic,
+          tags: material.tags,
+          downloadCount: material.downloadCount,
+          viewCount: material.viewCount,
+          uploadedBy: {
+            _id: material.uploadedBy._id,
+            fullName: material.uploadedBy.fullName,
+            email: material.uploadedBy.email,
+            role: material.uploadedBy.role
+          },
+          classroom: {
+            _id: material.classroom._id,
+            name: material.classroom.name,
+            subject: material.classroom.subject
+          },
+          createdAt: material.createdAt
+        }))
+      }
+    }); 
   } catch (error) {
     console.error('Error getting classroom materials:', error);
     res.status(500).json({
@@ -1508,11 +1507,11 @@ const getClassroomMaterials = async (req, res) => {
   }
 };
 
-module.exports = { 
-  getTeacherClassrooms, 
-  getAllClassrooms, 
-  deleteClassroom, 
-  createClassroom, 
+module.exports = {
+  getTeacherClassrooms,
+  getAllClassrooms,
+  deleteClassroom,
+  createClassroom,
   updateClassroom,
   approveClassroom,
   rejectClassroom,

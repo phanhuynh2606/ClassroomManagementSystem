@@ -14,7 +14,7 @@ const materialSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['pdf', 'slide', 'video', 'other'],
+      enum: ['pdf', 'slide', 'video', 'other', 'document'],
       required: true,
       index: true
     },

@@ -16,7 +16,7 @@ import {
 } from 'antd';
 import {
     EditOutlined,
-    DeleteOutlined, 
+    DeleteOutlined,
     SearchOutlined,
     PlusOutlined,
     ExclamationCircleOutlined,
@@ -26,6 +26,7 @@ import {
 } from '@ant-design/icons';
 import Dragger from 'antd/es/upload/Dragger';
 import TextArea from 'antd/es/input/TextArea';
+import { materialAPI } from '../../../services/api';
 
 const { Text } = Typography;
 const { Search } = Input;
@@ -55,53 +56,8 @@ const MaterialList = ({ classId, classData }) => {
     const fetchMaterialsData = async () => {
         setMaterialsLoading(true);
         try {
-            // const response = await classroomAPI.getMaterials(classId);
-            // Mock data for demonstration
-            const mockMaterials = [
-                {
-                    _id: '1',
-                    title: 'Introduction to React Hooks',
-                    description: 'Comprehensive guide to React Hooks',
-                    type: 'pdf',
-                    fileSize: 2500000,
-                    fileType: 'application/pdf',
-                    downloadCount: 45,
-                    viewCount: 128,
-                    isPublic: true,
-                    tags: ['react', 'hooks', 'javascript'],
-                    createdAt: new Date('2024-01-15'),
-                    isActive: true
-                },
-                {
-                    _id: '2',
-                    title: 'Lecture 1: Introduction',
-                    description: 'Introduction to the course',
-                    type: 'slide',
-                    fileSize: 1800000,
-                    fileType: 'application/vnd.ms-powerpoint',
-                    downloadCount: 32,
-                    viewCount: 89,
-                    isPublic: false,
-                    tags: ['introduction', 'lecture', 'course'],
-                    createdAt: new Date('2024-01-20'),
-                    isActive: true
-                },
-                {
-                    _id: '3',
-                    title: 'Web Development Tutorial',
-                    description: 'Complete web development course',
-                    type: 'video',
-                    fileSize: 125000000,
-                    fileType: 'video/mp4',
-                    downloadCount: 78,
-                    viewCount: 245,
-                    isPublic: true,
-                    tags: ['web', 'tutorial', 'fullstack'],
-                    createdAt: new Date('2024-01-25'),
-                    isActive: true
-                }
-            ];
-            setMaterialsData(mockMaterials);
+            const response = await materialAPI.getMaterials(classId);
+            setMaterialsData(response.data.materials || []);
         } catch (error) {
             console.error('Error fetching materials:', error);
             message.error('Failed to fetch materials');
@@ -133,9 +89,9 @@ const MaterialList = ({ classId, classData }) => {
             pdf: 'red',
             slide: 'blue',
             video: 'green',
-            other: 'default'
+            other: 'yellow'
         };
-        return colors[type] || 'default';
+        return colors[type] || 'yellow';
     };
 
     const handleCreateMaterial = () => {
@@ -155,7 +111,6 @@ const MaterialList = ({ classId, classData }) => {
         materialForm.setFieldsValue({
             title: material.title,
             description: material.description,
-            type: material.type,
             isPublic: material.isPublic
         });
         setCreateEditModalVisible(true);
@@ -169,11 +124,14 @@ const MaterialList = ({ classId, classData }) => {
     const confirmDeleteMaterial = async () => {
         setDeletingMaterial(true);
         try {
-            // await classroomAPI.deleteMaterial(selectedMaterial._id);
-            message.success('Material deleted successfully');
-            setMaterialDeleteModalVisible(false);
-            setSelectedMaterial(null);
-            fetchMaterialsData(); // Refresh data
+            const respone = await materialAPI.deleteMaterial(classId, selectedMaterial._id);
+            if (respone.success) {
+                message.success(respone.message || 'Material deleted successfully');
+                setMaterialDeleteModalVisible(false);
+                setSelectedMaterial(null);
+                fetchMaterialsData();
+            }
+
         } catch (error) {
             message.error('Failed to delete material');
         } finally {
@@ -182,21 +140,68 @@ const MaterialList = ({ classId, classData }) => {
     };
 
     const handleDownloadMaterial = async (material) => {
-        try {
-            // await classroomAPI.downloadMaterial(material._id);
-            message.success('Download started');
-            // Update download count
-            setMaterialsData(prev =>
-                prev.map(m =>
-                    m._id === material._id
-                        ? { ...m, downloadCount: m.downloadCount + 1 }
-                        : m
-                )
-            );
-        } catch (error) {
-            message.error('Download failed');
+    try {
+        console.log('Starting download for material:', material._id);
+        
+        const response = await materialAPI.downloadMaterial(material._id);
+        
+        // DEBUG: Log response details
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        console.log('Response data type:', typeof response.data);
+        console.log('Response data size:', response.data?.size);
+        console.log('Response data:', response.data);
+        
+        // Kiểm tra response
+        if (!response.data) {
+            throw new Error('No data received from server');
         }
-    };
+        
+        if (response.data.size === 0) {
+            throw new Error('Empty file received - file size is 0');
+        }
+        
+        // Lấy filename từ response header
+        let filename = material.originalFileName || material.title || 'download';
+        
+        const contentDisposition = response.headers['content-disposition'];
+        if (contentDisposition) {
+            const matches = contentDisposition.match(/filename="(.+)"/);
+            if (matches && matches[1]) {
+                filename = matches[1];
+            }
+        }
+        
+        console.log('Download filename:', filename);
+        
+        // Tạo URL và download
+        const url = window.URL.createObjectURL(response.data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        window.URL.revokeObjectURL(url);
+        
+        message.success('Download completed');
+        
+        // Update download count
+        setMaterialsData(prev =>
+            prev.map(m =>
+                m._id === material._id
+                    ? { ...m, downloadCount: m.downloadCount + 1 }
+                    : m
+            )
+        );
+        
+    } catch (error) {
+        console.error('Download error:', error);
+        message.error(`Download failed: ${error.message}`);
+    }
+};
 
     const handleSubmitMaterial = async (values) => {
         if (!isEditMode && fileList.length === 0) {
@@ -209,26 +214,26 @@ const MaterialList = ({ classId, classData }) => {
             const formData = new FormData();
             formData.append('title', values.title);
             formData.append('description', values.description || '');
-            formData.append('type', values.type);
             formData.append('isPublic', values.isPublic);
             formData.append('tags', JSON.stringify(tags));
             formData.append('classroom', classId);
-
             if (fileList.length > 0) {
-                formData.append('file', fileList[0].originFileObj);
+                const file = fileList[0].originFileObj || fileList[0].file || fileList[0];
+                formData.append('file', file);
             }
-
             if (isEditMode) {
-                // await classroomAPI.updateMaterial(selectedMaterial._id, formData);
+                await materialAPI.updateMaterial(selectedMaterial._id, formData);
                 message.success('Material updated successfully');
             } else {
-                // await classroomAPI.createMaterial(formData);
-                message.success('Material uploaded successfully');
+                const respone = await materialAPI.createMaterial(classId, formData);
+                console.log(respone);
+                //message.success('Material uploaded successfully');
             }
 
             setCreateEditModalVisible(false);
             fetchMaterialsData(); // Refresh data
         } catch (error) {
+            console.error('Error submitting material:', error);
             message.error(isEditMode ? 'Failed to update material' : 'Failed to upload material');
         } finally {
             setSubmittingMaterial(false);
@@ -293,7 +298,7 @@ const MaterialList = ({ classId, classData }) => {
             title: 'Type',
             dataIndex: 'type',
             key: 'type',
-            width: 100,
+            width: 130,
             render: (type) => (
                 <Badge
                     color={getTypeBadgeColor(type)}
@@ -473,19 +478,6 @@ const MaterialList = ({ classId, classData }) => {
                             rows={3}
                             placeholder="Enter material description (optional)"
                         />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="type"
-                        label="Material Type"
-                        rules={[{ required: true, message: 'Please select material type' }]}
-                    >
-                        <Select placeholder="Select material type">
-                            <Option value="pdf">PDF Document</Option>
-                            <Option value="slide">Presentation Slides</Option>
-                            <Option value="video">Video</Option>
-                            <Option value="other">Other</Option>
-                        </Select>
                     </Form.Item>
 
                     {!isEditMode && (

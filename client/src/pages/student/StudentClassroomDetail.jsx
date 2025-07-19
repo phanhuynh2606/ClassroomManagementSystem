@@ -52,7 +52,7 @@ import ClassroomPermissionStatus from '../../components/student/ClassroomPermiss
 
 const { Title, Text } = Typography;
 
-const StudentClassroomDetail = () => {  
+const StudentClassroomDetail = () => {
   const { classroomId } = useParams();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
@@ -63,7 +63,7 @@ const StudentClassroomDetail = () => {
   const location = useLocation();
   const [streamPosts, setStreamPosts] = useState([]);
   const [streamLoading, setStreamLoading] = useState(false);
-  
+
   // Pagination state
   const [streamPagination, setStreamPagination] = useState({
     currentPage: 1,
@@ -72,7 +72,7 @@ const StudentClassroomDetail = () => {
     itemsPerPage: 20
   });
   const [loadingMoreStream, setLoadingMoreStream] = useState(false);
-  
+
   // AnnouncementEditor states
   const [showEditor, setShowEditor] = useState(false);
   const [richTextContent, setRichTextContent] = useState('');
@@ -111,7 +111,7 @@ const StudentClassroomDetail = () => {
 
       try {
         const materialsResponse = await classroomAPI.getMaterials(classroomId);
-        setMaterials(materialsResponse.data.data || materialsResponse.data || []);
+        setMaterials(materialsResponse.data.materials || []);
       } catch (error) {
         console.log('Cannot fetch materials:', error);
       }
@@ -136,15 +136,18 @@ const StudentClassroomDetail = () => {
   // Fetch stream posts data
   const fetchStreamData = async (page = 1, append = false) => {
     if (!classroomId) return;
-    
+
     if (!append) setStreamLoading(true);
-    
+
     try {
       const response = await streamAPI.getClassroomStream(classroomId, {
         page: page,
         limit: 20,
       });
-      
+
+      console.log('Raw API response:', response);
+      console.log('Response data:', response.data);
+
       // Handle different response structures
       let data, items, pagination;
       if (response.success || response.data) {
@@ -165,13 +168,15 @@ const StudentClassroomDetail = () => {
           itemsPerPage: 20
         };
       }
-      
+
       // Extra safety check - if not array, make it empty array
       if (!Array.isArray(items)) {
         console.warn('Stream data is not an array:', items);
         items = [];
       }
-      
+
+      console.log('Stream data received:', items, 'pagination:', pagination);
+
       if (append) {
         // Append new items for Load More
         setStreamPosts(prev => {
@@ -182,7 +187,7 @@ const StudentClassroomDetail = () => {
         // Replace items for initial load
         setStreamPosts(items);
       }
-      
+
       setStreamPagination(pagination);
     } catch (error) {
       console.error('Error fetching stream data:', error);
@@ -191,12 +196,12 @@ const StudentClassroomDetail = () => {
         data: error.response?.data,
         message: error.message
       });
-      
+
       // Always ensure streamPosts is an array
       if (!append) {
         setStreamPosts([]);
       }
-      
+
       // Only show error message if it's not a 404 (empty stream)
       if (error.response?.status !== 404) {
         message.error(`Failed to load classroom stream: ${error.message}`);
@@ -208,7 +213,7 @@ const StudentClassroomDetail = () => {
 
   const handleLoadMoreStream = async () => {
     if (streamPagination.currentPage >= streamPagination.totalPages) return;
-    
+
     setLoadingMoreStream(true);
     try {
       await fetchStreamData(streamPagination.currentPage + 1, true);
@@ -258,12 +263,14 @@ const StudentClassroomDetail = () => {
     }
 
     try {
-      
+      console.log('Adding comment to post:', postId, 'Content:', commentText);
+
       // Call API to add comment
       const response = await streamAPI.addComment(postId, commentText);
       const newComment = response.data?.data || response.data;
-      
-      
+
+      console.log('Comment added successfully:', newComment);
+
       // Update local state with the new comment from server
       setStreamPosts(prevPosts => {
         // Ensure prevPosts is an array
@@ -271,14 +278,14 @@ const StudentClassroomDetail = () => {
           console.warn('prevPosts is not an array:', prevPosts);
           return [];
         }
-        
-        return prevPosts.map(post => 
-          post._id === postId 
-            ? { 
-                ...post, 
-                comments: [...(post.comments || []), newComment],
-                commentsCount: (post.commentsCount || 0) + 1 
-              }
+
+        return prevPosts.map(post =>
+          post._id === postId
+            ? {
+              ...post,
+              comments: [...(post.comments || []), newComment],
+              commentsCount: (post.commentsCount || 0) + 1
+            }
             : post
         );
       });
@@ -294,11 +301,11 @@ const StudentClassroomDetail = () => {
   const handlePin = () => {
     message.info('Only teachers and admins can pin posts');
   };
-  
+
   const handleEdit = () => {
     message.info('Only teachers and admins can edit posts');
   };
-  
+
   const handleDelete = () => {
     message.info('Only teachers and admins can delete posts');
   };
@@ -306,9 +313,10 @@ const StudentClassroomDetail = () => {
   // Handle delete comment (students can delete their own comments)
   const handleDeleteComment = async (postId, commentId) => {
     try {
-      
+      console.log('Deleting comment:', commentId, 'from post:', postId);
+
       await streamAPI.deleteComment(postId, commentId);
-      
+
       // Update local state
       setStreamPosts(prevPosts => {
         // Ensure prevPosts is an array
@@ -316,14 +324,14 @@ const StudentClassroomDetail = () => {
           console.warn('prevPosts is not an array:', prevPosts);
           return [];
         }
-        
-        return prevPosts.map(post => 
-          post._id === postId 
-            ? { 
-                ...post, 
-                comments: (post.comments || []).filter(comment => comment._id !== commentId),
-                commentsCount: Math.max((post.commentsCount || 0) - 1, 0)
-              }
+
+        return prevPosts.map(post =>
+          post._id === postId
+            ? {
+              ...post,
+              comments: (post.comments || []).filter(comment => comment._id !== commentId),
+              commentsCount: Math.max((post.commentsCount || 0) - 1, 0)
+            }
             : post
         );
       });
@@ -348,9 +356,9 @@ const StudentClassroomDetail = () => {
       tmp.innerHTML = html;
       return tmp.textContent || tmp.innerText || '';
     };
-    
+
     const plainContent = stripHtml(richTextContent);
-    
+
     if (!plainContent.trim() && attachments.length === 0) {
       message.warning('Please enter some content or add attachments');
       return;
@@ -359,8 +367,8 @@ const StudentClassroomDetail = () => {
     setPostingAnnouncement(true);
     try {
       // Extract title from content
-      const title = plainContent.length > 50 
-        ? plainContent.substring(0, 50) + '...' 
+      const title = plainContent.length > 50
+        ? plainContent.substring(0, 50) + '...'
         : plainContent || 'Student Post';
 
       const postData = {
@@ -374,14 +382,24 @@ const StudentClassroomDetail = () => {
         category: 'post', // Add category
         visibility: 'classroom' // Add visibility
       };
-      
+
+      console.log('Creating student post:', {
+        ...postData,
+        titleLength: title.length,
+        contentLength: richTextContent.length,
+        plainContentLength: plainContent.length,
+        hasAttachments: attachments.length > 0
+      });
+
       // Use createAnnouncement for now (backend will differentiate by type)
       const response = await streamAPI.createAnnouncement(classroomId, postData);
-      
+
+      console.log('API Response:', response);
+
       // Handle different response structures
       if (response.data?.success || response.success || response.status === 200 || response.status === 201) {
         const newPost = response.data?.data || response.data;
-        
+
         // Add new post to the beginning of the stream
         if (newPost) {
           // Ensure the post has required fields for display
@@ -400,7 +418,7 @@ const StudentClassroomDetail = () => {
             commentsCount: newPost.commentsCount || 0,
             ...newPost
           };
-          
+
           setStreamPosts(prevPosts => {
             const postsArray = Array.isArray(prevPosts) ? prevPosts : [];
             return [postToAdd, ...postsArray];
@@ -414,7 +432,7 @@ const StudentClassroomDetail = () => {
         setRichTextContent('');
         setAttachments([]);
         announcementForm.resetFields();
-        
+
         message.success('Your post has been shared successfully!');
       } else {
         throw new Error(response.data?.message || response.message || 'Failed to create post');
@@ -427,7 +445,7 @@ const StudentClassroomDetail = () => {
     }
   };
   const renderTabLabel = (icon, label) => <Space>{icon} {label}</Space>;
-  
+
   const tabItems = useMemo(() => {
     if (!classroom) return [];
 
@@ -495,7 +513,7 @@ const StudentClassroomDetail = () => {
                               streamItemId={item._id}
                             />
                           ))}
-                          
+
                           {/* Load More Button */}
                           {streamPagination.currentPage < streamPagination.totalPages && (
                             <div className="text-center mt-6">
@@ -510,7 +528,7 @@ const StudentClassroomDetail = () => {
                               </Button>
                             </div>
                           )}
-                          
+
                           {/* Pagination Info */}
                           {streamPagination.totalItems > 0 && (
                             <div className="text-center mt-4 text-gray-500 text-sm">
@@ -527,11 +545,11 @@ const StudentClassroomDetail = () => {
 
                   <Col xs={24} md={8}>
                     {/* Show permission status for students */}
-                    <ClassroomPermissionStatus 
-                      classroom={classroom} 
+                    <ClassroomPermissionStatus
+                      classroom={classroom}
                       compact={false}
                     />
-                    
+
                     <StreamSidebar
                       classData={classroom}
                       handleCopyClassCode={handleCopyClassCode}
@@ -551,10 +569,10 @@ const StudentClassroomDetail = () => {
         children: (
           <Row gutter={[24, 24]}>
             <Col span={24}>
-              {materials.length > 0 ? (
+              {materials.filter(material => material.isPublic).length > 0 ? (
                 <List
                   grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4 }}
-                  dataSource={materials}
+                  dataSource={materials.filter(material => material.isPublic)}
                   renderItem={(material) => (
                     <List.Item>
                       <Card
@@ -598,12 +616,12 @@ const StudentClassroomDetail = () => {
             </Col>
           </Row>
         )
-              }
-      ];
+      }
+    ];
   }, [
-    classroom, 
-    materials, 
-    streamPosts, 
+    classroom,
+    materials,
+    streamPosts,
     streamLoading,
     streamPagination,
     loadingMoreStream,
