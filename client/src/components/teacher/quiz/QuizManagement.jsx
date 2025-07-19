@@ -220,15 +220,15 @@ const QuizManagement = ({ classId }) => {
   };
 
   const handleViewQuizDetail = (quiz) => {
-    navigate(`/teacher/classroom/${classId}/quiz/${quiz._id}`);
+    navigate(`/teacher/classroom/${classId}/quizzes/${quiz._id}`);
   };
 
   const handleViewResults = (quiz) => {
-    navigate(`/teacher/classroom/${classId}/quiz/${quiz._id}/results`);
+    navigate(`/teacher/classroom/${classId}/quizzes/${quiz._id}/results`);
   };
 
   const handleEditQuiz = (quiz) => {
-    navigate(`/teacher/classroom/${classId}/quiz/${quiz._id}/edit`);
+    navigate(`/teacher/classroom/${classId}/quizzes/${quiz._id}/edit`);
   };
 
   const handleDeleteQuiz = (quiz) => {
