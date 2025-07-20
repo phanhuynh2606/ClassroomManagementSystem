@@ -105,31 +105,45 @@ const ChatWindow = () => {
           sender: message.sender?.fullName,
           content: message.content?.substring(0, 50) + '...',
           selectedChatId: selectedChat?._id,
-          isForCurrentChat: selectedChat && selectedChat._id === message.chat
+          isForCurrentChat: selectedChat && selectedChat._id === message.chat,
+          chatType: selectedChat?.type
         });
 
         try {
-          // Always update messages if it's for the current chat
-          if (selectedChat && selectedChat._id === message.chat) {
-            console.log('✅ Adding message to current chat');
+          // Update messages if it's for the current chat OR if it's a classroom chat
+          const isCurrentChat = selectedChat && selectedChat._id === message.chat;
+          const shouldUpdateMessages = isCurrentChat || selectedChat?.type === 'classroom';
+
+          if (shouldUpdateMessages) {
+            console.log('✅ Adding new message to chat');
+            
+            // Update messages state with new message
             setMessages(prev => {
               // Skip if message already exists
               if (prev.some(m => m._id === message._id)) {
                 return prev;
               }
+
               // Add new message and sort by createdAt
-              return [...prev, message].sort((a, b) => 
+              const updated = [...prev, message].sort((a, b) => 
                 new Date(a.createdAt) - new Date(b.createdAt)
               );
+              
+              console.log(`📝 Updated messages array: ${updated.length} messages`);
+              return updated;
             });
 
-            // Auto mark as read if message is from other user
+            // Auto mark as read for messages from others
             if (message.sender._id !== user._id) {
+              console.log('👁️ Auto-marking message as read');
               await markMessageAsRead(message._id);
             }
 
             // Scroll to bottom after adding new message
-            setTimeout(scrollToBottom, 100);
+            setTimeout(() => {
+              scrollToBottom();
+              console.log('⬇️ Scrolled to bottom after new message');
+            }, 100);
           }
 
           // Always update chat list to show latest message
@@ -330,13 +344,23 @@ const ChatWindow = () => {
           socket.emit('leave-chat', previousChatIdRef.current);
         }
 
-        // Join new chat room if selected
+        // Handle new chat selection
         if (selectedChat) {
-          console.log(`🚪 Joining chat room: ${selectedChat._id}`);
+          console.log(`🚪 Joining chat room: ${selectedChat._id}, type: ${selectedChat.type}`);
+          
+          // Join the chat room
           socket.emit('join-chat', selectedChat._id);
           previousChatIdRef.current = selectedChat._id;
 
-          // Fetch messages for new chat
+          // For classroom chats, join additional room for group messages
+          if (selectedChat.type === 'classroom' && selectedChat.classroom?._id) {
+            const classroomRoom = `classroom_${selectedChat.classroom._id}`;
+            console.log(`🏫 Joining classroom room: ${classroomRoom}`);
+            socket.emit('join-chat', classroomRoom);
+          }
+
+          // Fetch initial messages
+          console.log('📥 Fetching messages for new chat');
           await fetchChatMessages(selectedChat._id);
         } else {
           previousChatIdRef.current = null;
@@ -348,11 +372,18 @@ const ChatWindow = () => {
 
     handleChatChange();
 
-    // Cleanup: leave chat room when unmounting or changing chats
+    // Cleanup: leave chat rooms when unmounting or changing chats
     return () => {
       if (previousChatIdRef.current) {
         console.log(`👋 Cleanup: leaving chat room ${previousChatIdRef.current}`);
         socket.emit('leave-chat', previousChatIdRef.current);
+        
+        // Leave classroom room if applicable
+        if (selectedChat?.type === 'classroom' && selectedChat.classroom?._id) {
+          const classroomRoom = `classroom_${selectedChat.classroom._id}`;
+          console.log(`👋 Cleanup: leaving classroom room ${classroomRoom}`);
+          socket.emit('leave-chat', classroomRoom);
+        }
       }
     };
   }, [selectedChat, socket]);
@@ -508,12 +539,32 @@ const ChatWindow = () => {
     if (!selectedChat) return;
 
     try {
-      await chatAPI.sendMessage(selectedChat._id, messageData);
+      console.log('📤 Sending message to chat:', selectedChat._id);
+      const response = await chatAPI.sendMessage(selectedChat._id, messageData);
       
-      // Mark chat as read when sending a message (since user is actively in the chat)
+      // Update messages immediately with the new message
+      if (response.data.message) {
+        setMessages(prev => {
+          const newMessage = response.data.message;
+          // Skip if message somehow already exists
+          if (prev.some(m => m._id === newMessage._id)) {
+            return prev;
+          }
+          // Add new message and sort
+          return [...prev, newMessage].sort((a, b) => 
+            new Date(a.createdAt) - new Date(b.createdAt)
+          );
+        });
+
+        // Scroll to bottom after sending
+        setTimeout(scrollToBottom, 100);
+      }
+      
+      // Mark chat as read
       await markChatAsReadIfNeeded(selectedChat._id);
     } catch (error) {
       console.error('Error sending message:', error);
+      // You might want to show an error notification to the user here
     }
   };
 
