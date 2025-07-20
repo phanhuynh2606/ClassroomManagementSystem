@@ -79,7 +79,6 @@ const AdminLayout = () => {
     else if (key === '5') navigate('/admin/notifications');
     else if (key === '6') navigate('/admin/requests');
     else if (key === '7') navigate('/admin/chat');
-    else if (key === '8') navigate('/admin/debug');
   };
 
   const menuItems = React.useMemo(() => [
@@ -228,15 +227,6 @@ const AdminLayout = () => {
         </div>
       ),
     },
-    {
-      key: '8',
-      icon: <SettingOutlined />,
-      label: collapsed ? (
-        <Tooltip title="Socket Debug" placement="right">
-          <span>Socket Debug</span>
-        </Tooltip>
-      ) : 'Socket Debug',
-    },
     ], [collapsed]);
 
   // Determine which menu item should be selected based on current path and role
@@ -260,9 +250,6 @@ const AdminLayout = () => {
     }
     if (path.startsWith('/admin/chat')) {
       return ['7'];
-    }
-    if (path.startsWith('/admin/debug')) {
-      return ['8'];
     }
     if (path.startsWith('/admin/dashboard')) {
       return ['1'];
