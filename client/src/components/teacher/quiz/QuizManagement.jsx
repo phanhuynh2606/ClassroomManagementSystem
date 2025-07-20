@@ -1,15 +1,15 @@
-import React, { useState, memo } from 'react';
-import { 
-  Card, 
-  Button, 
-  List, 
-  Typography, 
-  Space, 
-  Tag, 
-  Modal, 
-  Form, 
-  Input, 
-  DatePicker, 
+import React, { useState, memo, useEffect } from 'react';
+import {
+  Card,
+  Button,
+  List,
+  Typography,
+  Space,
+  Tag,
+  Modal,
+  Form,
+  Input,
+  DatePicker,
   Select,
   Divider,
   Empty,
@@ -36,13 +36,17 @@ import {
   PlayCircleOutlined,
   PauseCircleOutlined,
   StopOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  ExperimentOutlined,
+  FileTextOutlined,
+  BookOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
 import { useNavigate } from 'react-router-dom';
 
 // Import the quiz modal component
-import QuizCreateModal from './QuizCreateModal';
+import CreateQuizModal from './QuizModal/QuizCreateModal';
+import quizAPI from '../../../services/api/quiz.api';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -53,70 +57,31 @@ const QuizManagement = ({ classId }) => {
   const [quizCreateVisible, setQuizCreateVisible] = useState(false);
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [quizItems, setQuizItems] = useState([]);
 
-  // Mock data for quiz items
-  const [quizItems, setQuizItems] = useState([
-    {
-      id: '1',
-      title: 'Chapter 1-3 Quiz',
-      description: 'Multiple choice quiz covering the first three chapters',
-      dueDate: '2024-01-20T15:00:00Z',
-      duration: 60, // minutes
-      totalPoints: 50,
-      totalQuestions: 25,
-      status: 'published',
-      submissionsCount: 22,
-      totalStudents: 25,
-      createdAt: '2024-01-10T14:00:00Z',
-      difficulty: 'Medium',
-      allowRetake: false,
-      randomizeQuestions: true,
-      showResultsImmediately: false,
-      avgScore: 42.5,
-      passRate: 85
-    },
-    {
-      id: '2',
-      title: 'Programming Basics Quiz',
-      description: 'Test your understanding of basic programming concepts',
-      dueDate: '2024-02-15T16:00:00Z',
-      duration: 45,
-      totalPoints: 75,
-      totalQuestions: 30,
-      status: 'draft',
-      submissionsCount: 0,
-      totalStudents: 25,
-      createdAt: '2024-01-25T09:00:00Z',
-      difficulty: 'Easy',
-      allowRetake: true,
-      randomizeQuestions: false,
-      showResultsImmediately: true,
-      avgScore: null,
-      passRate: null
-    },
-    {
-      id: '3',
-      title: 'Midterm Exam',
-      description: 'Comprehensive midterm examination',
-      dueDate: '2024-03-01T10:00:00Z',
-      duration: 120,
-      totalPoints: 100,
-      totalQuestions: 40,
-      status: 'scheduled',
-      submissionsCount: 0,
-      totalStudents: 25,
-      createdAt: '2024-02-01T11:00:00Z',
-      difficulty: 'Hard',
-      allowRetake: false,
-      randomizeQuestions: true,
-      showResultsImmediately: false,
-      avgScore: null,
-      passRate: null
+  useEffect(() => {
+    fetchQuizzes();
+  }, []);
+
+  const fetchQuizzes = async () => {
+    try {
+      setLoading(true);
+      const response = await quizAPI.getAll(classId);
+      if (response && response.data) {
+        setQuizItems(response.data);
+      } else {
+        setQuizItems([]);
+      }
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      message.error('Failed to fetch quizzes');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
-  const getStatusColor = (status) => {
-    switch (status) {
+  const getStatusColor = (visibility) => {
+    switch (visibility) {
       case 'published':
         return 'green';
       case 'draft':
@@ -130,63 +95,122 @@ const QuizManagement = ({ classId }) => {
     }
   };
 
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty) {
-      case 'Easy':
-        return 'green';
-      case 'Medium':
-        return 'orange';
-      case 'Hard':
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case 'PROGRESS_TEST':
+        return 'blue';
+      case 'MID_TERM_EXAM':
         return 'red';
+      case 'FINAL_EXAM':
+        return 'purple';
+      case 'ASSIGNMENT':
+        return 'green';
+      case 'QUIZ':
+        return 'orange';
       default:
         return 'default';
     }
   };
 
-  const formatDueDate = (dateString) => {
-    if (!dateString) return null;
-    const date = moment(dateString);
-    const now = moment();
-    
-    if (date.isBefore(now)) {
-      return <Text type="danger">Due {date.format('MMM D, YYYY HH:mm')}</Text>;
-    } else if (date.diff(now, 'days') <= 7) {
-      return <Text type="warning">Due {date.format('MMM D, YYYY HH:mm')}</Text>;
-    } else {
-      return <Text>Due {date.format('MMM D, YYYY HH:mm')}</Text>;
+  const getCategoryIcon = (category) => {
+    switch (category) {
+      case 'PROGRESS_TEST':
+        return <ExperimentOutlined />;
+      case 'MID_TERM_EXAM':
+        return <BookOutlined />;
+      case 'FINAL_EXAM':
+        return <TrophyOutlined />;
+      case 'ASSIGNMENT':
+        return <FileTextOutlined />;
+      case 'QUIZ':
+        return <QuestionCircleOutlined />;
+      default:
+        return <QuestionCircleOutlined />;
     }
   };
 
-  const handleQuizCreate = async (quizData) => {
-    try {
-      setLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newQuiz = {
-        id: Date.now().toString(),
-        title: quizData.title,
-        description: quizData.description,
-        dueDate: quizData.dueDate,
-        duration: quizData.duration,
-        totalPoints: quizData.totalPoints || 50,
-        totalQuestions: quizData.questions?.length || 0,
-        status: 'draft',
-        submissionsCount: 0,
-        totalStudents: 25,
-        createdAt: new Date().toISOString(),
-        difficulty: quizData.difficulty || 'Medium',
-        allowRetake: quizData.allowRetake || false,
-        randomizeQuestions: quizData.randomizeQuestions || false,
-        showResultsImmediately: quizData.showResultsImmediately || false,
-        avgScore: null,
-        passRate: null
-      };
+  const formatCategoryName = (category) => {
+    switch (category) {
+      case 'PROGRESS_TEST':
+        return 'Progress Test';
+      case 'MID_TERM_EXAM':
+        return 'Mid-term Exam';
+      case 'FINAL_EXAM':
+        return 'Final Exam';
+      case 'ASSIGNMENT':
+        return 'Assignment';
+      case 'QUIZ':
+        return 'Quiz';
+      default:
+        return category;
+    }
+  };
 
-      setQuizItems(prev => [newQuiz, ...prev]);
-      setQuizCreateVisible(false);
-      message.success('Quiz created successfully!');
+  const formatDateTime = (dateString) => {
+    if (!dateString) return null;
+    const date = moment(dateString);
+    const now = moment();
+
+    if (date.isBefore(now)) {
+      return <Text type="danger">{date.format('MMM D, YYYY HH:mm')}</Text>;
+    } else if (date.diff(now, 'hours') <= 24) {
+      return <Text type="warning">{date.format('MMM D, YYYY HH:mm')}</Text>;
+    } else {
+      return <Text>{date.format('MMM D, YYYY HH:mm')}</Text>;
+    }
+  };
+
+  const isQuizActive = (startTime, endTime) => {
+    const now = moment();
+    const start = moment(startTime);
+    const end = moment(endTime);
+
+    return now.isBetween(start, end);
+  };
+
+  const getQuizStatus = (quiz) => {
+    const now = moment();
+    const startTime = moment(quiz.startTime);
+    const endTime = moment(quiz.endTime);
+
+    if (quiz.visibility === 'draft') return 'draft';
+    if (quiz.visibility === 'published' && (!quiz.startTime || !quiz.endTime)) return 'published';
+    if (quiz.visibility === 'scheduled' && isQuizActive(quiz.startTime, quiz.endTime)) return 'scheduled';
+    if (now.isBefore(startTime)) return 'scheduled';
+    if (now.isBetween(startTime, endTime)) return 'active';
+    if (now.isAfter(endTime)) return 'completed';
+
+    return quiz.visibility;
+  };
+
+  const calculateQuizStats = (quiz) => {
+    const totalQuestions = quiz.questions?.length || 0;
+    const totalPoints = quiz.questions?.reduce((sum, q) => sum + (q.points || 0), 0) || 0;
+    const totalAttempts = quiz.questions?.reduce((sum, q) => sum + (q.statistics?.totalAttempts || 0), 0) || 0;
+    const correctAttempts = quiz.questions?.reduce((sum, q) => sum + (q.statistics?.correctAttempts || 0), 0) || 0;
+    const averageScore = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
+
+    return {
+      totalQuestions,
+      totalPoints,
+      totalAttempts,
+      correctAttempts,
+      averageScore
+    };
+  };
+
+  const handleQuizCreate = async (quizData) => {
+    const newQuiz = {
+      ...quizData,
+      classroom: classId,
+    };
+    try {
+      const response = await quizAPI.create(newQuiz);
+      if (response.success) {
+        setQuizCreateVisible(false);
+        message.success('Quiz created successfully!');
+        fetchQuizzes();
+      }
     } catch (error) {
       message.error('Failed to create quiz');
       console.error('Error creating quiz:', error);
@@ -196,15 +220,15 @@ const QuizManagement = ({ classId }) => {
   };
 
   const handleViewQuizDetail = (quiz) => {
-    navigate(`/teacher/classroom/${classId}/quiz/${quiz.id}`);
+    navigate(`/teacher/classroom/${classId}/quizzes/${quiz._id}`);
   };
 
   const handleViewResults = (quiz) => {
-    navigate(`/teacher/classroom/${classId}/quiz/${quiz.id}/results`);
+    navigate(`/teacher/classroom/${classId}/quizzes/${quiz._id}/results`);
   };
 
   const handleEditQuiz = (quiz) => {
-    navigate(`/teacher/classroom/${classId}/quiz/${quiz.id}/edit`);
+    navigate(`/teacher/classroom/${classId}/quizzes/${quiz._id}/edit`);
   };
 
   const handleDeleteQuiz = (quiz) => {
@@ -216,10 +240,11 @@ const QuizManagement = ({ classId }) => {
       cancelText: 'Cancel',
       onOk: async () => {
         try {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 500));
-          setQuizItems(prev => prev.filter(item => item.id !== quiz.id));
-          message.success('Quiz deleted successfully');
+          const response = await quizAPI.delete(quiz._id);
+          if (response.success) {
+            message.success('Quiz deleted successfully!');
+            fetchQuizzes();
+          }
         } catch (error) {
           message.error('Failed to delete quiz');
         }
@@ -227,16 +252,14 @@ const QuizManagement = ({ classId }) => {
     });
   };
 
-  const handlePublishQuiz = async (quiz) => {
+  const handleChangeVisibilityQuiz = async (id, visibility) => {
     try {
       setLoading(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setQuizItems(prev => prev.map(item => 
-        item.id === quiz.id ? { ...item, status: 'published' } : item
-      ));
-      message.success('Quiz published successfully!');
+      const response = await quizAPI.changeVisibility(id, { visibility });
+      if (response.success) {
+        message.success(`Quiz visibility changed to ${visibility}`);
+        fetchQuizzes();
+      }
     } catch (error) {
       message.error('Failed to publish quiz');
     } finally {
@@ -244,13 +267,17 @@ const QuizManagement = ({ classId }) => {
     }
   };
 
+  const publishedQuizzes = quizItems.filter(q => q.visibility === 'published');
+  const draftQuizzes = quizItems.filter(q => q.visibility === 'draft');
+  const scheduledQuizzes = quizItems.filter(q => q.visibility === 'scheduled');
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <Title level={3} className="mb-0">Quiz Management</Title>
-        <Button 
-          type="primary" 
+        <Button
+          type="primary"
           icon={<PlusOutlined />}
           onClick={() => setQuizCreateVisible(true)}
         >
@@ -262,40 +289,39 @@ const QuizManagement = ({ classId }) => {
       <Row gutter={16}>
         <Col span={6}>
           <Card>
-            <Statistic 
-              title="Total Quizzes" 
-              value={quizItems.length} 
-              prefix={<QuestionCircleOutlined />} 
+            <Statistic
+              title="Total Quizzes"
+              value={quizItems?.length || 0}
+              prefix={<QuestionCircleOutlined />}
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic 
-              title="Published" 
-              value={quizItems.filter(q => q.status === 'published').length} 
-              prefix={<CheckCircleOutlined />} 
+            <Statistic
+              title="Published"
+              value={publishedQuizzes.length}
+              prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#3f8600' }}
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic 
-              title="Draft" 
-              value={quizItems.filter(q => q.status === 'draft').length} 
-              prefix={<EditOutlined />} 
+            <Statistic
+              title="Draft"
+              value={draftQuizzes.length}
+              prefix={<EditOutlined />}
               valueStyle={{ color: '#cf1322' }}
             />
           </Card>
         </Col>
         <Col span={6}>
           <Card>
-            <Statistic 
-              title="Average Completion" 
-              value={78} 
-              suffix="%" 
-              prefix={<BarChartOutlined />} 
+            <Statistic
+              title="Scheduled"
+              value={scheduledQuizzes.length}
+              prefix={<CalendarOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
@@ -305,172 +331,212 @@ const QuizManagement = ({ classId }) => {
       {/* Quiz Items */}
       {quizItems.length === 0 ? (
         <Card>
-          <Empty 
+          <Empty
             description="No quizzes created yet"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </Card>
       ) : (
         <List
+          loading={loading}
           dataSource={quizItems}
-          renderItem={(quiz) => (
-            <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start gap-4">
-                <div className="mt-1">
-                  <QuestionCircleOutlined className="text-green-500 text-xl" />
-                </div>
-                
-                <div className="flex-1">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <Title level={4} className="mb-1">
-                        {quiz.title}
-                      </Title>
-                      <Space wrap>
-                        <Tag color={getStatusColor(quiz.status)} className="capitalize">
-                          {quiz.status}
-                        </Tag>
-                        <Tag color={getDifficultyColor(quiz.difficulty)}>
-                          {quiz.difficulty}
-                        </Tag>
-                        <Text type="secondary">{quiz.totalPoints} points</Text>
-                        <Text type="secondary">{quiz.totalQuestions} questions</Text>
-                        <Text type="secondary">{quiz.duration} minutes</Text>
+          renderItem={(quiz) => {
+            const stats = calculateQuizStats(quiz);
+            const status = getQuizStatus(quiz);
+
+            return (
+              <Card className="mb-4 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 text-xl">
+                    {getCategoryIcon(quiz.category)}
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <Title level={4} className="mb-1">
+                          {quiz.title}
+                        </Title>
+                        <Space wrap>
+                          <Tag color={getStatusColor(status)} className="capitalize">
+                            {status}
+                          </Tag>
+                          <Tag color={getCategoryColor(quiz.category)}>
+                            {formatCategoryName(quiz.category)}
+                          </Tag>
+                          <Text type="secondary">{stats.totalPoints} points</Text>
+                          <Text type="secondary">{stats.totalQuestions} questions</Text>
+                          <Text type="secondary">{quiz.duration} minutes</Text>
+                        </Space>
+                      </div>
+
+                      <Space>
+                        <Tooltip title="View Details">
+                          <Button
+                            type="text"
+                            icon={<EyeOutlined />}
+                            size="small"
+                            onClick={() => handleViewQuizDetail(quiz)}
+                          />
+                        </Tooltip>
+
+                        <Tooltip title="Edit Quiz">
+                          <Button
+                            type="text"
+                            icon={<EditOutlined />}
+                            size="small"
+                            onClick={() => handleEditQuiz(quiz)}
+                          />
+                        </Tooltip>
+
+                        {quiz.visibility === 'published' && (
+                          <Tooltip title="View Results">
+                            <Button
+                              type="text"
+                              icon={<BarChartOutlined />}
+                              size="small"
+                              onClick={() => handleViewResults(quiz?._id, "draft")}
+                              className="text-blue-600 hover:text-blue-700"
+                            />
+                          </Tooltip>
+                        )}
+
+                        {(quiz.visibility === 'published' || quiz.visibility === 'scheduled') && (
+                          <Tooltip title="Unpublish Quiz">
+                            <Button
+                              type="text"
+                              icon={<StopOutlined />}
+                              size="small"
+                              onClick={() => handleChangeVisibilityQuiz(quiz?._id, "draft")}
+                              className="text-red-600 hover:text-red-700"
+                            />
+                          </Tooltip>
+                        )}
+
+                        {quiz.visibility === 'draft' && (
+                          <Tooltip title="Publish Quiz">
+                            <Button
+                              type="text"
+                              icon={<PlayCircleOutlined />}
+                              size="small"
+                              onClick={() => handleChangeVisibilityQuiz(quiz?._id, "published")}
+                              className="text-green-600 hover:text-green-700"
+                            />
+                          </Tooltip>
+                        )}
+
+                        <Tooltip title="Delete Quiz">
+                          <Button
+                            type="text"
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            danger
+                            onClick={() => handleDeleteQuiz(quiz)}
+                          />
+                        </Tooltip>
                       </Space>
                     </div>
-                    
-                    <Space>
-                      <Tooltip title="View Details">
-                        <Button 
-                          type="text" 
-                          icon={<EyeOutlined />}
-                          size="small"
-                          onClick={() => handleViewQuizDetail(quiz)}
-                        />
-                      </Tooltip>
-                      
-                      <Tooltip title="Edit Quiz">
-                        <Button 
-                          type="text" 
-                          icon={<EditOutlined />}
-                          size="small"
-                          onClick={() => handleEditQuiz(quiz)}
-                        />
-                      </Tooltip>
-                      
-                      {quiz.status === 'published' && (
-                        <Tooltip title="View Results">
-                          <Button 
-                            type="text" 
-                            icon={<BarChartOutlined />}
-                            size="small"
-                            onClick={() => handleViewResults(quiz)}
-                            className="text-blue-600 hover:text-blue-700"
-                          />
-                        </Tooltip>
-                      )}
-                      
-                      {quiz.status === 'draft' && (
-                        <Tooltip title="Publish Quiz">
-                          <Button 
-                            type="text" 
-                            icon={<PlayCircleOutlined />}
-                            size="small"
-                            onClick={() => handlePublishQuiz(quiz)}
-                            className="text-green-600 hover:text-green-700"
-                          />
-                        </Tooltip>
-                      )}
-                      
-                      <Tooltip title="Delete Quiz">
-                        <Button 
-                          type="text" 
-                          icon={<DeleteOutlined />}
-                          size="small"
-                          danger
-                          onClick={() => handleDeleteQuiz(quiz)}
-                        />
-                      </Tooltip>
-                    </Space>
-                  </div>
 
-                  {quiz.description && (
-                    <Text className="text-gray-600 block mb-3">
-                      {quiz.description}
-                    </Text>
-                  )}
+                    {quiz.description && (
+                      <Text className="text-gray-600 block mb-3">
+                        {quiz.description}
+                      </Text>
+                    )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                    {quiz.dueDate && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                      {quiz.startTime && (
+                        <div className="flex items-center gap-2">
+                          <CalendarOutlined className="text-gray-500" />
+                          <Text type="secondary">Start: </Text>
+                          {formatDateTime(quiz.startTime)}
+                        </div>
+                      )}
+
+                      {quiz.endTime && (
+                        <div className="flex items-center gap-2">
+                          <CalendarOutlined className="text-gray-500" />
+                          <Text type="secondary">End: </Text>
+                          {formatDateTime(quiz.endTime)}
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-2">
-                        <CalendarOutlined className="text-gray-500" />
-                        {formatDueDate(quiz.dueDate)}
+                        <ClockCircleOutlined className="text-gray-500" />
+                        <Text type="secondary">Duration: {quiz.duration} minutes</Text>
                       </div>
-                    )}
-                    
-                    <div className="flex items-center gap-2">
-                      <ClockCircleOutlined className="text-gray-500" />
-                      <Text type="secondary">Duration: {quiz.duration} minutes</Text>
-                    </div>
-                    
-                    {quiz.status === 'published' && (
-                      <div className="flex items-center gap-2">
-                        <TeamOutlined className="text-gray-500" />
-                        <Text type="secondary">
-                          {quiz.submissionsCount}/{quiz.totalStudents} completed
-                        </Text>
-                        <Progress 
-                          percent={Math.round((quiz.submissionsCount / quiz.totalStudents) * 100)} 
-                          size="small" 
-                          className="ml-2"
-                          style={{ width: '100px' }}
-                        />
-                      </div>
-                    )}
-                    
-                    {quiz.avgScore && (
+
                       <div className="flex items-center gap-2">
                         <TrophyOutlined className="text-gray-500" />
-                        <Text type="secondary">
-                          Avg: {quiz.avgScore}/{quiz.totalPoints} ({quiz.passRate}% pass rate)
-                        </Text>
+                        <Text type="secondary">Passing Score: {quiz.passingScore}%</Text>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="flex justify-between items-center text-sm">
-                    <Space>
-                      {quiz.allowRetake && (
-                        <Tag color="cyan" size="small">Allow Retake</Tag>
+                      {quiz.maxAttempts && (
+                        <div className="flex items-center gap-2">
+                          <TeamOutlined className="text-gray-500" />
+                          <Text type="secondary">Max Attempts: {quiz.maxAttempts}</Text>
+                        </div>
                       )}
-                      {quiz.randomizeQuestions && (
-                        <Tag color="purple" size="small">Randomized</Tag>
+
+                      {stats.totalAttempts > 0 && (
+                        <div className="flex items-center gap-2">
+                          <BarChartOutlined className="text-gray-500" />
+                          <Text type="secondary">
+                            Success Rate: {stats.averageScore}%
+                          </Text>
+                        </div>
                       )}
-                      {quiz.showResultsImmediately && (
-                        <Tag color="blue" size="small">Instant Results</Tag>
-                      )}
-                    </Space>
-                    
-                    <Text type="secondary">
-                      Created {moment(quiz.createdAt).fromNow()}
-                    </Text>
+                    </div>
+
+                    <div className="flex justify-between items-center text-sm">
+                      <Space>
+                        {quiz.allowReview && (
+                          <Tag color="cyan" size="small">Allow Review</Tag>
+                        )}
+                        {quiz.shuffleQuestions && (
+                          <Tag color="purple" size="small">Shuffle Questions</Tag>
+                        )}
+                        {quiz.shuffleOptions && (
+                          <Tag color="purple" size="small">Shuffle Options</Tag>
+                        )}
+                        {quiz.fullScreen && (
+                          <Tag color="red" size="small">Full Screen</Tag>
+                        )}
+                        {quiz.showResults && (
+                          <Tag color="blue" size="small">Show Results</Tag>
+                        )}
+                        {!quiz.copyAllowed && (
+                          <Tag color="orange" size="small">Copy Disabled</Tag>
+                        )}
+                        {quiz.checkTab && (
+                          <Tag color="red" size="small">Tab Monitoring</Tag>
+                        )}
+                      </Space>
+
+                      <Space direction="vertical" size="small" className="text-right">
+                        <Text type="secondary">
+                          Created by: {quiz.createdBy?.email || 'Unknown'}
+                        </Text>
+                        <Text type="secondary">
+                          Created {moment(quiz.createdAt).fromNow()}
+                        </Text>
+                      </Space>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          )}
+              </Card>
+            );
+          }}
         />
       )}
 
-      {/* Quiz Create Modal */}
-      <QuizCreateModal
+      <CreateQuizModal
         visible={quizCreateVisible}
         onCancel={() => setQuizCreateVisible(false)}
-        onSubmit={handleQuizCreate}
+        onOk={handleQuizCreate}
         loading={loading}
       />
     </div>
   );
 };
 
-export default memo(QuizManagement); 
+export default memo(QuizManagement);

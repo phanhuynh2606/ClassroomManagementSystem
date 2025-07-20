@@ -8,7 +8,7 @@ const { log } = require('console');
 
 const getQuestions = async (req, res) => {
     try {
-        const { page = 1, limit = 10, search = '', difficulty, category, status } = req.query;
+        const { page, limit, search = '', difficulty, category, status } = req.query;
 
         const query = {};
 

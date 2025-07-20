@@ -12,6 +12,7 @@ import {
 } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
+import quizAPI from '../../services/api/quiz.api';
 const { Title, Text } = Typography;
 
 const quizQuestions = [
@@ -40,19 +41,43 @@ const QuizPage = () => {
   const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState({});
-  const { classroomId } = useParams();
+  const { classroomId, quizId } = useParams();
   const [submitted, setSubmitted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(1800); 
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [quizDataDetail, setQuizDataDetail] = useState(null);
 
   useEffect(() => {
-    if (submitted) return;
-    if (timeLeft <= 0) {
-      handleConfirmSubmit();
-      return;
+    let timer;
+
+    if (timeLeft > 0 && !submitted) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            handleConfirmSubmit();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
-    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+
     return () => clearInterval(timer);
   }, [timeLeft, submitted]);
+
+  useEffect(() => {
+    fetchTakeQuiz();
+  }, [classroomId, quizId]);
+
+  const fetchTakeQuiz = async () => {
+    try {
+      const response = await quizAPI.takeQuiz(quizId);
+      setQuizDataDetail(response.data);
+      setTimeLeft(response.data.duration * 60);
+    } catch (error) {
+      message.error('Failed to load quiz data');
+    }
+  };
 
   const formatTime = (seconds) => {
     const m = String(Math.floor(seconds / 60)).padStart(2, '0');
@@ -61,14 +86,34 @@ const QuizPage = () => {
   };
 
   const handleAnswer = (value) => {
-    setAnswers({ ...answers, [quizQuestions[current].id]: value });
+    const questionId = quizDataDetail?.questions[current]._id;
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: value,
+    }));
   };
 
-  const handleConfirmSubmit = () => {
-    if (submitted) return;
-    setSubmitted(true);
-    message.success('Quiz submitted!');
-    navigate(`/student/classroom/${classroomId}#quizzes`);
+
+  const handleConfirmSubmit = async () => {
+    try {
+      const payload = Object.entries(answers).map(([questionId, selectedOption]) => ({
+      questionId,
+      selectedOption,
+    }));
+
+      console.log('Submitting answers:', payload);
+
+
+      await quizAPI.submit(quizId, { answers: payload });
+
+      setSubmitted(true);
+      message.success('Quiz submitted successfully');
+      navigate(`/student/classroom/${classroomId}#quizzes`);
+
+    } catch (error) {
+      console.error('Failed to submit quiz', error);
+      message.error('Failed to submit quiz');
+    }
   };
 
   const showConfirmSubmit = () => {
@@ -81,15 +126,14 @@ const QuizPage = () => {
     });
   };
 
-  const percentCompleted =
-    (Object.keys(answers).length / quizQuestions.length) * 100;
+  const percentCompleted = (Object.keys(answers).length / quizDataDetail?.questions.length) * 100;
 
   return (
     <div className="flex flex-col md:flex-row gap-4 p-6">
       <div className="w-full md:w-1/4 border rounded p-4 bg-white shadow">
-        <Title level={5}>Quiz navigation</Title>
+        <Title level={5}>{quizDataDetail?.title}</Title>
         <Space wrap className="mb-4">
-          {quizQuestions.map((q, index) => (
+          {quizDataDetail?.questions.map((q, index) => (
             <Button
               key={q.id}
               shape="circle"
@@ -114,34 +158,52 @@ const QuizPage = () => {
 
       <div className="w-full md:w-3/4">
         <Card className="shadow" variant="outlined">
-          <Title level={4} className="text-red-500">Question {current + 1}</Title>
+          <Title level={4} className="text-red-500">
+            Question {current + 1}
+          </Title>
           <Divider />
-          <Text strong>{quizQuestions[current].question}</Text>
+          <Text strong>
+            {quizDataDetail?.questions[current].content}
+          </Text>
+
           <Radio.Group
             onChange={(e) => handleAnswer(e.target.value)}
-            value={answers[quizQuestions[current].id] || null}
+            value={
+              answers[quizDataDetail?.questions[current]._id] || null
+            }
             disabled={submitted}
             className="mt-4 block"
           >
             <Space direction="vertical" className="mt-2">
-              {quizQuestions[current].options.map((option, index) => (
-                <Radio key={index} value={option}>
-                  {option}
-                </Radio>
-              ))}
+              {quizDataDetail?.questions[current].options.map(
+                (option, index) => (
+                  <Radio key={index} value={option.content}>
+                    {option.content}
+                  </Radio>
+                )
+              )}
             </Space>
           </Radio.Group>
 
           <div className="flex justify-between mt-6">
-            <Button disabled={current === 0} onClick={() => setCurrent((prev) => prev - 1)}>
+            <Button
+              disabled={current === 0}
+              onClick={() => setCurrent((prev) => prev - 1)}
+            >
               Previous
             </Button>
-            <Button disabled={current === quizQuestions.length - 1} onClick={() => setCurrent((prev) => prev + 1)}>
+            <Button
+              disabled={
+                current === quizDataDetail?.questions.length - 1
+              }
+              onClick={() => setCurrent((prev) => prev + 1)}
+            >
               Next
             </Button>
           </div>
         </Card>
       </div>
+
     </div>
   );
 };

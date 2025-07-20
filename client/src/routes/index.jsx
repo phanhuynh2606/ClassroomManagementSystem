@@ -72,6 +72,7 @@ const TeacherClassroomManagement = lazy(() =>
 const TeacherClassroomDetail = lazy(() =>
   import("../pages/teacher/ClassroomDetail")
 );
+const QuizDetail = lazy(() => import("../components/teacher/quiz/QuizDetail"));
 const AssignmentDetail = lazy(() =>
   import("../pages/teacher/AssignmentDetail")
 );
@@ -306,6 +307,12 @@ const AppRouter = () => {
               </Suspense>
             }
           />
+          
+          <Route 
+            path="classroom/:classId/quizzes/:quizId"
+            element={<QuizDetail />}
+          />
+
           <Route path="classroom/edit/:classId" element={<EditClassForm />} />
           <Route
             path="classroom/:classId/assignment/:assignmentId"

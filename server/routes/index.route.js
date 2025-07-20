@@ -10,6 +10,7 @@ const videoWatchRoutes = require('./videoWatch.route.js');
 const fileRoutes = require('./file.route.js');
 const materialRoutes = require('./material.route.js');
 const teacherTodoRoutes = require('./teacher.todo.route.js');
+const quizRoutes = require('./quizzes.route.js');
 
 const initRoutes = (app) => {
   app.use('/api/auth', authRoutes);
@@ -24,6 +25,7 @@ const initRoutes = (app) => {
   app.use('/api/files', fileRoutes);
   app.use('/api/materials', materialRoutes);
   app.use('/api/teacher-todo', teacherTodoRoutes);
+  app.use('/api/quizzes', quizRoutes);
 };
 
 module.exports = initRoutes;

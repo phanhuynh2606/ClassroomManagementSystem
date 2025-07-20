@@ -9,6 +9,12 @@ const quizSchema = new mongoose.Schema(
       trim: true,
       index: true
     },
+    category: {
+      type: String,
+      enum: ['PROGRESS_TEST', 'FINAL_EXAM', 'ASSIGNMENT', 'MID_TERM_EXAM'],
+      required: true,
+      index: true
+    },
     description: {
       type: String,
       trim: true,
@@ -31,7 +37,7 @@ const quizSchema = new mongoose.Schema(
       index: true
     }],
     duration: {
-      type: Number, // in minutes
+      type: Number,
       required: true,
     },
     startTime: {
@@ -52,7 +58,27 @@ const quizSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    shuffleQuestions: {
+      type: Boolean,
+      default: false,
+    },
+    shuffleOptions: {
+      type: Boolean,
+      default: false,
+    },
     randomizeQuestions: {
+      type: Boolean,
+      default: false,
+    },
+    fullScreen: {
+      type: Boolean,
+      default: false,
+    },
+    copyAllowed: {
+      type: Boolean,
+      default: false,
+    },
+    checkTab: {
       type: Boolean,
       default: false,
     },
@@ -75,7 +101,7 @@ const quizSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Question'
         },
-        selectedOptions: [Number],
+        selectedOption: String,
         isCorrect: Boolean,
       }],
       score: Number,
@@ -89,7 +115,11 @@ const quizSchema = new mongoose.Schema(
         type: String,
         enum: ['in-progress', 'completed', 'abandoned'],
         default: 'in-progress'
-      }
+      },
+      questionsOrder: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Question'
+      }]
     }],
     isActive: {
       type: Boolean,
@@ -105,11 +135,11 @@ const quizSchema = new mongoose.Schema(
       enum: ['draft', 'published', 'scheduled'],
       default: 'draft'
     },
-    publishDate: Date,
-    tags: [{
-      type: String,
-      trim: true
-    }],
+    // publishDate: Date,
+    // tags: [{
+    //   type: String,
+    //   trim: true
+    // }],
     deleted: {
       type: Boolean,
       default: false,
