@@ -93,7 +93,7 @@ const getQuizzes = async (req, res) => {
 const getQuizzesForStudent = async (req, res) => {
     try {
         const { classroomId } = req.params;
-        const quizzes = await Quiz.find({ classroom: classroomId, isActive: true, deleted: false })
+        const quizzes = await Quiz.find({ classroom: classroomId, isActive: true, deleted: false, visibility: { $in: ['published', 'scheduled'] } })
             .populate('createdBy', 'name email')
             .populate('classroom', 'name').populate('questions').
             populate('submissions.student')
@@ -186,7 +186,6 @@ const takeQuizById = async (req, res) => {
     try {
         const { quizId } = req.params;
         const studentId = req.user._id;
-        console.log(`Taking quiz with ID: ${quizId} for student ID: ${studentId}`);
 
         const quiz = await Quiz.findById(quizId)
             .populate('createdBy', 'name email')
@@ -249,6 +248,7 @@ const takeQuizById = async (req, res) => {
                 startedAt: now,
                 attempt: completedAttempts + 1,
                 status: 'in-progress',
+                questionsOrder: shuffledQuestions.map(q => q._id)
             };
 
             quiz.submissions.push(newSubmission);
@@ -288,7 +288,7 @@ const takeQuizById = async (req, res) => {
 
 const submitQuiz = async (req, res) => {
     try {
-        const { id: quizId } = req.params;
+        const { quizId: quizId } = req.params;
         const { answers } = req.body;
         const studentId = req.user._id;
 
@@ -324,14 +324,9 @@ const submitQuiz = async (req, res) => {
             const question = quiz.questions.find(q => q._id.toString() === answer.questionId);
             if (!question) continue;
 
-            const correctOptionIndices = question.options
-                .map((opt, idx) => opt.isCorrect ? idx : null)
-                .filter(idx => idx !== null);
+            const correctOptionContent = question.options.find(opt => opt.isCorrect)?.content.trim() || '';
 
-            const isCorrect = arraysEqual(
-                answer.selectedOptions.sort(),
-                correctOptionIndices.sort()
-            );
+            const isCorrect = answer.selectedOption.trim() === correctOptionContent;
 
             if (isCorrect) {
                 totalScore += question.points || 1;
@@ -339,7 +334,7 @@ const submitQuiz = async (req, res) => {
 
             processedAnswers.push({
                 question: question._id,
-                selectedOptions: answer.selectedOptions,
+                selectedOption: answer.selectedOption,
                 isCorrect
             });
 

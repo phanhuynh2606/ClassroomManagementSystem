@@ -9,6 +9,7 @@ const quizAPI = {
   delete: (id) => axiosClient.delete(`/quizzes/${id}`),
   changeVisibility: (id, data) => axiosClient.patch(`/quizzes/${id}/visibility`, data),
   takeQuiz: (quizId) => axiosClient.get(`/quizzes/${quizId}/take`),
+  submit: (quizId, answers) => axiosClient.post(`/quizzes/${quizId}/submit`, answers),
 };
 
 export default quizAPI; 

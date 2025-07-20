@@ -101,7 +101,7 @@ const quizSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Question'
         },
-        selectedOptions: [Number],
+        selectedOption: String,
         isCorrect: Boolean,
       }],
       score: Number,
@@ -115,7 +115,11 @@ const quizSchema = new mongoose.Schema(
         type: String,
         enum: ['in-progress', 'completed', 'abandoned'],
         default: 'in-progress'
-      }
+      },
+      questionsOrder: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Question'
+      }]
     }],
     isActive: {
       type: Boolean,

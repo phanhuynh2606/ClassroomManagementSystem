@@ -94,17 +94,26 @@ const QuizPage = () => {
   };
 
 
-  const handleConfirmSubmit = () => {
-    if (submitted) return;
-    setSubmitted(true);
-    const payload = Object.entries(answers).map(([questionId, answer]) => ({
+  const handleConfirmSubmit = async () => {
+    try {
+      const payload = Object.entries(answers).map(([questionId, selectedOption]) => ({
       questionId,
-      answer,
+      selectedOption,
     }));
-    message.success('Quiz submitted!');
-    console.log('Answers:', payload);
 
-    // navigate(`/student/classroom/${classroomId}#quizzes`);
+      console.log('Submitting answers:', payload);
+
+
+      await quizAPI.submit(quizId, { answers: payload });
+
+      setSubmitted(true);
+      message.success('Quiz submitted successfully');
+      navigate(`/student/classroom/${classroomId}#quizzes`);
+
+    } catch (error) {
+      console.error('Failed to submit quiz', error);
+      message.error('Failed to submit quiz');
+    }
   };
 
   const showConfirmSubmit = () => {
@@ -122,7 +131,7 @@ const QuizPage = () => {
   return (
     <div className="flex flex-col md:flex-row gap-4 p-6">
       <div className="w-full md:w-1/4 border rounded p-4 bg-white shadow">
-        <Title level={5}>Quiz navigation</Title>
+        <Title level={5}>{quizDataDetail?.title}</Title>
         <Space wrap className="mb-4">
           {quizDataDetail?.questions.map((q, index) => (
             <Button
