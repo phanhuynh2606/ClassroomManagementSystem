@@ -10,6 +10,7 @@ import streamAPI from './stream.api';
 import youtubeAPI from './youtube.api';
 import videoWatchAPI from './videoWatch.api';
 import teacherTodoAPI from './teacher.todo.api';
+import materialAPI from './material.api';
 
 export {
   authAPI,
@@ -23,5 +24,6 @@ export {
   streamAPI,
   youtubeAPI,
   videoWatchAPI,
-  teacherTodoAPI
+  teacherTodoAPI,
+  materialAPI
 }; 
