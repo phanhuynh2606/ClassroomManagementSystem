@@ -28,6 +28,13 @@ const useSocket = () => {
 
   // Connect to socket
   const connect = useCallback(() => {
+    // If we've reached max reconnect attempts, stop trying
+    if (reconnectAttempts.current >= maxReconnectAttempts) {
+      console.log('🛑 Max reconnection attempts reached. Please refresh the page.');
+      cleanup();
+      return;
+    }
+
     // Clear any expired tokens first
     clearExpiredToken();
     
@@ -37,6 +44,8 @@ const useSocket = () => {
     if (!currentToken || !user) {
       console.log('❌ No valid token or user available for socket connection');
       logTokenStatus('🔍');
+      // Force user to re-authenticate by refreshing the page or redirecting to login
+      window.location.reload();
       return;
     }
 
@@ -62,6 +71,17 @@ const useSocket = () => {
       reconnectAttempts.current = 0; // Reset attempts on successful connection
     });
 
+    // Handle token refresh from server
+    newSocket.on('token:refresh', ({ token }) => {
+      console.log('🔄 Received new token from server');
+      // Store the new token (you might want to dispatch this to your auth store)
+      localStorage.setItem('token', token);
+      // Update socket auth
+      newSocket.auth.token = token;
+      // Reconnect with new token
+      newSocket.disconnect().connect();
+    });
+
     newSocket.on('disconnect', (reason) => {
       console.log('❌ Socket disconnected:', reason);
       setConnected(false);
@@ -78,9 +98,10 @@ const useSocket = () => {
       
       // Handle different types of errors
       if (error.message.includes('expired') || error.message.includes('Authentication error') || error.message.includes('JWT')) {
-        console.log('🔄 JWT authentication failed, waiting for token refresh...');
-        // Don't reconnect immediately for auth errors - wait for token refresh
-        scheduleReconnection(2000); // Wait 2 seconds for token refresh
+        console.log('� Token expired, redirecting to refresh authentication...');
+        // For JWT errors, force a page refresh to get a new token
+        window.location.reload();
+        return;
       } else {
         attemptReconnection();
       }

@@ -54,7 +54,7 @@ const io = new Server(server, {
 app.set('io', io);
 
 // Socket.IO middleware for authentication
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   const token = socket.handshake.auth.token;
   console.log('🔐 Socket auth attempt, token exists:', !!token);
   
@@ -66,22 +66,58 @@ io.use((socket, next) => {
   try {
     const jwt = require('jsonwebtoken');
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key-here';
-    const decoded = jwt.verify(token, jwtSecret);
-    socket.userId = decoded.id;
-    socket.userRole = decoded.role;
-    console.log('✅ Socket authenticated for user:', decoded.id, 'role:', decoded.role);
-    next();
+    
+    try {
+      // First try to verify the token
+      const decoded = jwt.verify(token, jwtSecret);
+      socket.userId = decoded.id;
+      socket.userRole = decoded.role;
+      console.log('✅ Socket authenticated for user:', decoded.id, 'role:', decoded.role);
+      return next();
+    } catch (verifyError) {
+      // If token is expired, try to refresh it
+      if (verifyError.name === 'TokenExpiredError') {
+        try {
+          // Decode the expired token to get the user ID
+          const decoded = jwt.decode(token);
+          
+          if (!decoded || !decoded.id) {
+            throw new Error('Invalid token format');
+          }
+
+          // Find the user
+          const user = await User.findById(decoded.id);
+          if (!user) {
+            throw new Error('User not found');
+          }
+          
+          // Generate a new token
+          const newToken = jwt.sign(
+            { id: user._id, role: user.role },
+            jwtSecret,
+            { expiresIn: '24h' }
+          );
+          
+          // Emit the new token to the client
+          socket.emit('token:refresh', { token: newToken });
+          
+          // Continue with the connection using the new token
+          socket.userId = user._id;
+          socket.userRole = user.role;
+          console.log('🔄 Token refreshed for user:', user._id);
+          return next();
+        } catch (refreshError) {
+          console.log('❌ Token refresh failed:', refreshError.message);
+          return next(new Error('Token refresh failed'));
+        }
+      } else {
+        console.log('❌ Invalid token:', verifyError.message);
+        return next(new Error('Invalid token'));
+      }
+    }
   } catch (err) {
     console.log('❌ Socket authentication failed:', err.message);
-    
-    // Send specific error message for JWT expiration
-    if (err.name === 'TokenExpiredError') {
-      return next(new Error('JWT expired'));
-    } else if (err.name === 'JsonWebTokenError') {
-      return next(new Error('Invalid JWT'));
-    } else {
-      return next(new Error('Authentication error'));
-    }
+    return next(new Error('Authentication failed'));
   }
 });
 

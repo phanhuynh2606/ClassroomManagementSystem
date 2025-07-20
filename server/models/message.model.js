@@ -104,8 +104,19 @@ messageSchema.index({ type: 1, deleted: 1 });
 
 // Methods
 messageSchema.methods.markAsRead = function(userId) {
-  const existingRead = this.readBy.find(
-    read => read.user.toString() === userId.toString()
+  // Initialize readBy array if it doesn't exist
+  if (!this.readBy) {
+    this.readBy = [];
+  }
+
+  // Ensure userId is valid
+  if (!userId) {
+    throw new Error('userId is required to mark message as read');
+  }
+
+  // Find existing read record
+  const existingRead = this.readBy.find(read => 
+    read && read.user && read.user.toString() === userId.toString()
   );
   
   if (!existingRead) {

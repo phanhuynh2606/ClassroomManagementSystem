@@ -98,7 +98,7 @@ const ChatWindow = () => {
         }
       });
 
-      newSocket.on('new-message', (message) => {
+      newSocket.on('new-message', async (message) => {
         console.log('📨 Received new message:', {
           messageId: message._id,
           chatId: message.chat,
@@ -107,13 +107,71 @@ const ChatWindow = () => {
           selectedChatId: selectedChat?._id,
           isForCurrentChat: selectedChat && selectedChat._id === message.chat
         });
-        
-        // Only add message to current chat's messages if it belongs to the selected chat
-        if (selectedChat && selectedChat._id === message.chat) {
-          console.log('✅ Adding message to current chat messages');
-          setMessages(prev => [...prev, message]);
-        } else {
-          console.log('ℹ️ Message is for different chat, updating chat list only');
+
+        try {
+          // Always update messages if it's for the current chat
+          if (selectedChat && selectedChat._id === message.chat) {
+            console.log('✅ Adding message to current chat');
+            setMessages(prev => {
+              // Skip if message already exists
+              if (prev.some(m => m._id === message._id)) {
+                return prev;
+              }
+              // Add new message and sort by createdAt
+              return [...prev, message].sort((a, b) => 
+                new Date(a.createdAt) - new Date(b.createdAt)
+              );
+            });
+
+            // Auto mark as read if message is from other user
+            if (message.sender._id !== user._id) {
+              await markMessageAsRead(message._id);
+            }
+
+            // Scroll to bottom after adding new message
+            setTimeout(scrollToBottom, 100);
+          }
+
+          // Always update chat list to show latest message
+          updateChatLastMessage(message);
+
+          // If message is not from current user, update notifications
+          if (message.sender._id !== user._id) {
+            // Show notification if chat is not currently selected
+            if (!selectedChat || selectedChat._id !== message.chat) {
+              if (Notification.permission === 'granted') {
+                const senderName = message.sender.fullName || message.sender.email || 'User';
+                const notificationTitle = `New message from ${senderName}`;
+                const notificationBody = message.type === 'text' 
+                  ? (message.content.length > 50 ? `${message.content.substring(0, 50)}...` : message.content)
+                  : `Sent a ${message.type}`;
+
+                new Notification(notificationTitle, {
+                  body: notificationBody,
+                  icon: '/logo.png',
+                  tag: `chat-${message.chat}`,
+                  requireInteraction: false
+                });
+              }
+
+              // Update unread count
+              setChats(prev => prev.map(chat => 
+                chat._id === message.chat
+                  ? { ...chat, unreadCount: (chat.unreadCount || 0) + 1 }
+                  : chat
+              ));
+            }
+          }
+
+          // Refresh chat list to ensure correct ordering
+          if (!selectedChat || selectedChat._id !== message.chat) {
+            const chatResponse = await chatAPI.getUserChats();
+            const sortedChats = sortChatsByLatestMessage(chatResponse.data.chats);
+            setChats(sortedChats);
+          }
+
+        } catch (error) {
+          console.error('Error processing new message:', error);
         }
         
         // Always update chat list for proper ordering and unread counts
@@ -262,69 +320,114 @@ const ChatWindow = () => {
   }, [messages]);
 
   useEffect(() => {
-    if (selectedChat && socket) {
-      // Leave previous chat room if there was one
-      if (previousChatIdRef.current && previousChatIdRef.current !== selectedChat._id) {
-        socket.emit('leave-chat', previousChatIdRef.current);
-      }
-      
-      // Join new chat room
-      socket.emit('join-chat', selectedChat._id);
-      previousChatIdRef.current = selectedChat._id;
-      
-      fetchChatMessages(selectedChat._id);
-    }
+    if (!socket) return;
 
-    // Cleanup function to leave chat room when component unmounts or selectedChat changes
+    const handleChatChange = async () => {
+      try {
+        // Leave previous chat room if exists
+        if (previousChatIdRef.current) {
+          console.log(`👋 Leaving chat room: ${previousChatIdRef.current}`);
+          socket.emit('leave-chat', previousChatIdRef.current);
+        }
+
+        // Join new chat room if selected
+        if (selectedChat) {
+          console.log(`🚪 Joining chat room: ${selectedChat._id}`);
+          socket.emit('join-chat', selectedChat._id);
+          previousChatIdRef.current = selectedChat._id;
+
+          // Fetch messages for new chat
+          await fetchChatMessages(selectedChat._id);
+        } else {
+          previousChatIdRef.current = null;
+        }
+      } catch (error) {
+        console.error('Error handling chat change:', error);
+      }
+    };
+
+    handleChatChange();
+
+    // Cleanup: leave chat room when unmounting or changing chats
     return () => {
-      if (socket && previousChatIdRef.current) {
+      if (previousChatIdRef.current) {
+        console.log(`👋 Cleanup: leaving chat room ${previousChatIdRef.current}`);
         socket.emit('leave-chat', previousChatIdRef.current);
       }
     };
   }, [selectedChat, socket]);
 
-  // Auto mark as read when user is active in chat with unread messages
+  // Auto mark as read and fetch messages when user is active in chat
   useEffect(() => {
     let markAsReadTimer;
     
-    if (selectedChat) {
-      // Mark as read after a short delay when user enters a chat with unread messages
-      markAsReadTimer = setTimeout(async () => {
-        await markChatAsReadIfNeeded(selectedChat._id);
-      }, 1000); // 1 second delay to ensure user is actively viewing
-    }
+    const updateChat = async () => {
+      if (selectedChat) {
+        try {
+          // Fetch latest messages immediately when switching chats
+          const latestMessages = await fetchChatMessages(selectedChat._id);
+          if (latestMessages) {
+            setMessages(latestMessages);
+          }
+
+          // Mark as read after a short delay
+          markAsReadTimer = setTimeout(async () => {
+            await markChatAsReadIfNeeded(selectedChat._id);
+          }, 1000);
+        } catch (error) {
+          console.error('Error updating chat:', error);
+        }
+      }
+    };
+
+    updateChat();
 
     return () => {
       if (markAsReadTimer) {
         clearTimeout(markAsReadTimer);
       }
     };
-  }, [selectedChat, chats]); // Re-run when selectedChat or chats change
+  }, [selectedChat]); // Only re-run when selectedChat changes
 
-  // Mark messages as read when user scrolls to bottom or is actively viewing
-  useEffect(() => {
-    if (selectedChat && messages.length > 0) {
-      const unreadMessages = messages.filter(msg => 
-        msg.sender._id !== user._id && 
-        !msg.readBy.some(read => read.user === user._id)
-      );
-
-      if (unreadMessages.length > 0) {
-        // Mark recent unread messages as read with a delay
-        const markTimer = setTimeout(async () => {
-          for (const message of unreadMessages.slice(-3)) { // Mark last 3 unread messages
-            try {
-              await chatAPI.markMessageAsRead(message._id);
-            } catch (error) {
-              console.error('Error marking message as read:', error);
-            }
-          }
-        }, 2000); // 2 second delay
-
-        return () => clearTimeout(markTimer);
-      }
+  // Message read status management
+  const markMessageAsRead = async (messageId) => {
+    try {
+      await chatAPI.markMessageAsRead(messageId);
+      console.log(`✅ Marked message ${messageId} as read`);
+    } catch (error) {
+      console.error(`❌ Error marking message ${messageId} as read:`, error);
     }
-  }, [messages, selectedChat, user._id]);
+  };
+
+  useEffect(() => {
+    if (!selectedChat || !messages.length || !user?._id) return;
+
+    const checkAndMarkUnreadMessages = async () => {
+      try {
+        // Find unread messages not from current user
+        const unreadMessages = messages.filter(msg => {
+          if (!msg?.sender || msg.sender._id === user._id) return false;
+          const readBy = Array.isArray(msg.readBy) ? msg.readBy : [];
+          return !readBy.some(read => 
+            read?.user && 
+            (read.user === user._id || read.user.toString() === user._id)
+          );
+        });
+
+        if (unreadMessages.length > 0) {
+          console.log(`📬 Found ${unreadMessages.length} unread messages`);
+          for (const msg of unreadMessages) {
+            await markMessageAsRead(msg._id);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error processing unread messages:', error);
+      }
+    };
+
+    const timer = setTimeout(checkAndMarkUnreadMessages, 1000);
+    return () => clearTimeout(timer);
+  }, [selectedChat?._id, messages, user?._id]);
 
   const fetchUserChats = async () => {
     try {
@@ -340,50 +443,59 @@ const ChatWindow = () => {
   };
 
   const fetchChatMessages = async (chatId) => {
+    if (!chatId) return;
+    
     try {
       setMessagesLoading(true);
+      console.log(`📥 Fetching messages for chat ${chatId}`);
+      
       const response = await chatAPI.getChatMessages(chatId);
-      setMessages(response.data.messages);
+      const sortedMessages = response.data.messages.sort((a, b) => 
+        new Date(a.createdAt) - new Date(b.createdAt)
+      );
+      
+      setMessages(sortedMessages);
+      console.log(`✅ Loaded ${sortedMessages.length} messages`);
 
-      const unreadMessages = response.data.messages.filter(msg => 
+      // Find messages that haven't been read by current user
+      const unreadMessages = sortedMessages.filter(msg => 
         msg.sender._id !== user._id && 
-        !msg.readBy.some(read => read.user === user._id)
+        !(msg.readBy || []).some(read => 
+          read?.user && (read.user === user._id || read.user.toString() === user._id)
+        )
       );
 
       if (unreadMessages.length > 0) {
+        console.log(`📬 Found ${unreadMessages.length} unread messages`);
         try {
+          // Try to mark whole chat as read first
           await chatAPI.markChatAsRead(chatId);
+          console.log('✅ Marked entire chat as read');
           
-          // Update unread count without re-sorting since we're not changing lastMessageAt
+          // Update chat's unread count
           setChats(prev => prev.map(chat => 
             chat._id === chatId 
               ? { ...chat, unreadCount: 0 }
               : chat
           ));
 
+          // Update global unread count if needed
           const currentChat = chats.find(c => c._id === chatId);
-          if (currentChat && (currentChat.unreadCount || 0) > 0) {
+          if (currentChat?.unreadCount > 0) {
             decreaseUnreadChatsCount(1);
+            setTimeout(refreshUnreadChatsCount, 200);
           }
-
-          setTimeout(() => {
-            refreshUnreadChatsCount();
-          }, 200);
-          
         } catch (error) {
+          console.error('Error marking chat as read, falling back to individual messages:', error);
+          // Fall back to marking individual messages as read
           for (const message of unreadMessages) {
             try {
-              await chatAPI.markMessageAsRead(message._id);
+              await markMessageAsRead(message._id);
             } catch (markError) {
-              console.error('Error marking message as read:', markError);
+              console.error(`Error marking message ${message._id} as read:`, markError);
             }
           }
         }
-
-        // Remove this line that causes chat list to reload
-        // setTimeout(() => {
-        //   fetchUserChats();
-        // }, 300);
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -441,6 +553,11 @@ const ChatWindow = () => {
 
   const updateChatLastMessage = (message) => {
     setChats(prev => {
+      // Find existing chat
+      const existingChat = prev.find(chat => chat._id === message.chat);
+      if (!existingChat) return prev;
+
+      // Update chat with new message
       const updated = prev.map(chat => 
         chat._id === message.chat 
           ? { 
@@ -449,17 +566,28 @@ const ChatWindow = () => {
                 ...message,
                 sender: message.sender
               }, 
-              lastMessageAt: message.createdAt 
+              lastMessageAt: message.createdAt,
+              // Update unread count for messages from others
+              unreadCount: message.sender._id !== user._id && 
+                          (!selectedChat || selectedChat._id !== message.chat)
+                          ? (chat.unreadCount || 0) + 1 
+                          : chat.unreadCount 
             }
           : chat
       );
       
-      // Only sort if the updated chat needs to move to the top
-      if (needsSorting(updated, message.chat)) {
-        return sortChatsByLatestMessage(updated);
-      }
-      return updated;
+      // Sort chats if needed
+      return needsSorting(updated, message.chat) 
+        ? sortChatsByLatestMessage(updated) 
+        : updated;
     });
+
+    // Refresh unread count after a short delay
+    if (message.sender._id !== user._id) {
+      setTimeout(() => {
+        refreshUnreadChatsCount();
+      }, 200);
+    }
   };
 
   const updateMessageReaction = (reactions, userId, emoji) => {
