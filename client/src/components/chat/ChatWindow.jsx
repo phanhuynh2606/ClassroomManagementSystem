@@ -81,6 +81,7 @@ const ChatWindow = () => {
       
       const newSocket = io(serverUrl, {
         auth: { token },
+        query: { role: user.role }, // Add role to query params
         forceNew: true
       });
 
@@ -106,13 +107,15 @@ const ChatWindow = () => {
           content: message.content?.substring(0, 50) + '...',
           selectedChatId: selectedChat?._id,
           isForCurrentChat: selectedChat && selectedChat._id === message.chat,
-          chatType: selectedChat?.type
+          chatType: selectedChat?.type,
+          userRole: user.role
         });
 
         try {
-          // Update messages if it's for the current chat OR if it's a classroom chat
+          // Always update messages for admin regardless of chat type
+          // For others, only update if it's current chat or classroom chat
           const isCurrentChat = selectedChat && selectedChat._id === message.chat;
-          const shouldUpdateMessages = isCurrentChat || selectedChat?.type === 'classroom';
+          const shouldUpdateMessages = user.role === 'admin' || isCurrentChat || selectedChat?.type === 'classroom';
 
           if (shouldUpdateMessages) {
             console.log('✅ Adding new message to chat');
@@ -667,14 +670,23 @@ const ChatWindow = () => {
     }
   };
 
-  const handleChatSelect = (chat) => {
-    setSelectedChat(chat);
-    if (isMobile) {
-      setShowChatList(false);
-    }
-  };
-
-  const handleBackToList = () => {
+    const handleChatSelect = async (chat) => {
+      setSelectedChat(chat);
+      if (isMobile) {
+        setShowChatList(false);
+      }
+      
+      // For admin, always join all chat rooms of selected chat
+      if (user.role === 'admin' && socket) {
+        console.log(`👨‍💼 Admin joining chat ${chat._id}`);
+        socket.emit('join-chat', chat._id);
+        if (chat.type === 'classroom' && chat.classroom?._id) {
+          const classroomRoom = `classroom_${chat.classroom._id}`;
+          console.log(`👨‍💼 Admin joining classroom room ${classroomRoom}`);
+          socket.emit('join-chat', classroomRoom);
+        }
+      }
+    };  const handleBackToList = () => {
     setShowChatList(true);
     if (isMobile) {
       setSelectedChat(null);
