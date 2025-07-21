@@ -14,6 +14,17 @@ router.get('/classroom/:classroomId',
   authorize('student', 'teacher'), 
   ctrls.getMaterials
 );
+router.get('/', 
+  protect, 
+  authorize('teacher'), 
+  ctrls.getMaterialByTeacher
+);
+
+router.put('/:materialId',
+  protect,
+  authorize('teacher'),
+  ctrls.shareMaterialToClass
+);
 
 router.delete('/teacher/:classroomId/:materialId', 
   protect, 

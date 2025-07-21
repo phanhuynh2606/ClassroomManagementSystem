@@ -16,6 +16,7 @@ const getMaterials = async (req, res) => {
         message: "The specified classroom does not exist",
       });
     }
+    console.log("Classroom details:", classroom);
     if (
       currentUser.role === "student" &&
       !classroom.students.some(
@@ -63,6 +64,95 @@ const getMaterials = async (req, res) => {
             name: material.classroom.name,
             subject: material.classroom.subject,
           },
+          createdAt: material.createdAt,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching materials:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "Failed to fetch materials. Please try again later.",
+    });
+  }
+};
+const shareMaterialToClass = async (req, res) => {
+  try {
+    const { classroomId } = req.body;
+    const { materialId } = req.params;
+ 
+    const classroom = await Classroom.findById(classroomId); 
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        error: "Classroom not found",
+        message: "The specified classroom does not exist",
+      });
+    }
+ 
+    const material = await Material.findById(materialId);
+    if (!material) {
+      return res.status(404).json({
+        success: false,
+        message: "Material not found",
+      });
+    }
+ 
+    if (material.classroom.includes(classroomId)) {
+      return res.status(200).json({
+        success: false,
+        message: `File ${material.title} đã tồn tại trong tài liệu lớp ${classroom.name}!`,
+        material,
+      });
+    }
+ 
+    const updatedMaterial = await Material.findByIdAndUpdate(
+      materialId,
+      { $push: { classroom: classroomId } },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: `Đã chia sẻ thành công file ${material.title} cho lớp ${classroom.name}`,
+      material: updatedMaterial,
+    });
+  } catch (error) {
+    console.error("Error sharing material to classroom:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "Failed to share material. Please try again later.",
+    });
+  }
+};
+const getMaterialByTeacher = async (req, res) => {
+  try {
+    const currentUser = req.user;
+
+    const materials = await Material.find({
+      uploadedBy: currentUser._id,
+      deleted: false,
+      isPublic: true,
+    }).sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      message: "Materials fetched successfully",
+      data: {
+        materials: materials.map((material) => ({
+          _id: material._id,
+          title: material.title,
+          description: material.description,
+          type: material.type,
+          fileUrl: material.fileUrl,
+          fileSize: material.fileSize,
+          fileType: material.fileType,
+          isPublic: material.isPublic,
+          tags: material.tags,
+          downloadCount: material.downloadCount,
+          viewCount: material.viewCount,
+          classroom: material.classroom,
           createdAt: material.createdAt,
         })),
       },
@@ -284,7 +374,7 @@ const getMaterialType = (mimeType) => {
   ) {
     return "presentation";
   } else if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) {
-    return "spreadsheet";
+    return "excel";
   } else if (
     mimeType.includes("zip") ||
     mimeType.includes("rar") ||
@@ -386,4 +476,6 @@ module.exports = {
   deleteMaterial,
   getMaterials,
   downloadMaterial,
+  getMaterialByTeacher,
+  shareMaterialToClass,
 };

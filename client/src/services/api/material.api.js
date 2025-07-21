@@ -1,3 +1,4 @@
+ 
 import axiosClient from '../axiosClient';
 const materialAPI = {
   createMaterial: (classroomId, formData) =>
@@ -17,6 +18,12 @@ const materialAPI = {
 
   getMaterials: (classroomId) =>
     axiosClient.get(`/materials/classroom/${classroomId}`),
+
+  getMaterialByTeacher: () =>
+    axiosClient.get('/materials'),
+
+  shareMaterial: (materialId, classroomId) => 
+    axiosClient.put(`/materials/${materialId}`, {classroomId}), 
 
   updateMaterial: (classroomId, materialId, data) =>
     axiosClient.put(`/materials/teacher/${classroomId}/${materialId}`, data)
