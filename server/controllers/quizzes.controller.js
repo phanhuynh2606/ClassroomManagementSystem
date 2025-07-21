@@ -2,6 +2,7 @@ const Quiz = require('../models/quiz.model');
 const Question = require('../models/question.model');
 const { shuffleArray } = require('../helper/shufferArray');
 const { arraysEqual } = require('../helper/arraysEqual');
+const cron = require('node-cron');
 
 const createQuiz = async (req, res) => {
     try {
@@ -26,6 +27,18 @@ const createQuiz = async (req, res) => {
             randomizeQuestions,
         } = req.body;
 
+        let visibility = 'draft';
+        const now = new Date();
+
+        if (now < new Date(startTime)) {
+            visibility = 'scheduled';
+        } else if (now >= new Date(startTime) && now <= new Date(endTime)) {
+            visibility = 'published';
+        } else {
+            visibility = 'draft';
+        }
+
+
         const createdBy = req.user._id;
 
         const quiz = new Quiz({
@@ -48,7 +61,7 @@ const createQuiz = async (req, res) => {
             copyAllowed,
             checkTab,
             randomizeQuestions,
-            visibility: 'draft',
+            visibility: visibility,
             isActive: true,
             submissions: [],
             createdAt: new Date(),
@@ -114,7 +127,7 @@ const getQuizzesForStudent = async (req, res) => {
 
 const getQuizById = async (req, res) => {
     try {
-        const quiz = await Quiz.findById(req.params.id)
+        const quiz = await Quiz.findById(req.params._id)
             .populate('createdBy', 'name email')
             .populate('classroom', 'name')
             .populate('questions')
@@ -123,6 +136,7 @@ const getQuizById = async (req, res) => {
         if (!quiz) {
             return res.status(404).json({ message: 'Quiz not found' });
         }
+
         res.status(200).json({
             success: 'Quiz fetched successfully',
             data: quiz
@@ -394,6 +408,75 @@ const submitQuiz = async (req, res) => {
     }
 };
 
+const autoPublishQuizzes = () => {
+    // Chạy mỗi phút để kiểm tra
+    cron.schedule('* * * * *', async () => {
+        try {
+            const now = new Date();
+
+            const quizzesToPublish = await Quiz.find({
+                visibility: 'scheduled',
+                startTime: { $lte: now },
+                isActive: true,
+                deleted: false
+            });
+
+            if (quizzesToPublish.length > 0) {
+                console.log(`[${now.toISOString()}] Found ${quizzesToPublish.length} quiz(es) to auto-publish`);
+
+                const bulkOps = quizzesToPublish.map(quiz => ({
+                    updateOne: {
+                        filter: { _id: quiz._id },
+                        update: {
+                            visibility: 'published',
+                            publishedAt: now
+                        }
+                    }
+                }));
+
+                const result = await Quiz.bulkWrite(bulkOps);
+
+                console.log(`[${now.toISOString()}] Auto-published ${result.modifiedCount} quiz(es):`,
+                    quizzesToPublish.map(q => `"${q.title}" (ID: ${q._id})`));
+
+                quizzesToPublish.forEach(quiz => {
+                    console.log(`- Quiz "${quiz.title}" in classroom ${quiz.classroom} is now PUBLISHED`);
+                });
+            }
+
+            const expiredQuizzes = await Quiz.find({
+                visibility: 'published',
+                endTime: { $lt: now },
+                isActive: true,
+                deleted: false
+            });
+
+            if (expiredQuizzes.length > 0) {
+                console.log(`[${now.toISOString()}] Found ${expiredQuizzes.length} expired quiz(es) to archive`);
+
+                const archiveBulkOps = expiredQuizzes.map(quiz => ({
+                    updateOne: {
+                        filter: { _id: quiz._id },
+                        update: {
+                            isArchived: true,
+                            archivedAt: now
+                        }
+                    }
+                }));
+
+                const archiveResult = await Quiz.bulkWrite(archiveBulkOps);
+                console.log(`[${now.toISOString()}] Archived ${archiveResult.modifiedCount} expired quiz(es)`);
+            }
+
+        } catch (error) {
+            console.error('[Auto-publish Quiz Error]:', error.message);
+        }
+    });
+
+    console.log('🤖 Quiz auto-publish cron job started - running every minute');
+};
+
+
 
 module.exports = {
     createQuiz,
@@ -404,5 +487,6 @@ module.exports = {
     deleteQuiz,
     changeQuizVisibility,
     takeQuizById,
-    submitQuiz
+    submitQuiz,
+    autoPublishQuizzes
 };

@@ -122,6 +122,68 @@ const deleteQuestion = async (req, res) => {
     }
 };
 
+const randomQuestion = async (req, res) => {
+    try {
+        const { difficulty, category, subjectCode, numberOfQuestions = 1 } = req.query;
+
+        const numQuestions = parseInt(numberOfQuestions, 10);
+        if (isNaN(numQuestions) || numQuestions <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: '`numberOfQuestions` must be a positive integer'
+            });
+        }
+
+        const query = {};
+        if (subjectCode) query.subjectCode = subjectCode;
+        if (difficulty) query.difficulty = difficulty;
+        if (category) query.category = category;
+
+        const count = await Question.countDocuments(query);
+
+        if (count === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No questions found matching criteria'
+            });
+        }
+
+        if (numQuestions > count) {
+            return res.status(400).json({
+                success: false,
+                message: `Requested ${numQuestions} questions but only ${count} available`
+            });
+        }
+
+        const randomIndexes = [];
+        while (randomIndexes.length < numQuestions) {
+            const idx = Math.floor(Math.random() * count);
+            if (!randomIndexes.includes(idx)) {
+                randomIndexes.push(idx);
+            }
+        }
+
+        // Fetch questions at those indexes
+        const questions = await Promise.all(
+            randomIndexes.map(idx =>
+                Question.findOne(query).skip(idx).lean())
+        );
+
+        res.status(200).json({
+            success: true,
+            data: questions
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
+
 const updateQuestion = async (req, res) => {
     try {
         const { id } = req.params;
@@ -397,5 +459,6 @@ module.exports = {
     createQuestionManual,
     downLoadTemplateExcel,
     createQuestionFromExcel,
-    createQuestionFromAI
+    createQuestionFromAI,
+    randomQuestion
 }

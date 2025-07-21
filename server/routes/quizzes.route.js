@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post('/', protect, authorize('teacher'), quizCtrl.createQuiz);
 router.get('/:classroomId', protect, authorize('teacher'), quizCtrl.getQuizzes);
-router.get('/:id', protect, authorize('teacher'), quizCtrl.getQuizById);
+router.get('/details/:_id', protect, authorize('teacher'), quizCtrl.getQuizById);
 router.patch('/:id', protect, authorize('teacher'), quizCtrl.updateQuiz);
 router.delete('/:id', protect, authorize('teacher'), quizCtrl.deleteQuiz);
 router.patch('/:id/visibility', protect, authorize('teacher'), quizCtrl.changeQuizVisibility);
