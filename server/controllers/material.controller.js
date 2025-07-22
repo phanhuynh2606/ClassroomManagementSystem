@@ -400,20 +400,10 @@ const deleteMaterial = async (req, res) => {
         error: "Material not found",
         message: "The specified material does not exist",
       });
-    }
-    if (material.classroom._id.toString() !== classroomId) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid request",
-        message: "Material does not belong to the specified classroom",
-      });
-    }
-
+    } 
     const canDelete =
       currentUser.role === "admin" ||
-      (currentUser.role === "teacher" &&
-        material.classroom.teacher.toString() === currentUser._id.toString()) ||
-      material.uploadedBy.toString() === currentUser._id.toString();
+      (currentUser.role === "teacher" && material.uploadedBy.toString() === currentUser._id.toString());
 
     if (!canDelete) {
       return res.status(403).json({
@@ -435,6 +425,51 @@ const deleteMaterial = async (req, res) => {
     //     }
     // }
 
+    res.json({
+      success: true,
+      message: "Material deleted successfully",
+    });
+    console.log(
+      `Material deleted: ${material.title} by ${currentUser.fullName}`
+    );
+  } catch (error) {
+    console.error("Error deleting material:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "Failed to delete material. Please try again later.",
+    });
+  }
+};
+const deleteMaterialFromLibrary = async (req, res) => {
+  try {
+    const { materialId } = req.params;
+    const currentUser = req.user;
+
+    const material = await Material.findById(materialId).populate("classroom");
+    if (!material) {
+      return res.status(404).json({
+        success: false,
+        error: "Material not found",
+        message: "The specified material does not exist",
+      });
+    } 
+    const canDelete =
+      currentUser.role === "admin" ||
+      (currentUser.role === "teacher" && material.uploadedBy.toString() === currentUser._id.toString());
+
+    if (!canDelete) {
+      return res.status(403).json({
+        success: false,
+        error: "Access denied",
+        message: "You are not authorized to delete this material",
+      });
+    }
+    material.deleted = true;
+    material.deletedAt = new Date();
+    material.deletedBy = currentUser._id;
+    material.isActive = false;
+    await material.save();
     res.json({
       success: true,
       message: "Material deleted successfully",
@@ -727,5 +762,6 @@ module.exports = {
   getMaterialByTeacher,
   shareMaterialToClass,
   uploadMaterialToLibrary,
-  updateMaterial
+  updateMaterial,
+  deleteMaterialFromLibrary
 };

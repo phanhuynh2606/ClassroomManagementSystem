@@ -44,8 +44,7 @@ const MaterialList = ({ classId, classData }) => {
   const [materialsData, setMaterialsData] = useState([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [materialSearchText, setMaterialSearchText] = useState("");
-  const [materialDeleteModalVisible, setMaterialDeleteModalVisible] =
-    useState(false);
+  const [materialDeleteModalVisible, setMaterialDeleteModalVisible] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [deletingMaterial, setDeletingMaterial] = useState(false);
 

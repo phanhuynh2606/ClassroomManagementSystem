@@ -25,6 +25,9 @@ const materialAPI = {
   deleteMaterial: (classroomId, materialId) =>
     axiosClient.delete(`/materials/teacher/${classroomId}/${materialId}`),
 
+  deleteMaterialFromLibrary: (materialId) =>
+    axiosClient.delete(`/materials/teacher/library/${materialId}`),
+
   getMaterials: (classroomId) =>
     axiosClient.get(`/materials/classroom/${classroomId}`),
 

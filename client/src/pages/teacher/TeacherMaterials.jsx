@@ -38,6 +38,7 @@ import {
   SearchOutlined,
   FilePptOutlined,
   InboxOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { materialAPI } from "../../services/api";
 import classroomAPI from "../../services/api/classroom.api";
@@ -50,6 +51,8 @@ const { TextArea } = Input;
 const TeacherMaterials = () => {
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [folderModalVisible, setFolderModalVisible] = useState(false);
+  const [materialDeleteModalVisible, setMaterialDeleteModalVisible] = useState(false);
+  
   const [classModal, setClassModal] = useState(false);
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
@@ -224,8 +227,8 @@ const TeacherMaterials = () => {
       formData.append("title", values.title);
       formData.append("description", values.description || "");
       formData.append("isPublic", values.isPublic || false);
-      formData.append("tags", JSON.stringify(tags)); 
-      
+      formData.append("tags", JSON.stringify(tags));
+
       if (values.sharedWith && values.sharedWith.length > 0) {
         formData.append("sharedWith", JSON.stringify(values.sharedWith));
       }
@@ -250,6 +253,29 @@ const TeacherMaterials = () => {
       message.error(
         isEditMode ? "Failed to update material" : "Failed to upload material"
       );
+    } finally {
+      setUploading(false);
+    }
+  };
+  const handleDeleteMaterial = (material) => {
+    setSelectedMaterial(material);
+    setMaterialDeleteModalVisible(true);
+  };
+
+  const confirmDeleteMaterial = async () => {
+    setUploading(true);
+    try {
+      const respone = await materialAPI.deleteMaterialFromLibrary( 
+        selectedMaterial._id
+      );
+      if (respone.success) {
+        message.success(respone.message || "Material deleted successfully");
+        setMaterialDeleteModalVisible(false);
+        setSelectedMaterial(null);
+        fetchMaterialsData();
+      }
+    } catch (error) {
+      message.error("Failed to delete material");
     } finally {
       setUploading(false);
     }
@@ -385,7 +411,7 @@ const TeacherMaterials = () => {
       label: "Delete",
       icon: <DeleteOutlined />,
       danger: true,
-      onClick: () => message.warning(`Delete ${material.title}`),
+      onClick: () => handleDeleteMaterial(material),
     },
   ];
 
@@ -721,6 +747,27 @@ const TeacherMaterials = () => {
             </Select>
           </Form.Item>
         </Form>
+      </Modal>
+      <Modal
+        title="Delete Material"
+        open={materialDeleteModalVisible}
+        onOk={confirmDeleteMaterial}
+        onCancel={() => {
+          setMaterialDeleteModalVisible(false);
+          setSelectedMaterial(null);
+        }}
+        confirmLoading={uploading}
+        okText="Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true }}
+      >
+        <div className="py-4">
+          <ExclamationCircleOutlined className="text-orange-500 mr-2" />
+          <Text>
+            Are you sure you want to delete "{selectedMaterial?.title}"? This
+            action cannot be undone.
+          </Text>
+        </div>
       </Modal>
     </div>
   );
