@@ -1,553 +1,221 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Row, 
-  Col, 
-  Typography,
-  Statistic,
-  Progress,
-  Table,
-  Tag,
-  Avatar,
-  Empty,
-  Spin,
-  Select,
-  Input,
-  Button,
-  Space,
-  Tooltip,
-  Divider
-} from 'antd';
-import { 
-  TrophyOutlined,
-  BookOutlined,
-  FileTextOutlined,
-  CheckSquareOutlined,
-  BarChartOutlined,
-  SearchOutlined,
-  FilterOutlined,
-  EyeOutlined,
-  CalendarOutlined,
-  UserOutlined
-} from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import moment from 'moment';
+  import React, { useEffect, useState } from 'react';
+  import axios from 'axios';
+  import { Table, Spin, Tag, Typography, Row, Col, Card, Tabs, Tooltip, Select } from 'antd';
+  import {
+    TrophyOutlined,
+    FileTextOutlined,
+    CheckSquareOutlined,
+    FilterOutlined,
+  } from '@ant-design/icons';
+  import dayjs from 'dayjs';
+  import assignmentAPI from '../../services/api/assignment.api';
+  import quizAPI from '../../services/api/quiz.api';
 
-const { Title, Text } = Typography;
-const { Search } = Input;
-const { Option } = Select;
+  const { Title } = Typography;
+  const { TabPane } = Tabs;
+  const { Option } = Select;
 
-const StudentGrades = () => {
-  const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [filterClassroom, setFilterClassroom] = useState('all');
-  const navigate = useNavigate();
+  const StudentGrades = () => {
+    const [assignmentList, setAssignmentList] = useState([]);
+    const [quizList, setQuizList] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedClassroom, setSelectedClassroom] = useState(null);
 
-  // Mock data - sẽ được thay thế bằng API call thực tế
-  const [studentGrades] = useState({
-    student: {
-      id: 'st1',
-      name: 'Nguyễn Văn An',
-      email: 'an.nguyen@student.edu',
-      avatar: null
-    },
-    classrooms: [
+    useEffect(() => {
+      const fetchData = async () => {
+        setLoading(true);
+        try {
+          const token = localStorage.getItem('token');
+
+          const [assignmentRes, quizRes] = await Promise.all([
+            assignmentAPI.getAssignmentStatsByStudent(),
+            quizAPI.getQuizStatsByStudent(),
+          ]);
+
+          setAssignmentList(assignmentRes.data || []);
+          setQuizList(quizRes.data || []);
+        } catch (err) {
+          console.error('Error fetching student grades:', err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchData();
+    }, []);
+
+    const getClassroomOptions = () => {
+      const allItems = [...assignmentList, ...quizList];
+      const names = [...new Set(allItems.map(item => item.classroom?.name).filter(Boolean))];
+      return names.map(name => ({ label: name, value: name }));
+    };
+
+    const filterByClassroom = (list) => {
+      return selectedClassroom
+        ? list.filter(item => item.classroom?.name === selectedClassroom)
+        : list;
+    };
+
+    const getGradedCount = () => {
+      const all = [...assignmentList, ...quizList];
+      return all.filter(item => item.submission?.grade !== undefined && item.submission?.grade !== null).length;
+    };
+
+    const getTotalCount = () => assignmentList.length + quizList.length;
+
+    const getColumns = (type) => [
       {
-        id: 'class1',
-        name: 'Web Development',
-        subject: 'Computer Science',
-        teacher: 'Dr. Smith',
-        totalPoints: 400,
-        earnedPoints: 342,
-        percentage: 85.5
+        title: 'Title',
+        dataIndex: 'title',
+        key: 'title',
+        width: 250,
+        ellipsis: true,
+        fixed: 'left',
+        render: (text) => <Tooltip title={text}>{text}</Tooltip>,
       },
       {
-        id: 'class2', 
-        name: 'Database Management',
-        subject: 'Information Technology',
-        teacher: 'Prof. Johnson',
-        totalPoints: 300,
-        earnedPoints: 240,
-        percentage: 80.0
+        title: 'Classroom',
+        dataIndex: ['classroom', 'name'],
+        key: 'classroom',
+        width: 200,
+        ellipsis: true,
+        fixed: 'left',
+        render: (text) => <Tooltip title={text}>{text}</Tooltip>,
       },
       {
-        id: 'class3',
-        name: 'Mobile App Development',
-        subject: 'Computer Science', 
-        teacher: 'Dr. Brown',
-        totalPoints: 350,
-        earnedPoints: 315,
-        percentage: 90.0
-      }
-    ],
-    grades: [
-      {
-        id: 'g1',
-        classroomId: 'class1',
-        classroomName: 'Web Development',
-        type: 'assignment',
-        title: 'React Components Assignment',
-        maxPoints: 100,
-        earnedPoints: 85,
-        percentage: 85,
-        submittedAt: '2024-01-20T10:00:00Z',
-        gradedAt: '2024-01-22T14:30:00Z',
-        feedback: 'Excellent work on component structure. Consider optimizing performance.',
-        status: 'graded'
+        title: type === 'quiz' ? 'Start Time' : 'Due Date',
+        dataIndex: type === 'quiz' ? 'startTime' : 'dueDate',
+        key: type === 'quiz' ? 'startTime' : 'dueDate',
+        width: 180,
+        render: (date) =>
+          date ? dayjs(date).format('DD/MM/YYYY HH:mm') : 'No Date',
       },
       {
-        id: 'g2',
-        classroomId: 'class1',
-        classroomName: 'Web Development',
-        type: 'quiz',
-        title: 'HTML/CSS Fundamentals Quiz',
-        maxPoints: 50,
-        earnedPoints: 47,
-        percentage: 94,
-        submittedAt: '2024-01-18T14:30:00Z',
-        gradedAt: '2024-01-18T14:35:00Z',
-        feedback: 'Great understanding of CSS flexbox!',
-        status: 'graded'
-      },
-      {
-        id: 'g3',
-        classroomId: 'class1',
-        classroomName: 'Web Development',
-        type: 'assignment',
-        title: 'JavaScript Functions Project',
-        maxPoints: 100,
-        earnedPoints: 92,
-        percentage: 92,
-        submittedAt: '2024-01-25T16:20:00Z',
-        gradedAt: '2024-01-27T09:15:00Z',
-        feedback: 'Well implemented functions. Good error handling.',
-        status: 'graded'
-      },
-      {
-        id: 'g4',
-        classroomId: 'class2',
-        classroomName: 'Database Management',
-        type: 'assignment',
-        title: 'SQL Query Assignment',
-        maxPoints: 80,
-        earnedPoints: 72,
-        percentage: 90,
-        submittedAt: '2024-01-19T15:45:00Z',
-        gradedAt: '2024-01-21T11:20:00Z',
-        feedback: 'Complex queries executed correctly. Minor syntax improvements needed.',
-        status: 'graded'
-      },
-      {
-        id: 'g5',
-        classroomId: 'class2',
-        classroomName: 'Database Management',
-        type: 'quiz',
-        title: 'Database Design Quiz',
-        maxPoints: 40,
-        earnedPoints: 35,
-        percentage: 87.5,
-        submittedAt: '2024-01-16T13:15:00Z',
-        gradedAt: '2024-01-16T13:20:00Z',
-        feedback: 'Good understanding of normalization principles.',
-        status: 'graded'
-      },
-      {
-        id: 'g6',
-        classroomId: 'class3',
-        classroomName: 'Mobile App Development',
-        type: 'assignment',
-        title: 'Flutter UI Design',
-        maxPoints: 120,
-        earnedPoints: 108,
-        percentage: 90,
-        submittedAt: '2024-01-22T10:45:00Z',
-        gradedAt: '2024-01-24T16:30:00Z',
-        feedback: 'Beautiful UI design with smooth animations. Excellent work!',
-        status: 'graded'
-      },
-      {
-        id: 'g7',
-        classroomId: 'class3',
-        classroomName: 'Mobile App Development',
-        type: 'quiz',
-        title: 'Dart Programming Quiz',
-        maxPoints: 60,
-        earnedPoints: 54,
-        percentage: 90,
-        submittedAt: '2024-01-15T09:30:00Z',
-        gradedAt: '2024-01-15T09:35:00Z',
-        feedback: 'Strong grasp of Dart syntax and concepts.',
-        status: 'graded'
-      },
-      {
-        id: 'g8',
-        classroomId: 'class1',
-        classroomName: 'Web Development',
-        type: 'assignment',
-        title: 'Final Project - E-commerce Website',
-        maxPoints: 150,
-        earnedPoints: null,
-        percentage: null,
-        submittedAt: '2024-01-28T18:00:00Z',
-        gradedAt: null,
-        feedback: null,
-        status: 'submitted'
-      }
-    ]
-  });
+        title: type === 'quiz' ? 'Score' : 'Grade',
+        dataIndex: 'submission',
+        key: 'grade',
+        width: 150,
+        render: (submission, record) => {
+          if (!submission) return <Tag color="red">Not Submitted</Tag>;
 
-  useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  }, []);
+          const score = submission.grade ?? submission.score;
+          const total = record.totalPoints ?? record.totalQuestions ?? 100;
 
-  const getGradeColor = (percentage) => {
-    if (percentage >= 90) return '#52c41a';
-    if (percentage >= 80) return '#1890ff';
-    if (percentage >= 70) return '#faad14';
-    return '#ff4d4f';
-  };
-
-  const getGradeTag = (percentage) => {
-    if (percentage >= 90) return { color: 'green', text: 'Xuất sắc' };
-    if (percentage >= 80) return { color: 'blue', text: 'Giỏi' };
-    if (percentage >= 70) return { color: 'orange', text: 'Khá' };
-    return { color: 'red', text: 'Trung bình' };
-  };
-
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'assignment': return <FileTextOutlined className="text-blue-500" />;
-      case 'quiz': return <CheckSquareOutlined className="text-green-500" />;
-      case 'exam': return <BookOutlined className="text-red-500" />;
-      default: return <FileTextOutlined className="text-gray-500" />;
-    }
-  };
-
-  const getTypeTag = (type) => {
-    switch (type) {
-      case 'assignment': return { color: 'blue', text: 'Assignment' };
-      case 'quiz': return { color: 'green', text: 'Quiz' };
-      case 'exam': return { color: 'red', text: 'Exam' };
-      default: return { color: 'default', text: type };
-    }
-  };
-
-  // Calculate overall statistics
-  const overallStats = {
-    totalAssignments: studentGrades.grades.filter(g => g.type === 'assignment').length,
-    totalQuizzes: studentGrades.grades.filter(g => g.type === 'quiz').length,
-    totalItems: studentGrades.grades.length,
-    gradedItems: studentGrades.grades.filter(g => g.status === 'graded').length,
-    averageScore: Math.round(
-      studentGrades.grades
-        .filter(g => g.percentage !== null)
-        .reduce((sum, g) => sum + g.percentage, 0) /
-      studentGrades.grades.filter(g => g.percentage !== null).length
-    )
-  };
-
-  // Filter grades
-  const filteredGrades = studentGrades.grades.filter(grade => {
-    const matchesSearch = grade.title.toLowerCase().includes(searchText.toLowerCase()) ||
-                         grade.classroomName.toLowerCase().includes(searchText.toLowerCase());
-    const matchesType = filterType === 'all' || grade.type === filterType;
-    const matchesClassroom = filterClassroom === 'all' || grade.classroomId === filterClassroom;
-    
-    return matchesSearch && matchesType && matchesClassroom;
-  });
-
-  const columns = [
-    {
-      title: 'Assignment/Quiz',
-      key: 'title',
-      render: (_, record) => (
-        <div className="flex items-center gap-3">
-          <div className="text-lg">
-            {getTypeIcon(record.type)}
-          </div>
-          <div>
-            <div className="font-medium">{record.title}</div>
-            <Text type="secondary" className="text-xs">
-              {record.classroomName}
-            </Text>
-            <br />
-            <Tag size="small" color={getTypeTag(record.type).color}>
-              {getTypeTag(record.type).text}
-            </Tag>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Score',
-      key: 'score',
-      align: 'center',
-      width: 120,
-      render: (_, record) => {
-        if (record.status !== 'graded') {
           return (
-            <div className="text-center">
-              <Tag color="orange">Pending</Tag>
-            </div>
+            <span style={{ color: 'green', fontWeight: 600 }}>
+              {score} / {total}
+            </span>
           );
-        }
-        
-        return (
-          <div className="text-center">
-            <div 
-              className="text-lg font-bold mb-1"
-              style={{ color: getGradeColor(record.percentage) }}
-            >
-              {record.earnedPoints}/{record.maxPoints}
-            </div>
-            <Progress 
-              percent={record.percentage}
-              size="small"
-              strokeColor={getGradeColor(record.percentage)}
-              showInfo={false}
-            />
-            <Text className="text-xs">{record.percentage}%</Text>
-          </div>
-        );
+        },
       },
-    },
-    {
-      title: 'Grade',
-      key: 'grade',
-      align: 'center',
-      width: 100,
-      render: (_, record) => {
-        if (record.status !== 'graded') {
-          return <Text type="secondary">-</Text>;
-        }
-        
-        const gradeTag = getGradeTag(record.percentage);
-        return (
-          <Tag color={gradeTag.color}>
-            {gradeTag.text}
-          </Tag>
-        );
-      },
-    },
-    {
-      title: 'Submitted',
-      dataIndex: 'submittedAt',
-      key: 'submittedAt',
-      width: 120,
-      render: (date) => (
-        <div className="text-center">
-          <div>{moment(date).format('MMM DD')}</div>
-          <Text type="secondary" className="text-xs">
-            {moment(date).format('HH:mm')}
-          </Text>
-        </div>
-      ),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      align: 'center',
-      width: 80,
-      render: (_, record) => (
-        <Tooltip title="View Details">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => {
-              // Navigate to assignment/quiz detail
-              navigate(`/student/classrooms/${record.classroomId}`);
-            }}
-          />
-        </Tooltip>
-      ),
-    },
-  ];
+      {
+        title: type === 'quiz' ? 'End Time' : 'Graded At',
+        key: 'endTimeOrGradedAt',
+        width: 200,
+        render: (_, record) => {
+          if (type === 'quiz') {
+            return record.endTime
+              ? dayjs(record.endTime).format('DD/MM/YYYY HH:mm')
+              : 'N/A';
+          }
 
-  if (loading) {
+          return record.submission?.gradedAt
+            ? dayjs(record.submission.gradedAt).format('DD/MM/YYYY HH:mm')
+            : 'N/A';
+        },
+      },
+      {
+        title: 'Status',
+        dataIndex: ['submission', 'status'],
+        key: 'status',
+        width: 150,
+        render: (status) =>
+          status ? (
+            <Tag color="blue">{status}</Tag>
+          ) : (
+            <Tag color="red">No Submission</Tag>
+          ),
+      },
+    ];
+
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spin size="large" />
+      <div style={{ padding: 24 }}>
+        <Title level={3}>Student Grades</Title>
+
+        <Row gutter={16} style={{ marginBottom: 24 }}>
+          <Col span={8}>
+            <Card bordered style={{ textAlign: 'center', borderRadius: 10 }}>
+              <TrophyOutlined style={{ fontSize: 32, color: '#52c41a' }} />
+              <div style={{ color: 'gray', marginTop: 8 }}>Graded Items</div>
+              <div style={{ fontSize: 20, fontWeight: 'bold', marginTop: 4 }}>
+                {getGradedCount()} / {getTotalCount()}
+              </div>
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card bordered style={{ textAlign: 'center', borderRadius: 10 }}>
+              <FileTextOutlined style={{ fontSize: 32, color: '#9254de' }} />
+              <div style={{ color: 'gray', marginTop: 8 }}>Assignments</div>
+              <div style={{ fontSize: 20, fontWeight: 'bold', marginTop: 4 }}>
+                {assignmentList.length}
+              </div>
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card bordered style={{ textAlign: 'center', borderRadius: 10 }}>
+              <CheckSquareOutlined style={{ fontSize: 32, color: '#fa8c16' }} />
+              <div style={{ color: 'gray', marginTop: 8 }}>Quizzes</div>
+              <div style={{ fontSize: 20, fontWeight: 'bold', marginTop: 4 }}>
+                {quizList.length}
+              </div>
+            </Card>
+          </Col>
+        </Row>
+
+        <Row gutter={16} style={{ marginBottom: 24 }}>
+          <Col span={8}>
+            <Card bordered>
+              <Title level={5}><FilterOutlined /> Filter by Classroom</Title>
+              <Select
+                placeholder="Select Classroom"
+                style={{ width: '100%' }}
+                allowClear
+                value={selectedClassroom}
+                onChange={value => setSelectedClassroom(value)}
+                options={getClassroomOptions()}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        {loading ? (
+          <Spin size="large" />
+        ) : (
+          <Tabs defaultActiveKey="assignments">
+            <TabPane tab="Assignments" key="assignments">
+              <Table
+                dataSource={filterByClassroom(assignmentList)}
+                columns={getColumns('assignment')}
+                rowKey="_id"
+                pagination={{ pageSize: 5 }}
+                scroll={{ x: 1200, y: 400 }}
+                sticky
+              />
+            </TabPane>
+            <TabPane tab="Quizzes" key="quizzes">
+              <Table
+                dataSource={filterByClassroom(quizList)}
+                columns={getColumns('quiz')}
+                rowKey="_id"
+                pagination={{ pageSize: 5 }}
+                scroll={{ x: 1200, y: 400 }}
+                sticky
+              />
+            </TabPane>
+          </Tabs>
+        )}
       </div>
     );
-  }
+  };
 
-  return (
-    <div className="p-6">
-      <div className="mb-6">
-        <Title level={2} className="mb-2">
-          📊 My Grades
-        </Title>
-        <Text type="secondary">
-          View all your assignment and quiz grades across all classrooms
-        </Text>
-      </div>
-
-      {/* Overall Statistics */}
-      <Row gutter={[24, 24]} className="mb-6">
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="text-center">
-            <div className="text-3xl mb-2 text-blue-500">
-              <BarChartOutlined />
-            </div>
-            <Statistic 
-              title="Overall Average" 
-              value={overallStats.averageScore}
-              suffix="%"
-              valueStyle={{ 
-                fontSize: '24px', 
-                fontWeight: 'bold',
-                color: getGradeColor(overallStats.averageScore)
-              }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="text-center">
-            <div className="text-3xl mb-2 text-green-500">
-              <TrophyOutlined />
-            </div>
-            <Statistic 
-              title="Graded Items" 
-              value={overallStats.gradedItems}
-              suffix={`/ ${overallStats.totalItems}`}
-              valueStyle={{ fontSize: '24px', fontWeight: 'bold' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="text-center">
-            <div className="text-3xl mb-2 text-purple-500">
-              <FileTextOutlined />
-            </div>
-            <Statistic 
-              title="Assignments" 
-              value={overallStats.totalAssignments}
-              valueStyle={{ fontSize: '24px', fontWeight: 'bold' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card className="text-center">
-            <div className="text-3xl mb-2 text-orange-500">
-              <CheckSquareOutlined />
-            </div>
-            <Statistic 
-              title="Quizzes" 
-              value={overallStats.totalQuizzes}
-              valueStyle={{ fontSize: '24px', fontWeight: 'bold' }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Classroom Performance Overview */}
-      <Card title="📚 Performance by Classroom" className="mb-6">
-        <Row gutter={[16, 16]}>
-          {studentGrades.classrooms.map((classroom) => (
-            <Col xs={24} md={8} key={classroom.id}>
-              <Card size="small" className="h-full">
-                <div className="flex items-center gap-3 mb-3">
-                  <Avatar 
-                    style={{ backgroundColor: '#1890ff' }}
-                    icon={<BookOutlined />}
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium">{classroom.name}</div>
-                    <Text type="secondary" className="text-xs">
-                      {classroom.teacher}
-                    </Text>
-                  </div>
-                </div>
-                
-                <div className="text-center mb-3">
-                  <div 
-                    className="text-2xl font-bold"
-                    style={{ color: getGradeColor(classroom.percentage) }}
-                  >
-                    {classroom.percentage}%
-                  </div>
-                  <Progress 
-                    percent={classroom.percentage}
-                    strokeColor={getGradeColor(classroom.percentage)}
-                    size="small"
-                    showInfo={false}
-                  />
-                </div>
-                
-                <div className="text-center">
-                  <Text className="text-xs text-gray-500">
-                    {classroom.earnedPoints} / {classroom.totalPoints} points
-                  </Text>
-                </div>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      </Card>
-
-      {/* Grades Table */}
-      <Card 
-        title="📋 All Grades"
-        extra={
-          <Space>
-            <Search
-              placeholder="Search assignments..."
-              allowClear
-              style={{ width: 200 }}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
-            <Select
-              placeholder="Filter by type"
-              style={{ width: 120 }}
-              value={filterType}
-              onChange={setFilterType}
-            >
-              <Option value="all">All Types</Option>
-              <Option value="assignment">Assignment</Option>
-              <Option value="quiz">Quiz</Option>
-              <Option value="exam">Exam</Option>
-            </Select>
-            <Select
-              placeholder="Filter by classroom"
-              style={{ width: 180 }}
-              value={filterClassroom}
-              onChange={setFilterClassroom}
-            >
-              <Option value="all">All Classrooms</Option>
-              {studentGrades.classrooms.map(classroom => (
-                <Option key={classroom.id} value={classroom.id}>
-                  {classroom.name}
-                </Option>
-              ))}
-            </Select>
-          </Space>
-        }
-      >
-        {filteredGrades.length > 0 ? (
-          <Table
-            columns={columns}
-            dataSource={filteredGrades}
-            rowKey="id"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showTotal: (total, range) => 
-                `${range[0]}-${range[1]} of ${total} grades`
-            }}
-          />
-        ) : (
-          <Empty 
-            description="No grades found"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          />
-        )}
-      </Card>
-    </div>
-  );
-};
-
-export default StudentGrades; 
+  export default StudentGrades;

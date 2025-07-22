@@ -4,6 +4,7 @@ const quizCtrl = require('../controllers/quizzes.controller');
 const router = express.Router();
 
 router.post('/', protect, authorize('teacher'), quizCtrl.createQuiz);
+router.get('/by-student', protect, authorize('student'), quizCtrl.getQuizzesByStudent);
 router.get('/:classroomId', protect, authorize('teacher'), quizCtrl.getQuizzes);
 router.get('/details/:_id', protect, authorize('teacher'), quizCtrl.getQuizById);
 router.patch('/:id', protect, authorize('teacher'), quizCtrl.updateQuiz);
