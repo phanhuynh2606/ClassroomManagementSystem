@@ -68,6 +68,13 @@ const createQuiz = async (req, res) => {
             createdAt: new Date(),
         });
 
+        const existingQuiz = await Quiz.findOne({ title, classroom });
+        if (existingQuiz) {
+            return res.status(400).json({
+                message: 'Quiz with this title already exists in the selected classroom'
+            });
+        }
+
         await quiz.save();
 
         if (visibility === 'published') {

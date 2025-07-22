@@ -290,6 +290,14 @@ const createQuestionManual = async (req, res) => {
             deleted: false
         });
 
+        const existingQuestion = await Question.findOne({ content, subjectCode, difficulty, category });
+        if (existingQuestion) {
+            return res.status(400).json({
+                success: false,
+                message: 'Question already exists'
+            });
+        }
+
         await newQuestion.save();
 
         res.status(201).json({
@@ -382,6 +390,19 @@ const createQuestionFromExcel = async (req, res) => {
             deleted: false
         }));
 
+        // Check for duplicate questions
+        const uniqueQuestions = new Set();
+        for (const question of questions) {
+            const key = `${question.content}-${question.subjectCode}-${question.difficulty}-${question.category}`;
+            if (uniqueQuestions.has(key)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Duplicate question found: ${question.content}`
+                });
+            }
+            uniqueQuestions.add(key);
+        }
+
         await Question.insertMany(questions);
 
         res.status(201).json({
@@ -436,11 +457,25 @@ const createQuestionFromAI = async (req, res) => {
             deleted: false
         }));
 
+        // Check for duplicate questions
+        const uniqueQuestions = new Set();
+        for (const question of questions) {
+            const key = `${question.content}-${question.subjectCode}-${question.difficulty}-${question.category}`;
+            if (uniqueQuestions.has(key)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Duplicate question found: ${question.content}`
+                });
+            }
+            uniqueQuestions.add(key);
+        }
+
         await Question.insertMany(questions);
 
         res.status(201).json({
             success: true,
-            message: `${questions.length} questions created successfully`
+            message: `${questions.length} questions created successfully`,
+            data: questions
         });
     } catch (error) {
         console.error('Error creating questions from Excel:', error);
