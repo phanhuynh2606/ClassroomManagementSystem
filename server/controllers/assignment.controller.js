@@ -1472,6 +1472,81 @@ const bulkGradeMissingSubmissions = async (req, res) => {
     });
   }
 };
+const getAssignmentsByStudent = async (req, res) => {
+  try {
+    const studentId = req.user._id;
+    const classrooms = await Classroom.find({ 'students.student': studentId }).select('_id');
+    const classroomIds = classrooms.map(c => c._id);
+
+    if (classroomIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'Student is not in any classrooms',
+        data: [],
+        total: 0,
+        submittedCount: 0,
+        notSubmittedCount: 0,
+        gradedCount: 0
+      });
+    }
+
+    const assignments = await Assignment.find({
+      visibility: 'published',
+      deleted: false,
+      classroom: { $in: classroomIds }
+    }).populate('classroom', 'name')
+    .sort({ dueDate: -1 });
+
+    let submittedCount = 0;
+    let notSubmittedCount = 0;
+    let gradedCount = 0;
+
+    const result = assignments.map((assignment) => {
+      const submission = assignment.submissions.find(
+        (sub) => sub.student.toString() === studentId.toString()
+      );
+
+      if (submission) {
+        submittedCount++;
+        if (submission.status === 'graded') gradedCount++;
+      } else {
+        notSubmittedCount++;
+      }
+
+      return {
+        _id: assignment._id,
+        title: assignment.title,
+        description: assignment.description,
+        classroom: assignment.classroom,
+        dueDate: assignment.dueDate,
+        totalPoints: assignment.totalPoints,
+        submission: submission ? {
+          status: submission.status,
+          submittedAt: submission.submittedAt,
+          gradedAt: submission.gradedAt,
+          grade: submission.grade,
+          feedback: submission.feedback || null
+        } : null
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Assignments for current student retrieved successfully',
+      data: result,
+      total: result.length,
+      submittedCount,
+      notSubmittedCount,
+      gradedCount
+    });
+  } catch (error) {
+    console.error('getAssignmentsByStudent error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while getting assignments',
+    });
+  }
+};
 
 // Send reminder emails to students who haven't submitted
 const sendReminderEmails = async (req, res) => {
@@ -1544,4 +1619,5 @@ module.exports = {
   autoGradeMissingSubmissions,
   bulkGradeMissingSubmissions,
   sendReminderEmails
+  getAssignmentsByStudent
 }; 
