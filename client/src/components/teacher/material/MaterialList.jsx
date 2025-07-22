@@ -23,6 +23,14 @@ import {
   InboxOutlined,
   UploadOutlined,
   DownloadOutlined,
+  FolderOutlined,
+  FilePdfOutlined,
+  FileWordOutlined,
+  FileExcelOutlined,
+  FilePptOutlined,
+  FileImageOutlined,
+  VideoCameraOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import Dragger from "antd/es/upload/Dragger";
 import TextArea from "antd/es/input/TextArea";
@@ -36,8 +44,7 @@ const MaterialList = ({ classId, classData }) => {
   const [materialsData, setMaterialsData] = useState([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [materialSearchText, setMaterialSearchText] = useState("");
-  const [materialDeleteModalVisible, setMaterialDeleteModalVisible] =
-    useState(false);
+  const [materialDeleteModalVisible, setMaterialDeleteModalVisible] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const [deletingMaterial, setDeletingMaterial] = useState(false);
 
@@ -53,7 +60,7 @@ const MaterialList = ({ classId, classData }) => {
   useEffect(() => {
     fetchMaterialsData();
   }, []);
-
+ 
   const fetchMaterialsData = async () => {
     setMaterialsLoading(true);
     try {
@@ -76,13 +83,24 @@ const MaterialList = ({ classId, classData }) => {
   };
 
   const getTypeIcon = (type) => {
-    const icons = {
-      pdf: "📄",
-      slide: "📊",
-      video: "🎥",
-      other: "📁",
-    };
-    return icons[type] || "📁";
+    switch (type) {
+      case "folder":
+        return <FolderOutlined className="text-blue-500 text-2xl" />;
+      case "pdf":
+        return <FilePdfOutlined className="text-red-500 text-2xl" />;
+      case "document":
+        return <FileWordOutlined className="text-blue-600 text-2xl" />;
+      case "excel":
+        return <FileExcelOutlined className="text-green-600 text-2xl" />;
+      case "presentation":
+        return <FilePptOutlined className="text-purple-500 text-2xl" />;
+      case "image":
+        return <FileImageOutlined className="text-orange-500 text-2xl" />;
+      case "video":
+        return <VideoCameraOutlined className="text-purple-600 text-2xl" />;
+      default:
+        return <FileTextOutlined className="text-gray-500 text-2xl" />;
+    }
   };
 
   const getTypeBadgeColor = (type) => {
@@ -152,15 +170,15 @@ const MaterialList = ({ classId, classData }) => {
       if (!response.data || response.data.size === 0) {
         throw new Error("No data received from server");
       }
- 
+
       let filename = extractFilename(response, material);
 
       console.log("Final filename:", filename);
- 
+
       const blob = new Blob([response.data], {
         type: response.headers["content-type"] || material.fileType,
       });
- 
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -170,25 +188,25 @@ const MaterialList = ({ classId, classData }) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
- 
+
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
-      }, 1000); 
+      }, 1000);
       message.success(`Download successful: ${filename}`);
-      fetchMaterialsData(); 
+      fetchMaterialsData();
     } catch (error) {
       console.error("Download error:", error);
       message.error(`Download failed: ${error.message}`);
     }
   };
 
-  const extractFilename = (response, material) => { 
+  const extractFilename = (response, material) => {
     const contentDisposition = response.headers["content-disposition"];
     if (contentDisposition) {
       const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/);
       if (utf8Match) {
         return decodeURIComponent(utf8Match[1]);
-      } 
+      }
       const regularMatch = contentDisposition.match(
         /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
       );
@@ -228,7 +246,7 @@ const MaterialList = ({ classId, classData }) => {
       "image/jpeg": "jpg",
       "image/png": "png",
       "image/gif": "gif",
-    }; 
+    };
     return mimeToExt[mimeType] || "bin";
   };
   const handleSubmitMaterial = async (values) => {
@@ -236,7 +254,6 @@ const MaterialList = ({ classId, classData }) => {
       message.error("Please upload a file");
       return;
     }
-
     setSubmittingMaterial(true);
     try {
       const formData = new FormData();
@@ -244,23 +261,32 @@ const MaterialList = ({ classId, classData }) => {
       formData.append("description", values.description || "");
       formData.append("isPublic", values.isPublic);
       formData.append("tags", JSON.stringify(tags));
-      formData.append("classroom", classId);
+      formData.append("classroom", null);
+
+      // Thêm file nếu có (cho cả create và update)
       if (fileList.length > 0) {
-        const file =
-          fileList[0].originFileObj || fileList[0].file || fileList[0];
+        const file = fileList[0].originFileObj || fileList[0].file || fileList[0];
         formData.append("file", file);
       }
       if (isEditMode) {
         await materialAPI.updateMaterial(selectedMaterial._id, formData);
-        message.success("Material updated successfully");
+        message.success(
+          fileList.length > 0
+            ? "Material and file updated successfully"
+            : "Material updated successfully"
+        );
       } else {
-        const respone = await materialAPI.createMaterial(classId, formData);
-        console.log(respone);
-        //message.success('Material uploaded successfully');
+        const response = await materialAPI.createMaterial(classId, formData);
+        console.log(response);
+        message.success("Material uploaded successfully");
       }
 
       setCreateEditModalVisible(false);
-      fetchMaterialsData(); // Refresh data
+      fetchMaterialsData();
+      materialForm.resetFields();
+      setFileList([]);
+      setTags([]);
+
     } catch (error) {
       console.error("Error submitting material:", error);
       message.error(
@@ -296,7 +322,7 @@ const MaterialList = ({ classId, classData }) => {
     fileList: fileList,
     beforeUpload: (file) => {
       setFileList([file]);
-      return false; // Prevent auto upload
+      return false;  
     },
     onRemove: () => {
       setFileList([]);
@@ -331,7 +357,7 @@ const MaterialList = ({ classId, classData }) => {
       title: "Type",
       dataIndex: "type",
       key: "type",
-      width: 130,
+      width: 150,
       render: (type) => (
         <Badge color={getTypeBadgeColor(type)} text={type.toUpperCase()} />
       ),
@@ -507,21 +533,30 @@ const MaterialList = ({ classId, classData }) => {
             />
           </Form.Item>
 
-          {!isEditMode && (
-            <Form.Item label="Upload File" required>
-              <Dragger {...uploadProps}>
-                <p className="ant-upload-drag-icon">
-                  <InboxOutlined />
-                </p>
-                <p className="ant-upload-text">
-                  Click or drag file to this area to upload
-                </p>
-                <p className="ant-upload-hint">
-                  Support for PDF, PowerPoint, Videos and other document formats
-                </p>
-              </Dragger>
-            </Form.Item>
-          )}
+          <Form.Item
+            label={isEditMode ? "Update File (optional)" : "Upload File"}
+            required={!isEditMode}
+          >
+            {isEditMode && selectedMaterial?.filename && (
+              <div className="mb-2 p-2 bg-gray-50 rounded">
+                <Text type="secondary">Current file: </Text>
+                <Text strong>{selectedMaterial.filename}</Text>
+              </div>
+            )}
+            <Dragger {...uploadProps}>
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">
+                Click or drag file to this area to {isEditMode ? "replace current file" : "upload"}
+              </p>
+              <p className="ant-upload-hint">
+                Support for PDF, PowerPoint, Videos and other document formats
+                {isEditMode && <br />}
+                {isEditMode && "Leave empty to keep current file"}
+              </p>
+            </Dragger>
+          </Form.Item>
 
           <Form.Item label="Tags">
             <div className="mb-2">

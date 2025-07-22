@@ -13,8 +13,7 @@ const materialSchema = new mongoose.Schema(
       trim: true,
     },
     type: {
-      type: String,
-      enum: ['pdf', 'slide', 'video', 'other', 'document'],
+      type: String, 
       required: true,
       index: true
     },
@@ -31,12 +30,12 @@ const materialSchema = new mongoose.Schema(
     thumbnail: {
       type: String,
     },
-    classroom: {
+    classroom: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Classroom',
       required: true,
       index: true
-    },
+    }],
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
