@@ -132,13 +132,13 @@ const QuizManagement = ({ classId }) => {
   const formatCategoryName = (category) => {
     switch (category) {
       case 'PROGRESS_TEST':
-        return 'Progress Test';
+        return 'Bài kiểm tra tiến độ';
       case 'MID_TERM_EXAM':
-        return 'Mid-term Exam';
+        return 'Kiểm tra giữa kỳ';
       case 'FINAL_EXAM':
-        return 'Final Exam';
+        return 'Kiểm tra cuối kỳ';
       case 'ASSIGNMENT':
-        return 'Assignment';
+        return 'Bài tập';
       case 'QUIZ':
         return 'Quiz';
       default:
@@ -173,12 +173,12 @@ const QuizManagement = ({ classId }) => {
     const startTime = moment(quiz.startTime);
     const endTime = moment(quiz.endTime);
 
-    if (quiz.visibility === 'draft') return 'draft';
-    if (quiz.visibility === 'published' && (!quiz.startTime || !quiz.endTime)) return 'published';
-    if (quiz.visibility === 'scheduled' && isQuizActive(quiz.startTime, quiz.endTime)) return 'scheduled';
-    if (now.isBefore(startTime)) return 'scheduled';
-    if (now.isBetween(startTime, endTime)) return 'active';
-    if (now.isAfter(endTime)) return 'completed';
+    if (quiz.visibility === 'draft') return 'bản nháp';
+    if (quiz.visibility === 'published' && (!quiz.startTime || !quiz.endTime)) return 'đã xuất bản';
+    if (quiz.visibility === 'scheduled' && isQuizActive(quiz.startTime, quiz.endTime)) return 'đã lên lịch';
+    if (now.isBefore(startTime)) return 'đã lên lịch';
+    if (now.isBetween(startTime, endTime)) return 'đang diễn ra';
+    if (now.isAfter(endTime)) return 'đã hoàn thành';
 
     return quiz.visibility;
   };
@@ -208,7 +208,7 @@ const QuizManagement = ({ classId }) => {
       const response = await quizAPI.create(newQuiz);
       if (response.success) {
         setQuizCreateVisible(false);
-        message.success('Quiz created successfully!');
+        message.success('Quiz đã được tạo thành công!');
         fetchQuizzes();
       }
     } catch (error) {
@@ -233,16 +233,16 @@ const QuizManagement = ({ classId }) => {
 
   const handleDeleteQuiz = (quiz) => {
     Modal.confirm({
-      title: 'Delete Quiz',
-      content: `Are you sure you want to delete "${quiz.title}"?`,
-      okText: 'Delete',
+      title: 'Xóa Quiz',
+      content: `Bạn có chắc chắn muốn xóa "${quiz.title}"?`,
+      okText: 'Xóa',
       okType: 'danger',
-      cancelText: 'Cancel',
+      cancelText: 'Hủy',
       onOk: async () => {
         try {
           const response = await quizAPI.delete(quiz._id);
           if (response.success) {
-            message.success('Quiz deleted successfully!');
+            message.success('Quiz đã được xóa thành công!');
             fetchQuizzes();
           }
         } catch (error) {
@@ -257,7 +257,7 @@ const QuizManagement = ({ classId }) => {
       setLoading(true);
       const response = await quizAPI.changeVisibility(id, { visibility });
       if (response.success) {
-        message.success(`Quiz visibility changed to ${visibility}`);
+        message.success(`Quiz đã được thay đổi trạng thái hiển thị thành ${visibility}`);
         fetchQuizzes();
       }
     } catch (error) {
@@ -281,7 +281,7 @@ const QuizManagement = ({ classId }) => {
           icon={<PlusOutlined />}
           onClick={() => setQuizCreateVisible(true)}
         >
-          Create Quiz
+          Tạo Quiz
         </Button>
       </div>
 
@@ -290,7 +290,7 @@ const QuizManagement = ({ classId }) => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="Total Quizzes"
+              title="Tổng Quiz"
               value={quizItems?.length || 0}
               prefix={<QuestionCircleOutlined />}
             />
@@ -299,7 +299,7 @@ const QuizManagement = ({ classId }) => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="Published"
+              title="Đã Xuất Bản"
               value={publishedQuizzes.length}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#3f8600' }}
@@ -309,7 +309,7 @@ const QuizManagement = ({ classId }) => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="Draft"
+              title="Bản Nháp"
               value={draftQuizzes.length}
               prefix={<EditOutlined />}
               valueStyle={{ color: '#cf1322' }}
@@ -319,7 +319,7 @@ const QuizManagement = ({ classId }) => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="Scheduled"
+              title="Đã Lên Lịch"
               value={scheduledQuizzes.length}
               prefix={<CalendarOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -332,7 +332,7 @@ const QuizManagement = ({ classId }) => {
       {quizItems.length === 0 ? (
         <Card>
           <Empty
-            description="No quizzes created yet"
+            description="Chưa có quiz nào được tạo"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </Card>
@@ -364,14 +364,14 @@ const QuizManagement = ({ classId }) => {
                           <Tag color={getCategoryColor(quiz.category)}>
                             {formatCategoryName(quiz.category)}
                           </Tag>
-                          <Text type="secondary">{stats.totalPoints} points</Text>
-                          <Text type="secondary">{stats.totalQuestions} questions</Text>
-                          <Text type="secondary">{quiz.duration} minutes</Text>
+                          <Text type="secondary">{stats.totalPoints} điểm</Text>
+                          <Text type="secondary">{stats.totalQuestions} câu hỏi</Text>
+                          <Text type="secondary">{quiz.duration} phút</Text>
                         </Space>
                       </div>
 
                       <Space>
-                        <Tooltip title="View Details">
+                        <Tooltip title="Xem Chi Tiết">
                           <Button
                             type="text"
                             icon={<EyeOutlined />}
@@ -380,7 +380,7 @@ const QuizManagement = ({ classId }) => {
                           />
                         </Tooltip>
 
-                        <Tooltip title="Edit Quiz">
+                        <Tooltip title="Chỉnh Sửa Quiz">
                           <Button
                             type="text"
                             icon={<EditOutlined />}
@@ -390,7 +390,7 @@ const QuizManagement = ({ classId }) => {
                         </Tooltip>
 
                         {quiz.visibility === 'draft' && (
-                          <Tooltip title="Publish Quiz">
+                          <Tooltip title="Xuất Bản Quiz">
                             <Button
                               type="text"
                               icon={<PlayCircleOutlined />}
@@ -417,7 +417,7 @@ const QuizManagement = ({ classId }) => {
 
 
                         {(quiz.visibility === 'published' || quiz.visibility === 'scheduled') && (
-                          <Tooltip title="Unpublish Quiz">
+                          <Tooltip title="Thu Hồi Quiz">
                             <Button
                               type="text"
                               icon={<StopOutlined />}
@@ -429,7 +429,7 @@ const QuizManagement = ({ classId }) => {
                         )}
 
                         {quiz.visibility === 'draft' && (
-                          <Tooltip title="Publish Quiz">
+                          <Tooltip title="Xuất Bản Quiz">
                             <Button
                               type="text"
                               icon={<PlayCircleOutlined />}
@@ -440,7 +440,7 @@ const QuizManagement = ({ classId }) => {
                           </Tooltip>
                         )}
 
-                        <Tooltip title="Delete Quiz">
+                        <Tooltip title="Xóa Quiz">
                           <Button
                             type="text"
                             icon={<DeleteOutlined />}
@@ -462,7 +462,7 @@ const QuizManagement = ({ classId }) => {
                       {quiz.startTime && (
                         <div className="flex items-center gap-2">
                           <CalendarOutlined className="text-gray-500" />
-                          <Text type="secondary">Start: </Text>
+                          <Text type="secondary">Bắt Đầu: </Text>
                           {formatDateTime(quiz.startTime)}
                         </div>
                       )}
@@ -470,25 +470,25 @@ const QuizManagement = ({ classId }) => {
                       {quiz.endTime && (
                         <div className="flex items-center gap-2">
                           <CalendarOutlined className="text-gray-500" />
-                          <Text type="secondary">End: </Text>
+                          <Text type="secondary">Kết Thúc: </Text>
                           {formatDateTime(quiz.endTime)}
                         </div>
                       )}
 
                       <div className="flex items-center gap-2">
                         <ClockCircleOutlined className="text-gray-500" />
-                        <Text type="secondary">Duration: {quiz.duration} minutes</Text>
+                        <Text type="secondary">Thời Gian: {quiz.duration} phút</Text>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <TrophyOutlined className="text-gray-500" />
-                        <Text type="secondary">Passing Score: {quiz.passingScore}%</Text>
+                        <Text type="secondary">Điểm Số: {quiz.passingScore}%</Text>
                       </div>
 
                       {quiz.maxAttempts && (
                         <div className="flex items-center gap-2">
                           <TeamOutlined className="text-gray-500" />
-                          <Text type="secondary">Max Attempts: {quiz.maxAttempts}</Text>
+                          <Text type="secondary">Số Lần Thử: {quiz.maxAttempts}</Text>
                         </div>
                       )}
 
@@ -496,7 +496,7 @@ const QuizManagement = ({ classId }) => {
                         <div className="flex items-center gap-2">
                           <BarChartOutlined className="text-gray-500" />
                           <Text type="secondary">
-                            Success Rate: {stats.averageScore}%
+                            Tỷ Lệ Thành Công: {stats.averageScore}%
                           </Text>
                         </div>
                       )}
@@ -505,34 +505,34 @@ const QuizManagement = ({ classId }) => {
                     <div className="flex justify-between items-center text-sm">
                       <Space>
                         {quiz.allowReview && (
-                          <Tag color="cyan" size="small">Allow Review</Tag>
+                          <Tag color="cyan" size="small">Cho phép Xem Lại</Tag>
                         )}
                         {quiz.shuffleQuestions && (
-                          <Tag color="purple" size="small">Shuffle Questions</Tag>
+                          <Tag color="purple" size="small">Trộn Câu Hỏi</Tag>
                         )}
                         {quiz.shuffleOptions && (
-                          <Tag color="purple" size="small">Shuffle Options</Tag>
+                          <Tag color="purple" size="small">Trộn Tùy Chọn</Tag>
                         )}
                         {quiz.fullScreen && (
-                          <Tag color="red" size="small">Full Screen</Tag>
+                          <Tag color="red" size="small">Toàn Màn Hình</Tag>
                         )}
                         {quiz.showResults && (
-                          <Tag color="blue" size="small">Show Results</Tag>
+                          <Tag color="blue" size="small">Hiển Thị Kết Quả</Tag>
                         )}
                         {!quiz.copyAllowed && (
-                          <Tag color="orange" size="small">Copy Disabled</Tag>
+                          <Tag color="orange" size="small">Không Cho Phép Sao Chép</Tag>
                         )}
                         {quiz.checkTab && (
-                          <Tag color="red" size="small">Tab Monitoring</Tag>
+                          <Tag color="red" size="small">Theo Dõi Tab</Tag>
                         )}
                       </Space>
 
                       <Space direction="vertical" size="small" className="text-right">
                         <Text type="secondary">
-                          Created by: {quiz.createdBy?.email || 'Unknown'}
+                          Tạo bởi: {quiz.createdBy?.email || 'Không Rõ'}
                         </Text>
                         <Text type="secondary">
-                          Created {moment(quiz.createdAt).fromNow()}
+                          Tạo {moment(quiz.createdAt).fromNow()}
                         </Text>
                       </Space>
                     </div>

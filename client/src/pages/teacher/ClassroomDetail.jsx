@@ -689,32 +689,32 @@ const ClassroomDetail = () => {
     () => [
       {
         key: "stream",
-        label: "Stream",
+        label: "Bảng tin",
         children: StreamTab,
       },
       {
         key: "materials",
-        label: "Materials",
+        label: "Tài liệu",
         children: <MaterialList classId={classId} classData={classData} />,
       },
       {
         key: "classwork",
-        label: "Classwork",
+        label: "Bài tập",
         children: ClassworkTabComponent,
       },
       {
         key: "quizzes",
-        label: "Quizzes",
+        label: "Quiz",
         children: QuizManagementComponent,
       },
       {
         key: "people",
-        label: "People",
+        label: "Thành viên",
         children: PeopleTabComponent,
       },
       {
         key: "grades",
-        label: "Grades",
+        label: "Bảng điểm",
         children: GradesTabComponent,
       },
     ],
@@ -751,7 +751,7 @@ const ClassroomDetail = () => {
         onClick={() => navigate("/teacher/classroom")}
         className="mb-4"
       >
-        Back to Classrooms
+        Quay lại danh sách lớp
       </Button>
 
       {/* Header */}
@@ -786,8 +786,8 @@ const ClassroomDetail = () => {
         {/* Status Messages */}
         {classData.status === "inactive" && (
           <Alert
-            message="This classroom is currently inactive"
-            description="Students cannot access this classroom while it is inactive."
+            message="Lớp học này hiện đang bị khóa"
+            description="Học sinh sẽ không thể truy cập lớp học khi lớp bị khóa."
             type="info"
             showIcon
             className="mb-4"
@@ -795,8 +795,8 @@ const ClassroomDetail = () => {
         )}
         {classData.status === "pending_delete" && (
           <Alert
-            message="Deletion Request Pending"
-            description="This classroom is pending deletion approval from the administrator."
+            message="Yêu cầu xóa lớp đang chờ duyệt"
+            description="Lớp học này đang chờ quản trị viên phê duyệt xóa."
             type="warning"
             showIcon
             className="mb-4"
@@ -804,8 +804,8 @@ const ClassroomDetail = () => {
         )}
         {classData.status === "pending_edit" && (
           <Alert
-            message="Edit Request Pending"
-            description="Changes to this classroom are pending approval from the administrator."
+            message="Yêu cầu chỉnh sửa đang chờ duyệt"
+            description="Các thay đổi với lớp học này đang chờ quản trị viên phê duyệt."
             type="warning"
             showIcon
             className="mb-4"
@@ -819,7 +819,7 @@ const ClassroomDetail = () => {
               <div className="text-2xl font-bold text-blue-600">
                 {classData.code}
               </div>
-              <div className="text-gray-500">Class Code</div>
+              <div className="text-gray-500">Mã lớp</div>
             </div>
           </Card>
           <Card size="small">
@@ -827,7 +827,7 @@ const ClassroomDetail = () => {
               <div className="text-2xl font-bold text-green-600">
                 {studentsData.length}
               </div>
-              <div className="text-gray-500">Students</div>
+              <div className="text-gray-500">Học sinh</div>
             </div>
           </Card>
           <Card size="small">
@@ -835,7 +835,7 @@ const ClassroomDetail = () => {
               <div className="text-2xl font-bold text-purple-600">
                 {classData.category}
               </div>
-              <div className="text-gray-500">Category</div>
+              <div className="text-gray-500">Danh mục</div>
             </div>
           </Card>
           <Card size="small">
@@ -843,7 +843,7 @@ const ClassroomDetail = () => {
               <div className="text-2xl font-bold text-orange-600">
                 {classData.level}
               </div>
-              <div className="text-gray-500">Level</div>
+              <div className="text-gray-500">Trình độ</div>
             </div>
           </Card>
         </div>
@@ -876,15 +876,14 @@ const ClassroomDetail = () => {
         onOk={confirmDeleteClass}
         onCancel={handleCancelDelete}
         confirmLoading={deleting}
-        okText="Request Deletion"
-        cancelText="Cancel"
+        okText="Gửi yêu cầu xóa"
+        cancelText="Hủy"
         okButtonProps={{ danger: true }}
       >
         <div className="py-4">
           <ExclamationCircleOutlined className="text-orange-500 mr-2" />
           <Text>
-            Are you sure you want to delete "{classData.name}"? This action will
-            require admin approval.
+            Bạn có chắc chắn muốn xóa lớp "{classData.name}"? Hành động này sẽ cần quản trị viên phê duyệt.
           </Text>
         </div>
       </Modal>

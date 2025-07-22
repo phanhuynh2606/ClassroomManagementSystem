@@ -435,9 +435,23 @@ const StudentProfile = () => {
                   </Form.Item>
 
                   <Form.Item
+                    name="email"
+                    label={<span style={{ fontWeight: 500 }}>Email</span>}
+                    rules={[
+                      { required: true, message: 'Please input your email!' },
+                      { type: 'email', message: 'Email is not valid!' }
+                    ]}
+                  >
+                    <Input prefix={<MailOutlined />} size="large" disabled />
+                  </Form.Item>
+
+                  <Form.Item
                     name="phone"
                     label={<span style={{ fontWeight: 500 }}>Phone Number</span>}
-                    rules={[{ required: true, message: 'Please input your phone number!' }]}
+                    rules={[
+                      { required: true, message: 'Please input your phone number!' },
+                      { pattern: /^(0|84|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-5]|9[0-9])[0-9]{7}$|^(0|84|\+84)[1-9][0-9]{8,9}$/, message: 'Phone number must be a valid Vietnamese number!' }
+                    ]}
                   >
                     <Input prefix={<PhoneOutlined />} size="large" />
                   </Form.Item>
@@ -445,6 +459,19 @@ const StudentProfile = () => {
                   <Form.Item
                     name="dateOfBirth"
                     label={<span style={{ fontWeight: 500 }}>Date of Birth</span>}
+                    rules={[
+                      { required: true, message: 'Please select your date of birth!' },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value) return Promise.resolve();
+                          const today = new Date();
+                          const dob = value.toDate ? value.toDate() : value;
+                          const age = today.getFullYear() - dob.getFullYear() - (today < new Date(dob.setFullYear(today.getFullYear())) ? 1 : 0);
+                          if (age >= 12) return Promise.resolve();
+                          return Promise.reject(new Error('You must be at least 12 years old!'));
+                        }
+                      })
+                    ]}
                   >
                     <DatePicker style={{ width: '100%' }} size="large" />
                   </Form.Item>

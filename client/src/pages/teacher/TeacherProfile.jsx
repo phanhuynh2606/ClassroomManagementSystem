@@ -89,9 +89,9 @@ const TeacherProfile = () => {
       };
 
       await userAPI.updateProfile(updatedData);
-      message.success("Profile updated successfully");
+      message.success("Hồ sơ đã được cập nhật thành công");
     } catch (error) {
-      message.error("Failed to update profile");
+      message.error("Không thể cập nhật hồ sơ");
       console.error("Error updating profile:", error);
     } finally {
       setLoading(false);
@@ -112,7 +112,7 @@ const TeacherProfile = () => {
 
   const handleImageUpload = async () => {
     if (!selectedFile) {
-      message.error("Please select an image first");
+      message.error("Vui lòng chọn một hình ảnh");
       return;
     }
 
@@ -128,12 +128,12 @@ const TeacherProfile = () => {
         setUserData({...userData, image: response.imageUrl});
         setPreviewUrl(null);
         setSelectedFile(null);
-        message.success("Image uploaded successfully");
+        message.success("Hình ảnh đã được tải lên thành công");
       } else {
-        throw new Error("Upload failed");
+        throw new Error("Tải lên thất bại");
       }
     } catch (error) {
-      message.error("Failed to upload image");
+      message.error("Không thể tải lên hình ảnh");
       console.error("Upload error:", error);
     } finally {
       setUploadLoading(false);
@@ -158,21 +158,21 @@ const TeacherProfile = () => {
 
       if (response.isCurrentDevice) {
         // If current device is logged out, redirect to login
-        message.success("You have been logged out");
+        message.success("Bạn đã đăng xuất");
         // Dispatch logout action to clear auth state
         dispatch(logout());
         return;
       }
-      message.success("Device logged out successfully");
+      message.success("Thiết bị đã đăng xuất thành công");
     } catch (error) {
-      message.error("Failed to logout device");
+      message.error("Không thể đăng xuất thiết bị");
       console.error("Error logging out device:", error);
     }
   };
 
   const deviceColumns = [
     {
-      title: "Device",
+      title: "Thiết bị",
       dataIndex: "userAgent",
       key: "userAgent",
       width: "30%",
@@ -180,10 +180,10 @@ const TeacherProfile = () => {
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {getDeviceIcon(record.device)}
           <span>
-            {userAgent || "Unknown Device"}
+            {userAgent || "Thiết bị không xác định"}
             {record.isCurrentDevice && (
               <Tag color="blue" style={{ marginLeft: 8 }}>
-                Current Device
+                Thiết bị hiện tại
               </Tag>
             )}
           </span>
@@ -191,12 +191,12 @@ const TeacherProfile = () => {
       ),
     },
     {
-      title: "IP Address",
+      title: "Địa chỉ IP",
       dataIndex: "ipAddress",
       key: "ipAddress",
       width: "25%",
       render: (ip) => (
-        <Tooltip title="IP Address">
+        <Tooltip title="Địa chỉ IP">
           <span>
             <GlobalOutlined style={{ marginRight: 8 }} />
             {ip}
@@ -205,25 +205,25 @@ const TeacherProfile = () => {
       ),
     },
     {
-      title: "Last Active",
+      title: "Hoạt động gần nhất",
       dataIndex: "createdAt",
       key: "createdAt",
       width: "30%",
-      render: (date) => dayjs(date).format("YYYY-MM-DD HH:mm"),
+      render: (date) => dayjs(date).format("DD-MM-YYYY HH:mm"),
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "isRevoked",
       key: "isRevoked",
       width: "5%",
       render: (isRevoked, record) => (
         <Tag color={isRevoked ? "red" : "green"}>
-          {isRevoked ? "Revoked" : "Active"}
+          {isRevoked ? "Đã thu hồi" : "Đang hoạt động"}
         </Tag>
       ),
     },
     {
-      title: "Action",
+      title: "Hành động",
       key: "action",
       width: "10%",
       render: (_, record) =>
@@ -231,20 +231,20 @@ const TeacherProfile = () => {
           <Popconfirm
             title={
               record.isCurrentDevice
-                ? "Logout current device?"
-                : "Logout this device?"
+                ? "Bạn có chắc chắn muốn đăng xuất thiết bị hiện tại?"
+                : "Bạn có chắc chắn muốn đăng xuất thiết bị này?"
             }
             description={
               record.isCurrentDevice
-                ? "You will be logged out and redirected to login page"
-                : "Are you sure you want to logout this device?"
+                ? "Bạn sẽ đăng xuất và được chuyển hướng đến trang đăng nhập"
+                : "Bạn có chắc chắn muốn đăng xuất thiết bị này?"
             }
             onConfirm={() => handleLogoutDevice(record.token)}
-            okText="Yes"
-            cancelText="No"
+            okText="Có"
+            cancelText="Không"
           >
             <Button type="text" danger icon={<LogoutOutlined />}>
-              Logout
+              Đăng xuất
             </Button>
           </Popconfirm>
         ),
@@ -265,10 +265,10 @@ const TeacherProfile = () => {
           color: "white"
         }}>
           <Title level={1} style={{ color: "white", marginBottom: 8 }}>
-            Teacher Profile
+            Hồ sơ giáo viên
           </Title>
           <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: "16px" }}>
-            Manage your profile information and account settings
+            Quản lý thông tin hồ sơ và cài đặt tài khoản
           </Text>
         </div>
 
@@ -311,7 +311,7 @@ const TeacherProfile = () => {
                       fontSize: "12px",
                       fontWeight: "500"
                     }}>
-                      Preview
+                      Xem trước
                     </div>
                   )}
                   <Upload
@@ -357,7 +357,7 @@ const TeacherProfile = () => {
                           fontWeight: "500"
                         }}
                       >
-                        Upload Image
+                        Tải ảnh lên
                       </Button>
                       <Button
                         onClick={handleCancelUpload}
@@ -366,7 +366,7 @@ const TeacherProfile = () => {
                           fontWeight: "500"
                         }}
                       >
-                        Cancel
+                        Hủy
                       </Button>
                     </Space>
                                      </div>
@@ -404,7 +404,7 @@ const TeacherProfile = () => {
                   <Row gutter={16}>
                     <Col span={12}>
                       <Statistic
-                        title={<span style={{ color: "rgba(255,255,255,0.8)" }}>Active Sessions</span>}
+                        title={<span style={{ color: "rgba(255,255,255,0.8)" }}>Phiên hoạt động</span>}
                         value={devices?.filter((t) => !t.isRevoked).length || 0}
                         prefix={<CheckCircleOutlined style={{ color: "#48bb78" }} />}
                         valueStyle={{ color: "white", fontSize: "22px" }}
@@ -412,8 +412,8 @@ const TeacherProfile = () => {
                     </Col>
                     <Col span={12}>
                       <Statistic
-                        title={<span style={{ color: "rgba(255,255,255,0.8)" }}>Account Status</span>}
-                        value={userData?.isActive ? "Active" : "Inactive"}
+                        title={<span style={{ color: "rgba(255,255,255,0.8)" }}>Trạng thái tài khoản</span>}
+                        value={userData?.isActive ? "Đang hoạt động" : "Không hoạt động"}
                         prefix={<SafetyOutlined style={{ color: userData?.isActive ? "#48bb78" : "#f56565" }} />}
                         valueStyle={{ 
                           color: userData?.isActive ? "#48bb78" : "#f56565",
@@ -430,11 +430,11 @@ const TeacherProfile = () => {
                   borderRadius: "12px",
                   padding: "12px"
                 }}>
-                  <Text strong style={{ color: "#4a5568" }}>Last Login: </Text>
+                  <Text strong style={{ color: "#4a5568" }}>Đăng nhập gần đây: </Text>
                   <Text style={{ color: "#718096" }}>
                     {userData?.lastLogin
                       ? dayjs(userData.lastLogin).format("DD-MM-YYYY HH:mm")
-                      : "Never"}
+                      : "Không từng đăng nhập"}
                   </Text>
                 </div>
               </Space>
@@ -466,7 +466,7 @@ const TeacherProfile = () => {
                   tab={
                     <span style={{ fontSize: "16px", fontWeight: "500" }}>
                       <EditOutlined style={{ marginRight: 8 }} />
-                      Edit Profile
+                      Chỉnh sửa hồ sơ
                     </span>
                   } 
                   key="1"
@@ -482,11 +482,11 @@ const TeacherProfile = () => {
                         <Col span={12}>
                           <Form.Item
                             name="fullName"
-                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Full Name</span>}
+                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Họ và tên</span>}
                             rules={[
                               {
                                 required: true,
-                                message: "Please input your full name!",
+                                message: "Vui lòng nhập họ và tên!",
                               },
                             ]}
                           >
@@ -502,8 +502,8 @@ const TeacherProfile = () => {
                             name="email"
                             label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Email</span>}
                             rules={[
-                              { required: true, message: "Please input your email!" },
-                              { type: "email", message: "Please enter a valid email!" },
+                              { required: true, message: "Vui lòng nhập email!" },
+                              { type: "email", message: "Vui lòng nhập email hợp lệ!" },
                             ]}
                           >
                             <Input 
@@ -520,12 +520,10 @@ const TeacherProfile = () => {
                         <Col span={12}>
                           <Form.Item
                             name="phone"
-                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Phone Number</span>}
+                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Số điện thoại</span>}
                             rules={[
-                              {
-                                required: true,
-                                message: "Please input your phone number!",
-                              },
+                              { required: true, message: "Vui lòng nhập số điện thoại!" },
+                              { pattern: /^(0)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-5]|9[0-9])[0-9]{7}$/, message: "Số điện thoại phải có 10 số, bắt đầu bằng 0 và đúng đầu số di động Việt Nam!" }
                             ]}
                           >
                             <Input 
@@ -538,7 +536,20 @@ const TeacherProfile = () => {
                         <Col span={12}>
                           <Form.Item 
                             name="dateOfBirth" 
-                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Date of Birth</span>}
+                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Ngày sinh</span>}
+                            rules={[
+                              { required: true, message: "Vui lòng chọn ngày sinh!" },
+                              ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                  if (!value) return Promise.resolve();
+                                  const today = new Date();
+                                  const dob = value.toDate ? value.toDate() : value;
+                                  const age = today.getFullYear() - dob.getFullYear() - (today < new Date(dob.setFullYear(today.getFullYear())));
+                                  if (age >= 12) return Promise.resolve();
+                                  return Promise.reject(new Error("Bạn phải từ 12 tuổi trở lên!"));
+                                }
+                              })
+                            ]}
                           >
                             <DatePicker 
                               style={{ width: "100%", borderRadius: "12px" }} 
@@ -550,15 +561,15 @@ const TeacherProfile = () => {
 
                       <Form.Item
                         name="gender"
-                        label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Gender</span>}
+                        label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Giới tính</span>}
                         rules={[
-                          { required: true, message: "Please select your gender!" },
+                          { required: true, message: "Vui lòng chọn giới tính!" },
                         ]}
                       >
                         <Select size="large" style={{ borderRadius: "12px" }}>
-                          <Option value="male">Male</Option>
-                          <Option value="female">Female</Option>
-                          <Option value="other">Other</Option>
+                          <Option value="male">Nam</Option>
+                          <Option value="female">Nữ</Option>
+                          <Option value="other">Khác</Option>
                         </Select>
                       </Form.Item>
 
@@ -579,7 +590,7 @@ const TeacherProfile = () => {
                             boxShadow: "0 8px 25px rgba(102, 126, 234, 0.3)",
                           }}
                         >
-                          Update Profile
+                          Cập nhật hồ sơ
                         </Button>
                       </Form.Item>
                     </Form>
@@ -590,14 +601,14 @@ const TeacherProfile = () => {
                   tab={
                     <span style={{ fontSize: "16px", fontWeight: "500" }}>
                       <LockOutlined style={{ marginRight: 8 }} />
-                      Security
+                      Bảo mật
                     </span>
                   } 
                   key="2"
                 >
                   <div style={{ padding: "32px 0" }}>
                     <Title level={4} style={{ color: "#4a5568", marginBottom: "24px" }}>
-                      Change Password
+                      Đổi mật khẩu
                     </Title>
                     <Form
                       form={passwordForm}
@@ -605,23 +616,23 @@ const TeacherProfile = () => {
                       onFinish={async (values) => {
                         try {
                           await dispatch(updatePassword(values)).unwrap();
-                          message.success("Password updated successfully");
+                          message.success("Mật khẩu đã được cập nhật thành công");
                           passwordForm.resetFields();
                         } catch (error) {
-                          message.error(error.message || "Failed to update password");
+                          message.error(error.message || "Không thể cập nhật mật khẩu");
                         }
                       }}
                     >
                       <Form.Item
                         name="currentPassword"
-                        label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Current Password</span>}
-                        rules={[{ required: true, message: "Please input your current password!" }]}
+                        label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Mật khẩu hiện tại</span>}
+                        rules={[{ required: true, message: "Vui lòng nhập mật khẩu hiện tại!" }]}
                       >
                         <Input.Password 
                           prefix={<LockOutlined style={{ color: "#a0aec0" }} />} 
                           size="large" 
                           style={{ borderRadius: "12px" }}
-                          placeholder="Enter current password"
+                          placeholder="Nhập mật khẩu hiện tại"
                         />
                       </Form.Item>
 
@@ -629,33 +640,33 @@ const TeacherProfile = () => {
                         <Col span={12}>
                           <Form.Item
                             name="newPassword"
-                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>New Password</span>}
+                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Mật khẩu mới</span>}
                             rules={[
-                              { required: true, message: "Please input your new password!" },
-                              { min: 6, message: "Password must be at least 6 characters!" }
+                              { required: true, message: "Vui lòng nhập mật khẩu mới!" },
+                              { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" }
                             ]}
                           >
                             <Input.Password 
                               prefix={<LockOutlined style={{ color: "#a0aec0" }} />} 
                               size="large" 
                               style={{ borderRadius: "12px" }}
-                              placeholder="Enter new password"
+                              placeholder="Nhập mật khẩu mới"
                             />
                           </Form.Item>
                         </Col>
                         <Col span={12}>
                           <Form.Item
                             name="confirmPassword"
-                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Confirm New Password</span>}
+                            label={<span style={{ fontWeight: 600, color: "#4a5568" }}>Xác nhận mật khẩu mới</span>}
                             dependencies={["newPassword"]}
                             rules={[
-                              { required: true, message: "Please confirm your new password!" },
+                              { required: true, message: "Vui lòng xác nhận mật khẩu mới!" },
                               ({ getFieldValue }) => ({
                                 validator(_, value) {
                                   if (!value || getFieldValue("newPassword") === value) {
                                     return Promise.resolve();
                                   }
-                                  return Promise.reject(new Error("The two passwords do not match!"));
+                                  return Promise.reject(new Error("Mật khẩu không khớp!"));
                                 },
                               }),
                             ]}
@@ -664,7 +675,7 @@ const TeacherProfile = () => {
                               prefix={<LockOutlined style={{ color: "#a0aec0" }} />} 
                               size="large" 
                               style={{ borderRadius: "12px" }}
-                              placeholder="Confirm new password"
+                              placeholder="Xác nhận mật khẩu mới"
                             />
                           </Form.Item>
                         </Col>
@@ -686,7 +697,7 @@ const TeacherProfile = () => {
                             boxShadow: "0 8px 25px rgba(245, 87, 108, 0.3)",
                           }}
                         >
-                          Update Password
+                          Cập nhật mật khẩu
                         </Button>
                       </Form.Item>
                     </Form>
@@ -697,7 +708,7 @@ const TeacherProfile = () => {
                   tab={
                     <span style={{ fontSize: "16px", fontWeight: "500" }}>
                       <InfoCircleOutlined style={{ marginRight: 8 }} />
-                      Account Info
+                      Thông tin tài khoản
                     </span>
                   } 
                   key="3"
@@ -716,7 +727,7 @@ const TeacherProfile = () => {
                           bodyStyle={{ padding: "24px" }}
                         >
                           <Space direction="vertical" size="small">
-                            <Text style={{ color: "rgba(255,255,255,0.8)" }}>Role</Text>
+                            <Text style={{ color: "rgba(255,255,255,0.8)" }}>Vai trò</Text>
                             <Title level={4} style={{ color: "white", margin: 0 }}>
                               {userData?.role?.toUpperCase()}
                             </Title>
@@ -737,9 +748,9 @@ const TeacherProfile = () => {
                           bodyStyle={{ padding: "24px" }}
                         >
                           <Space direction="vertical" size="small">
-                            <Text style={{ color: "rgba(255,255,255,0.8)" }}>Account Status</Text>
+                            <Text style={{ color: "rgba(255,255,255,0.8)" }}>Trạng thái tài khoản</Text>
                             <Title level={4} style={{ color: "white", margin: 0 }}>
-                              {userData?.isActive ? "Active" : "Inactive"}
+                              {userData?.isActive ? "Đang hoạt động" : "Không hoạt động"}
                             </Title>
                           </Space>
                         </Card>
@@ -757,9 +768,9 @@ const TeacherProfile = () => {
                           bodyStyle={{ padding: "24px" }}
                         >
                           <Space direction="vertical" size="small">
-                            <Text style={{ color: "#4a5568" }}>Verification Status</Text>
+                            <Text style={{ color: "#4a5568" }}>Trạng thái xác thực</Text>
                             <Title level={4} style={{ color: "#2d3748", margin: 0 }}>
-                              {userData?.verified ? "Verified" : "Pending"}
+                              {userData?.verified ? "Đã xác thực" : "Chờ xác thực"}
                             </Title>
                           </Space>
                         </Card>
@@ -775,11 +786,11 @@ const TeacherProfile = () => {
                           bodyStyle={{ padding: "24px" }}
                         >
                           <Space direction="vertical" size="small">
-                            <Text style={{ color: "#4a5568" }}>Member Since</Text>
+                            <Text style={{ color: "#4a5568" }}>Thành viên từ</Text>
                             <Title level={4} style={{ color: "#2d3748", margin: 0 }}>
                               {userData?.createdAt 
                                 ? dayjs(userData.createdAt).format("DD-MM-YYYY")
-                                : "Unknown"}
+                                : "Không xác định"}
                             </Title>
                           </Space>
                         </Card>
@@ -792,14 +803,14 @@ const TeacherProfile = () => {
                   tab={
                     <span style={{ fontSize: "16px", fontWeight: "500" }}>
                       <SettingOutlined style={{ marginRight: 8 }} />
-                      Devices
+                      Thiết bị
                     </span>
                   } 
                   key="4"
                 >
                   <div style={{ padding: "32px 0" }}>
                     <Title level={4} style={{ color: "#4a5568", marginBottom: "24px" }}>
-                      Active Devices & Sessions
+                      Thiết bị & phiên hoạt động
                     </Title>
                     <Table
                       columns={deviceColumns}

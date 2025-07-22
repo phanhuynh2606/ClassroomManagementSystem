@@ -352,43 +352,43 @@ const AssignmentEdit = () => {
 
   const steps = [
     {
-      title: "Basic Info",
+      title: "Thông tin cơ bản",
       icon: sectionStatus.basicInfoComplete ? (
         <CheckCircleOutlined />
       ) : (
         <FileTextOutlined />
       ),
-      description: "Title, description & instructions",
+      description: "Tiêu đề, mô tả & hướng dẫn",
       status: sectionStatus.basicInfoComplete ? "finish" : "process",
     },
     {
-      title: "Settings",
+      title: "Cài đặt",
       icon: sectionStatus.settingsComplete ? (
         <CheckCircleOutlined />
       ) : (
         <SettingOutlined />
       ),
-      description: "Points, dates & submission type",
+      description: "Điểm số, ngày & loại nộp bài",
       status: sectionStatus.settingsComplete ? "finish" : "process",
     },
     {
-      title: "Files",
+      title: "Tệp đính kèm",
       icon: sectionStatus.filesComplete ? (
         <CheckCircleOutlined />
       ) : (
         <CloudUploadOutlined />
       ),
-      description: "Attachments & file settings",
+      description: "Tệp đính kèm & cài đặt tệp",
       status: sectionStatus.filesComplete ? "finish" : "process",
     },
     {
-      title: "Publish",
+      title: "Xuất bản",
       icon: sectionStatus.publishComplete ? (
         <CheckCircleOutlined />
       ) : (
         <GlobalOutlined />
       ),
-      description: "Visibility & tags",
+      description: "Tính năng & thẻ",
       status: sectionStatus.publishComplete ? "finish" : "process",
     },
   ];
@@ -400,7 +400,7 @@ const AssignmentEdit = () => {
           <Spin size="large" />
           <div className="mt-4">
             <Text type="secondary" className="text-lg">
-              Loading assignment data...
+              Đang tải dữ liệu bài tập...
             </Text>
           </div>
         </div>
@@ -413,8 +413,8 @@ const AssignmentEdit = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
         <div className="max-w-2xl mx-auto pt-20">
           <Alert
-            message="Assignment not found"
-            description="The assignment you're looking for doesn't exist or has been deleted."
+            message="Bài tập không tìm thấy"
+            description="Bài tập bạn đang tìm kiếm không tồn tại hoặc đã bị xóa."
             type="error"
             showIcon
             action={
@@ -424,7 +424,7 @@ const AssignmentEdit = () => {
                   navigate(`/teacher/classroom/${classId}#classwork`)
                 }
               >
-                Back to Classwork
+                Quay lại Bài tập
               </Button>
             }
             className="shadow-lg"
@@ -450,7 +450,7 @@ const AssignmentEdit = () => {
                     className="cursor-pointer hover:text-blue-600 transition-colors"
                   >
                     <FileTextOutlined className="mr-1" />
-                    {assignmentData.classroom?.name || "Classroom"}
+                    {assignmentData.classroom?.name || "Lớp học"}
                   </span>
                 ),
               },
@@ -462,7 +462,7 @@ const AssignmentEdit = () => {
                     }
                     className="cursor-pointer hover:text-blue-600 transition-colors"
                   >
-                    Classwork
+                    Bài tập
                   </span>
                 ),
               },
@@ -484,7 +484,7 @@ const AssignmentEdit = () => {
                 title: (
                   <span className="text-blue-600">
                     <EditOutlined className="mr-1" />
-                    Edit
+                    Chỉnh sửa
                   </span>
                 ),
               },
@@ -503,7 +503,7 @@ const AssignmentEdit = () => {
                 }
                 className="flex items-center hover:shadow-md transition-shadow"
               >
-                Back to Assignment
+                Quay lại Bài tập
               </Button>
 
               <div className="hidden md:flex items-center gap-3">
@@ -513,7 +513,7 @@ const AssignmentEdit = () => {
                   color="#52c41a"
                 >
                   <div className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
-                    Submissions
+                    Bài nộp
                   </div>
                 </Badge>
                 <Tag
@@ -539,7 +539,7 @@ const AssignmentEdit = () => {
                 }
                 className="hover:shadow-md transition-shadow"
               >
-                Cancel
+                Hủy bỏ
               </Button>
               <Button
                 type="primary"
@@ -549,7 +549,7 @@ const AssignmentEdit = () => {
                 className="bg-gradient-to-r from-blue-500 to-blue-600 border-0 hover:shadow-lg transition-all duration-300 px-6"
                 size="large"
               >
-                Save Changes
+                Lưu thay đổi
               </Button>
             </Space>
           </div>
@@ -565,16 +565,16 @@ const AssignmentEdit = () => {
             className="mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
           >
             <EditOutlined className="mr-3" />
-            Edit Assignment
+            Chỉnh sửa Bài tập
           </Title>
           <Paragraph className="text-gray-600 text-lg mb-6">
-            Update your assignment details, settings, and requirements
+            Cập nhật chi tiết, cài đặt và yêu cầu của bài tập
           </Paragraph>
 
           {/* Progress Bar */}
           <div className="max-w-md mx-auto mb-6">
             <div className="flex items-center gap-3">
-              <Text type="secondary">Completion:</Text>
+              <Text type="secondary">Hoàn thành:</Text>
               <Progress
                 percent={progressPercent}
                 size="small"
@@ -625,10 +625,10 @@ const AssignmentEdit = () => {
                     </div>
                     <div>
                       <Text strong className="text-lg">
-                        Basic Information
+                        Thông tin cơ bản
                       </Text>
                       <div className="text-sm text-gray-500">
-                        Essential assignment details
+                        Chi tiết cơ bản của bài tập
                       </div>
                     </div>
                   </div>
@@ -638,17 +638,17 @@ const AssignmentEdit = () => {
               >
                 <Form.Item
                   name="title"
-                  label={<Text strong>Assignment Title</Text>}
+                  label={<Text strong>Tiêu đề bài tập</Text>}
                   rules={[
                     {
                       required: true,
-                      message: "Please enter assignment title",
+                      message: "Vui lòng nhập tiêu đề bài tập",
                     },
-                    { min: 5, message: "Title must be at least 5 characters" },
+                    { min: 5, message: "Tiêu đề phải có ít nhất 5 ký tự" },
                   ]}
                 >
                   <Input
-                    placeholder="Enter a clear, descriptive title..."
+                    placeholder="Nhập một tiêu đề rõ ràng, mô tả..."
                     className="rounded-lg"
                     prefix={<EditOutlined className="text-gray-400" />}
                   />
@@ -656,21 +656,21 @@ const AssignmentEdit = () => {
 
                 <Form.Item
                   name="description"
-                  label={<Text strong>Description</Text>}
+                  label={<Text strong>Mô tả</Text>}
                   rules={[
                     {
                       required: true,
-                      message: "Please enter assignment description",
+                      message: "Vui lòng nhập mô tả bài tập",
                     },
                     {
                       min: 20,
-                      message: "Description must be at least 20 characters",
+                      message: "Mô tả phải có ít nhất 20 ký tự",
                     },
                   ]}
                 >
                   <TextArea
                     rows={4}
-                    placeholder="Provide a clear overview of what students need to do..."
+                    placeholder="Cung cấp một tổng quan rõ ràng về những gì học sinh cần làm..."
                     showCount
                     maxLength={2000}
                     className="rounded-lg"
@@ -679,12 +679,12 @@ const AssignmentEdit = () => {
 
                 <Form.Item
                   name="instructions"
-                  label={<Text strong>Detailed Instructions</Text>}
-                  extra="Provide step-by-step guidance, grading criteria, and submission requirements"
+                  label={<Text strong>Hướng dẫn chi tiết</Text>}
+                  extra="Cung cấp hướng dẫn bước nhảy, tiêu chí đánh giá và yêu cầu nộp bài"
                 >
                   <TextArea
                     rows={3}
-                    placeholder="Enter detailed instructions, guidelines, and grading criteria..."
+                    placeholder="Nhập hướng dẫn chi tiết, hướng dẫn và tiêu chí đánh giá..."
                     showCount
                     maxLength={3000}
                     className="rounded-lg"
@@ -701,10 +701,10 @@ const AssignmentEdit = () => {
                     </div>
                     <div>
                       <Text strong className="text-lg">
-                        Submission Settings
+                        Cài đặt nộp bài
                       </Text>
                       <div className="text-sm text-gray-500">
-                        Configure how students submit their work
+                        Cấu hình cách học sinh nộp bài của mình
                       </div>
                     </div>
                   </div>
@@ -713,11 +713,11 @@ const AssignmentEdit = () => {
               >
                 <Form.Item
                   name="submissionType"
-                  label={<Text strong>Submission Type</Text>}
+                  label={<Text strong>Loại nộp bài</Text>}
                   rules={[
                     {
                       required: true,
-                      message: "Please select submission type",
+                      message: "Vui lòng chọn loại nộp bài",
                     },
                   ]}
                 >
@@ -734,7 +734,7 @@ const AssignmentEdit = () => {
                         >
                           <div className="flex items-center justify-center gap-2">
                             <FileTextOutlined className="text-xl block mb-1" />
-                            <div>Text Only</div>
+                            <div>Chỉ nộp văn bản</div>
                           </div>
                         </Radio.Button>
                       </Col>
@@ -745,7 +745,7 @@ const AssignmentEdit = () => {
                         >
                           <div className="flex items-center justify-center gap-2">
                             <FileOutlined className="text-xl block mb-1" />
-                            <div>File Only</div>
+                            <div>Chỉ nộp tệp</div>
                           </div>
                         </Radio.Button>
                       </Col>
@@ -756,7 +756,7 @@ const AssignmentEdit = () => {
                         >
                           <div className="flex items-center justify-center gap-2">
                             <CloudUploadOutlined className="text-xl block mb-1" />
-                            <div>Both</div>
+                            <div>Cả hai</div>
                           </div>
                         </Radio.Button>
                       </Col>
@@ -769,7 +769,7 @@ const AssignmentEdit = () => {
                     <Col span={12}>
                       <Form.Item
                         name="maxFileSize"
-                        label={<Text strong>Max File Size (MB)</Text>}
+                        label={<Text strong>Dung lượng tệp tối đa (MB)</Text>}
                       >
                         <InputNumber
                           min={1}
@@ -783,11 +783,11 @@ const AssignmentEdit = () => {
                     <Col span={12}>
                       <Form.Item
                         name="allowedFileTypes"
-                        label={<Text strong>Allowed File Types</Text>}
+                        label={<Text strong>Các loại tệp được phép</Text>}
                       >
                         <Select
                           mode="multiple"
-                          placeholder="All file types"
+                          placeholder="Tất cả các loại tệp"
                           className="rounded-lg"
                         >
                           <Option value="pdf">📄 PDF</Option>
@@ -796,7 +796,7 @@ const AssignmentEdit = () => {
                           <Option value="ppt">📰 PowerPoint</Option>
                           <Option value="txt">📄 Text</Option>
                           <Option value="zip">🗜️ ZIP/RAR</Option>
-                          <Option value="image">🖼️ Images</Option>
+                          <Option value="image">🖼️ Hình ảnh</Option>
                         </Select>
                       </Form.Item>
                     </Col>
@@ -828,7 +828,7 @@ const AssignmentEdit = () => {
                         className="text-base"
                       >
                         <ClockCircleOutlined className="mr-1" />
-                        Allow late submission
+                        Cho phép nộp muộn
                       </Checkbox>
                     </Form.Item>
                   </Col>
@@ -836,8 +836,8 @@ const AssignmentEdit = () => {
                 
                 {allowLateSubmission && (
                   <Alert
-                    message="⚠️ Conflict Warning với Auto-Grade"
-                    description="Khi cho phép nộp muộn, bạn cần cài đặt số ngày tối đa để tránh conflict với chính sách auto-grade. Auto-grade chỉ có thể thực hiện sau khi hết thời gian nộp muộn."
+                    message="⚠️ Cảnh báo xung đột với Auto-Grade"
+                    description="Khi cho phép nộp muộn, bạn cần cài đặt số ngày tối đa để tránh xung đột với chính sách auto-grade. Auto-grade chỉ có thể thực hiện sau khi hết thời gian nộp muộn."
                     type="warning"
                     showIcon
                     className="mb-4"
@@ -849,10 +849,10 @@ const AssignmentEdit = () => {
                     <Col span={12}>
                       <Form.Item
                         name="maxLateDays"
-                        label={<Text strong>Max Late Days</Text>}
+                        label={<Text strong>Số ngày tối đa được nộp muộn</Text>}
                         rules={[
-                          { required: true, message: 'Please set max late days!' },
-                          { type: 'number', min: 1, max: 30, message: 'Must be 1-30 days' }
+                          { required: true, message: 'Vui lòng cài đặt số ngày tối đa được nộp muộn!' },
+                          { type: 'number', min: 1, max: 30, message: 'Phải là 1-30 ngày' }
                         ]}
                       >
                         <InputNumber
@@ -861,7 +861,7 @@ const AssignmentEdit = () => {
                           style={{ width: "100%" }}
                           placeholder="7"
                           className="rounded-lg"
-                          addonAfter="days"
+                          addonAfter="ngày"
                           onChange={(value) => {
                             // Auto-adjust auto-grade days when max late days changes
                             const currentAutoGradeDays = form.getFieldValue('daysAfterDueForAutoGrade');
@@ -870,7 +870,7 @@ const AssignmentEdit = () => {
                               form.setFieldsValue({
                                 daysAfterDueForAutoGrade: newAutoGradeDays
                               });
-                              message.info(`Auto-grade adjusted to ${newAutoGradeDays} days to avoid conflict`);
+                              message.info(`Auto-grade được đặt ${newAutoGradeDays} ngày để tránh xung đột`);
                             }
                           }}
                         />
@@ -879,7 +879,7 @@ const AssignmentEdit = () => {
                     <Col span={12}>
                       <Form.Item
                         name="latePenalty"
-                        label={<Text strong>Late Penalty (%/day)</Text>}
+                        label={<Text strong>Phạt nộp muộn (%/ngày)</Text>}
                       >
                         <InputNumber
                           min={0}
@@ -903,7 +903,7 @@ const AssignmentEdit = () => {
                       >
                         <Checkbox className="text-base">
                           <CheckCircleOutlined className="mr-1" />
-                          Require text submission
+                          Yêu cầu nộp văn bản
                         </Checkbox>
                       </Form.Item>
                     </Col>
@@ -914,7 +914,7 @@ const AssignmentEdit = () => {
                       >
                         <Checkbox className="text-base">
                           <CheckCircleOutlined className="mr-1" />
-                          <span className="text-base">Require file upload</span>
+                          <span className="text-base">Yêu cầu nộp tệp</span>
                         </Checkbox>
                       </Form.Item>
                     </Col>
@@ -931,10 +931,10 @@ const AssignmentEdit = () => {
                     </div>
                     <div>
                       <Text strong className="text-lg">
-                        Supporting Files
+                        Tệp đính kèm
                       </Text>
                       <div className="text-sm text-gray-500">
-                        Add reference materials and resources
+                        Thêm tài liệu tham khảo và tài nguyên
                       </div>
                     </div>
                   </div>
@@ -943,8 +943,8 @@ const AssignmentEdit = () => {
               >
                 <Form.Item
                   name="attachments"
-                  label={<Text strong>Upload Files (optional)</Text>}
-                  extra="Provide additional resources, templates, or reference materials"
+                  label={<Text strong>Tải lên tệp (tùy chọn)</Text>}
+                  extra="Cung cấp thêm tài nguyên, mẫu hoặc tài liệu tham khảo"
                 >
                   <Upload.Dragger
                     multiple
@@ -958,11 +958,11 @@ const AssignmentEdit = () => {
                       <CloudUploadOutlined className="text-blue-500 text-4xl" />
                     </p>
                     <p className="ant-upload-text text-lg font-medium">
-                      Click or drag files to upload
+                      Kéo hoặc thả tệp để tải lên
                     </p>
                     <p className="ant-upload-hint text-gray-500">
-                      Support: PDF, Word, Excel, PowerPoint, ZIP, RAR (max 50MB
-                      per file)
+                      Hỗ trợ: PDF, Word, Excel, PowerPoint, ZIP, RAR (tối đa 50MB
+                      mỗi tệp)
                     </p>
                   </Upload.Dragger>
                 </Form.Item>
@@ -978,7 +978,7 @@ const AssignmentEdit = () => {
                     <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                       <TrophyOutlined className="text-white text-sm" />
                     </div>
-                    <Text strong>Timing & Scoring</Text>
+                    <Text strong>Thời gian & Điểm số</Text>
                   </div>
                 }
                 className="mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border-0"
@@ -986,14 +986,14 @@ const AssignmentEdit = () => {
               >
                 <Form.Item
                   name="totalPoints"
-                  label={<Text strong>Total Points</Text>}
+                  label={<Text strong>Tổng điểm</Text>}
                   rules={[
-                    { required: true, message: "Please enter total points" },
+                    { required: true, message: "Vui lòng nhập tổng điểm" },
                     {
                       type: "number",
                       min: 1,
                       max: 1000,
-                      message: "Points must be 1-1000",
+                      message: "Điểm phải là 1-1000",
                     },
                   ]}
                 >
@@ -1009,15 +1009,15 @@ const AssignmentEdit = () => {
 
                 <Form.Item
                   name="dueDate"
-                  label={<Text strong>Due Date</Text>}
+                  label={<Text strong>Ngày hết hạn</Text>}
                   rules={[
-                    { required: true, message: "Please select due date" },
+                    { required: true, message: "Vui lòng chọn ngày hết hạn" },
                   ]}
                 >
                   <DatePicker
                     showTime
                     format="DD/MM/YYYY HH:mm"
-                    placeholder="Select due date"
+                    placeholder="Chọn ngày hết hạn"
                     style={{ width: "100%" }}
                     className="rounded-lg"
                   />
@@ -1025,12 +1025,12 @@ const AssignmentEdit = () => {
 
                 <Form.Item
                   name="publishDate"
-                  label={<Text strong>Publish Date</Text>}
+                  label={<Text strong>Ngày xuất bản</Text>}
                 >
                   <DatePicker
                     showTime
                     format="DD/MM/YYYY HH:mm"
-                    placeholder="Publish immediately"
+                    placeholder="Xuất bản ngay lập tức"
                     style={{ width: "100%" }}
                     className="rounded-lg"
                   />
@@ -1044,7 +1044,7 @@ const AssignmentEdit = () => {
                     <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
                       <GlobalOutlined className="text-white text-sm" />
                     </div>
-                    <Text strong>Publishing</Text>
+                    <Text strong>Xuất bản</Text>
                   </div>
                 }
                 className="mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border-0"
@@ -1052,41 +1052,41 @@ const AssignmentEdit = () => {
               >
                 <Form.Item
                   name="visibility"
-                  label={<Text strong>Status</Text>}
-                  rules={[{ required: true, message: "Please select status" }]}
+                  label={<Text strong>Trạng thái</Text>}
+                  rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
                 >
                   <Select className="rounded-lg">
                     <Option value="draft">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                        Draft
+                        Nháp
                       </div>
                     </Option>
                     <Option value="published">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        Published
+                        Xuất bản
                       </div>
                     </Option>
                     <Option value="scheduled">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        Scheduled
+                        Lên lịch
                       </div>
                     </Option>
                   </Select>
                 </Form.Item>
 
-                <Form.Item name="tags" label={<Text strong>Tags</Text>}>
+                <Form.Item name="tags" label={<Text strong>Thẻ</Text>}>
                   <Select
                     mode="tags"
-                    placeholder="Add tags for easy search"
+                    placeholder="Thêm thẻ để dễ tìm kiếm"
                     className="rounded-lg"
                   >
-                    <Option value="homework">📚 Homework</Option>
-                    <Option value="project">🚀 Project</Option>
-                    <Option value="lab">🔬 Lab</Option>
-                    <Option value="essay">✍️ Essay</Option>
+                    <Option value="homework">📚 Bài tập</Option>
+                    <Option value="project">🚀 Dự án</Option>
+                    <Option value="lab">🔬 Thí nghiệm</Option>
+                    <Option value="essay">✍️ Bài viết</Option>
                   </Select>
                 </Form.Item>
               </Card>
@@ -1098,7 +1098,7 @@ const AssignmentEdit = () => {
                     <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-lg flex items-center justify-center">
                       <RobotOutlined className="text-white text-sm" />
                     </div>
-                    <Text strong>Missing Submissions</Text>
+                    <Text strong>Bài nộp bị thiếu</Text>
                   </div>
                 }
                 className="mb-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border-0"
@@ -1129,7 +1129,7 @@ const AssignmentEdit = () => {
                             autoGradeValue: 0, 
                             daysAfterDueForAutoGrade: minAutoGradeDays 
                           });
-                          message.success(`Auto-grade được đặt ${minAutoGradeDays} ngày để tránh conflict với late submission`);
+                          message.success(`Auto-grade được đặt ${minAutoGradeDays} ngày để tránh xung đột với late submission`);
                         } else {
                           form.setFieldsValue({ 
                             autoGradeValue: 0, 
@@ -1146,7 +1146,7 @@ const AssignmentEdit = () => {
                     className="text-sm"
                   >
                     <RobotOutlined className="mr-1" />
-                    Auto-grade when overdue
+                    Auto-grade khi hết hạn
                   </Checkbox>
                 </Form.Item>
                 
@@ -1170,7 +1170,7 @@ const AssignmentEdit = () => {
                           name="autoGradeValue"
                           label={
                             <Text strong className="text-xs">
-                              Grade
+                              Điểm
                             </Text>
                           }
                           className="mb-2"
@@ -1189,7 +1189,7 @@ const AssignmentEdit = () => {
                           name="daysAfterDueForAutoGrade"
                           label={
                             <Text strong className="text-xs">
-                              Days
+                              Ngày
                             </Text>
                           }
                           className="mb-2"
@@ -1200,7 +1200,7 @@ const AssignmentEdit = () => {
                                   const maxLateDays = form.getFieldValue('maxLateDays');
                                   if (maxLateDays && value && value <= maxLateDays) {
                                     return Promise.reject(
-                                      `Must be greater than ${maxLateDays} days (max late days)`
+                                      `Phải lớn hơn ${maxLateDays} ngày (số ngày tối đa được nộp muộn)`
                                     );
                                   }
                                 }
@@ -1219,7 +1219,7 @@ const AssignmentEdit = () => {
                               if (allowLateSubmission) {
                                 const maxLateDays = form.getFieldValue('maxLateDays');
                                 if (maxLateDays && value <= maxLateDays) {
-                                  message.warning(`Auto-grade must be after ${maxLateDays} days to avoid conflict with late submission!`);
+                                  message.warning(`Auto-grade phải sau ${maxLateDays} ngày để tránh xung đột với late submission!`);
                                 }
                               }
                             }}
@@ -1228,7 +1228,7 @@ const AssignmentEdit = () => {
                       </Col>
                     </Row>
                     <Alert
-                      message="Will auto-grade after deadline"
+                      message="Sẽ auto-grade sau ngày hết hạn"
                       type="warning"
                       showIcon
                       className="mt-2"
@@ -1247,7 +1247,7 @@ const AssignmentEdit = () => {
                     className="text-sm"
                   >
                     <TeamOutlined className="mr-1" />
-                    Allow bulk grading
+                    Cho phép đánh giá nhiều học sinh
                   </Checkbox>
                 </Form.Item>
 
@@ -1266,7 +1266,7 @@ const AssignmentEdit = () => {
                     className="text-sm"
                   >
                     <BellOutlined className="mr-1" />
-                    Notify students
+                    Thông báo cho học sinh
                   </Checkbox>
                 </Form.Item>
 
@@ -1276,23 +1276,23 @@ const AssignmentEdit = () => {
                       name="reminderDaysBeforeDue"
                       label={
                         <Text strong className="text-xs">
-                          Reminder days
+                          Ngày nhắc nhở
                         </Text>
                       }
                       className="mb-0"
                     >
                       <Select
                         mode="multiple"
-                        placeholder="Select days"
+                        placeholder="Chọn ngày"
                         style={{ width: "100%" }}
                         size="small"
                         allowClear
                       >
-                        <Option value={1}>1 day</Option>
-                        <Option value={2}>2 days</Option>
-                        <Option value={3}>3 days</Option>
-                        <Option value={5}>5 days</Option>
-                        <Option value={7}>7 days</Option>
+                        <Option value={1}>1 ngày</Option>
+                        <Option value={2}>2 ngày</Option>
+                        <Option value={3}>3 ngày</Option>
+                        <Option value={5}>5 ngày</Option>
+                        <Option value={7}>7 ngày</Option>
                       </Select>
                     </Form.Item>
                   </div>
@@ -1301,13 +1301,13 @@ const AssignmentEdit = () => {
 
               {/* Quick Stats */}
               <Card
-                title={<Text strong>Quick Stats</Text>}
+                title={<Text strong>Thống kê nhanh</Text>}
                 className="shadow-lg border-0"
                 size="small"
               >
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <Text type="secondary">Current Status:</Text>
+                    <Text type="secondary">Trạng thái hiện tại:</Text>
                     <Tag
                       color={
                         assignmentData.visibility === "published"
@@ -1320,7 +1320,7 @@ const AssignmentEdit = () => {
                     </Tag>
                   </div>
                   <div className="flex justify-between items-center">
-                    <Text type="secondary">Submissions:</Text>
+                    <Text type="secondary">Bài nộp:</Text>
                     <Badge
                       count={assignmentData.submissions?.length || 0}
                       showZero
@@ -1328,7 +1328,7 @@ const AssignmentEdit = () => {
                     />
                   </div>
                   <div className="flex justify-between items-center">
-                    <Text type="secondary">Created:</Text>
+                    <Text type="secondary">Tạo lúc:</Text>
                     <Text>
                       {dayjs(assignmentData.createdAt).format(
                         "HH:mm DD/MM/YYYY"
@@ -1341,13 +1341,13 @@ const AssignmentEdit = () => {
                     assignmentData.submissions?.length > 0 && (
                       <div className="mt-4 pt-3 border-t border-gray-200">
                         <Alert
-                          message="⚠️ Edit Restrictions"
+                          message="⚠️ Hạn chế chỉnh sửa"
                           description={
                             <div className="text-xs">
-                              <div>• Cannot change submission type</div>
-                              <div>• Cannot shorten due date</div>
+                              <div>• Không thể thay đổi loại nộp bài</div>
+                              <div>• Không thể rút ngắn ngày hết hạn</div>
                               <div>
-                                • Cannot decrease total points if graded
+                                • Không thể giảm điểm tổng nếu đã đánh giá
                               </div>
                             </div>
                           }
@@ -1375,7 +1375,7 @@ const AssignmentEdit = () => {
               }
               className="px-8 hover:shadow-md transition-shadow"
             >
-              Cancel Changes
+              Hủy bỏ thay đổi
             </Button>
             <Button
               type="primary"
@@ -1385,7 +1385,7 @@ const AssignmentEdit = () => {
               onClick={handleSave}
               className="bg-gradient-to-r from-blue-500 to-blue-600 border-0 hover:shadow-lg transition-all duration-300 px-12"
             >
-              {loading ? "Saving..." : "Save Assignment"}
+              {loading ? "Đang lưu..." : "Lưu bài tập"}
             </Button>
           </Space>
         </div>

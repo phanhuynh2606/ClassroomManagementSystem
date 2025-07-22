@@ -63,27 +63,27 @@ const ClassroomManagement = () => {
     const statusConfig = {
       active: {
         type: 'success',
-        text: 'Active'
+        text: 'Đang hoạt động'
       },
       inactive: {
         type: 'default',
-        text: 'Inactive'
+        text: 'Không hoạt động'
       },
       pending_delete: {
         type: 'error',
-        text: 'Pending Delete'
+        text: 'Chờ xóa'
       },
       pending_edit: {
         type: 'warning',
-        text: 'Pending Edit'
+        text: 'Chờ chỉnh sửa'
       },
       pending_creation: {
         type: 'warning',
-        text: 'Pending Creation'
+        text: 'Chờ tạo mới'
       },
       deleted: {
         type: 'default',
-        text: 'Deleted'
+        text: 'Đã xóa'
       }
     };
     
@@ -145,27 +145,8 @@ const ClassroomManagement = () => {
             onClick={() => onView(classItem._id)}
             icon={<EyeOutlined />}
           >
-            View
+            Xem chi tiết
           </Button>,
-          // canEdit && (
-          //   <Button 
-          //     type="link" 
-          //     onClick={() => onEdit(classItem._id)}
-          //     icon={<EditOutlined />}
-          //   >
-          //     Edit
-          //   </Button>
-          // ),
-          // canEdit && (
-          //   <Button 
-          //     type="link" 
-          //     danger
-          //     onClick={() => onDelete(classItem._id)}
-          //     icon={<DeleteOutlined />}
-          //   >
-          //     Delete
-          //   </Button>
-          // )
         ].filter(Boolean)}
       >
         <Card.Meta
@@ -177,8 +158,8 @@ const ClassroomManagement = () => {
           }
           description={
             <Space direction="vertical" size="small">
-              <Text>Code: {classItem.code}</Text>
-              <Text>Students: {classItem.students?.length || 0}/{classItem.maxStudents}</Text>
+              <Text>Mã lớp: {classItem.code}</Text>
+              <Text>Học sinh: {classItem.students?.length || 0}/{classItem.maxStudents}</Text>
             </Space>
           }
         />
@@ -187,7 +168,7 @@ const ClassroomManagement = () => {
   };
 
   const ClassList = () => (
-    <Spin spinning={loading}>
+    <Spin spinning={loading} tip="Đang tải danh sách lớp...">
       <div>
         <Row gutter={[24, 24]}>
           {classes.map((classItem) => (
@@ -199,7 +180,7 @@ const ClassroomManagement = () => {
             <Col span={24}>
               <div className="text-center py-12">
                 <Text type="secondary" className="text-lg">
-                  No classrooms found. Create your first classroom to get started.
+                  Không có lớp nào. Hãy tạo lớp học đầu tiên để bắt đầu.
                 </Text>
               </div>
             </Col>
@@ -212,12 +193,12 @@ const ClassroomManagement = () => {
   const tabItems = [
     {
       key: 'list',
-      label: 'Classroom List',
+      label: 'Danh sách lớp học',
       children: <ClassList />
     },
     {
       key: 'create',
-      label: 'Create New Classroom',
+      label: 'Tạo lớp học mới',
       children: <CreateClassForm onSuccess={() => {
         setActiveTab('list');
         fetchClassrooms();
@@ -229,7 +210,7 @@ const ClassroomManagement = () => {
     <div className="p-6">
       <div className="mb-6">
         <Title level={2} className="mb-2">
-          Classroom Management System
+          Quản lý lớp học
         </Title>
       </div>
 

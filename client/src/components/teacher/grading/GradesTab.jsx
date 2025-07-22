@@ -155,7 +155,7 @@ console.log("ClassroomId", classroomId);
   // Create dynamic columns
   const columns = [
     {
-      title: 'Student',
+      title: 'Học sinh',
       dataIndex: 'name',
       key: 'name',
       fixed: 'left',
@@ -179,10 +179,10 @@ console.log("ClassroomId", classroomId);
         <div className="text-center">
           <div className="font-medium">{assignment.title}</div>
           <Text type="secondary" className="text-xs">
-            /{assignment.maxPoints} pts
+            /{assignment.maxPoints} điểm
           </Text>
           <Tag color={assignment.type === 'assignment' ? 'blue' : 'purple'} style={{ marginTop: 4 }}>
-            {assignment.type === 'assignment' ? 'Assignment' : 'Quiz'}
+            {assignment.type === 'assignment' ? 'Bài tập' : 'Quiz'}
           </Tag>
         </div>
       ),
@@ -225,14 +225,14 @@ console.log("ClassroomId", classroomId);
               icon={<EditOutlined />}
               onClick={() => handleEditGrade(student, assignment)}
             >
-              Edit
+              Sửa điểm
             </Button>
           </div>
         );
       }
     })),
     {
-      title: 'Average',
+      title: 'Trung bình',
       key: 'average',
       width: 100,
       align: 'center',
@@ -277,7 +277,7 @@ console.log("ClassroomId", classroomId);
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <Title level={3} className="mb-0">📊 Bảng điểm & Thống kê</Title>
+        <Title level={3} className="mb-0">Bảng điểm & Thống kê</Title>
         <Space.Compact>
           <Button 
             icon={<FileExcelOutlined />}
@@ -296,7 +296,7 @@ console.log("ClassroomId", classroomId);
             icon={<DownloadOutlined />}
             onClick={handleExportCSV}
           >
-            CSV
+            Xuất CSV
           </Button>
           <Button 
             icon={<PrinterOutlined />}
@@ -308,7 +308,7 @@ console.log("ClassroomId", classroomId);
             icon={<UploadOutlined />}
             type="dashed"
           >
-            Import
+            Nhập
           </Button>
         </Space.Compact>
       </div>
@@ -422,11 +422,11 @@ console.log("ClassroomId", classroomId);
           </Card>
         </Col>
         <Col span={12}>
-          <Card title="📊 Tiến độ nộp bài theo assignment" size="small">
+          <Card title="📊 Tiến độ nộp bài theo bài" size="small">
             <div className="space-y-3">
               {/* This section will need to be updated to use actual data */}
               {/* For now, it will show a placeholder or empty */}
-              <Text type="secondary">Tiến độ nộp bài theo assignment sẽ được cập nhật sau khi tải dữ liệu.</Text>
+              <Text type="secondary">Tiến độ nộp bài theo bài sẽ được cập nhật sau khi tải dữ liệu.</Text>
             </div>
           </Card>
         </Col>
@@ -451,16 +451,16 @@ console.log("ClassroomId", classroomId);
                 placeholder="Lọc theo loại bài"
               >
                 <Option value="all">Tất cả loại</Option>
-                <Option value="assignment">Assignment</Option>
+                <Option value="assignment">Bài tập</Option>
                 <Option value="quiz">Quiz</Option>
               </Select>
               <Select
                 value={filterAssignment}
                 onChange={setFilterAssignment}
                 style={{ width: 180 }}
-                placeholder="Lọc theo bài tập"
+                placeholder="Lọc theo bài"
               >
-                <Option value="all">Tất cả bài tập</Option>
+                <Option value="all">Tất cả bài</Option>
                 {assignments
                   .filter(a => filterAssignmentType === 'all' ? true : a.type === filterAssignmentType)
                   .map(assignment => (
@@ -495,14 +495,14 @@ console.log("ClassroomId", classroomId);
 
       {/* Edit Grade Modal */}
       <Modal
-        title={`Edit Grade - ${selectedStudent?.name} - ${selectedAssignment?.title}`}
+        title={`Sửa điểm - ${selectedStudent?.name} - ${selectedAssignment?.title}`}
         open={editModalVisible}
         onOk={() => form.submit()}
         onCancel={() => {
           setEditModalVisible(false);
           form.resetFields();
         }}
-        okText="Save Grade"
+        okText="Lưu điểm"
         width={500}
       >
         <Form
@@ -512,16 +512,16 @@ console.log("ClassroomId", classroomId);
         >
           <Form.Item
             name="score"
-            label={`Score (out of ${selectedAssignment?.maxPoints} points)`}
+            label={`Điểm (trên ${selectedAssignment?.maxPoints} điểm)`}
             rules={[
-              { required: true, message: 'Please enter a score' },
+              { required: true, message: 'Vui lòng nhập điểm' },
               { type: 'number', min: 0, max: selectedAssignment?.maxPoints, 
-                message: `Score must be between 0 and ${selectedAssignment?.maxPoints}` }
+                message: `Điểm phải nằm trong khoảng 0 và ${selectedAssignment?.maxPoints}` }
             ]}
           >
             <InputNumber
               style={{ width: '100%' }}
-              placeholder="Enter score"
+              placeholder="Nhập điểm"
               min={0}
               max={selectedAssignment?.maxPoints}
             />
@@ -529,11 +529,11 @@ console.log("ClassroomId", classroomId);
 
           <Form.Item
             name="feedback"
-            label="Feedback (optional)"
+            label="Phản hồi (tùy chọn)"
           >
             <Input.TextArea
               rows={4}
-              placeholder="Enter feedback for the student"
+              placeholder="Nhập phản hồi cho học sinh"
             />
           </Form.Item>
         </Form>

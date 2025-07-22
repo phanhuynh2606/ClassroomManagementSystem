@@ -210,9 +210,9 @@ const TeacherRequestManagement = () => {
   // Get type label
   const getTypeLabel = (type) => {
     switch (type) {
-      case 'classroom_creation': return 'Classroom Creation';
-      case 'classroom_deletion': return 'Classroom Deletion';
-      case 'classroom_edit': return 'Classroom Edit';
+      case 'classroom_creation': return 'Tạo lớp học';
+      case 'classroom_deletion': return 'Xóa lớp học';
+      case 'classroom_edit': return 'Chỉnh sửa lớp học';
       default: return type;
     }
   };
@@ -220,7 +220,7 @@ const TeacherRequestManagement = () => {
   // Table columns
   const columns = [
     {
-      title: 'Type',
+      title: 'Loại yêu cầu',
       dataIndex: 'type',
       key: 'type',
       render: (type) => (
@@ -232,7 +232,7 @@ const TeacherRequestManagement = () => {
       ),
     },
     {
-      title: 'Classroom',
+      title: 'Lớp học',
       dataIndex: 'classroom',
       key: 'classroom',
       render: (classroom) => classroom ? (
@@ -244,29 +244,29 @@ const TeacherRequestManagement = () => {
       ) : '-'
     },
     {
-      title: 'Status',
+      title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
       render: (status) => (
         <Tag icon={getStatusIcon(status)} color={getStatusColor(status)}>
-          {status.toUpperCase()}
+          {status === 'pending' ? 'Chờ duyệt' : status === 'approved' ? 'Đã duyệt' : status === 'rejected' ? 'Từ chối' : status}
         </Tag>
       ),
     },
     {
-      title: 'Requested Date',
+      title: 'Ngày gửi',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (date) => new Date(date).toLocaleString(),
     },
     {
-      title: 'Reviewed Date',
+      title: 'Ngày xử lý',
       dataIndex: 'reviewedAt',
       key: 'reviewedAt',
       render: (date) => date ? new Date(date).toLocaleString() : '-',
     },
     {
-      title: 'Actions',
+      title: 'Hành động',
       key: 'actions',
       width: 150,
       render: (_, record) => (
@@ -276,22 +276,22 @@ const TeacherRequestManagement = () => {
             icon={<EyeOutlined />}
             onClick={() => handleViewDetails(record)}
           >
-            View
+            Xem
           </Button>
           {record.status === 'pending' && (
             <Popconfirm
-              title="Cancel Request"
-              description="Are you sure you want to cancel this request?"
+              title="Hủy yêu cầu"
+              description="Bạn có chắc chắn muốn hủy yêu cầu này?"
               onConfirm={() => handleCancelRequest(record._id)}
-              okText="Yes"
-              cancelText="No"
+              okText="Có"
+              cancelText="Không"
             >
               <Button
                 size="small"
                 danger
                 icon={<DeleteOutlined />}
               >
-                Cancel
+                Hủy
               </Button>
             </Popconfirm>
           )}
@@ -306,7 +306,7 @@ const TeacherRequestManagement = () => {
       key: 'all',
       label: (
         <Badge count={stats.total} offset={[10, 0]}>
-          All Requests
+          Tất cả yêu cầu
         </Badge>
       ),
     },
@@ -316,7 +316,7 @@ const TeacherRequestManagement = () => {
         <Badge count={stats.pending} offset={[10, 0]}>
           <Space>
             <ClockCircleOutlined />
-            Pending
+            Chờ duyệt
           </Space>
         </Badge>
       ),
@@ -327,7 +327,7 @@ const TeacherRequestManagement = () => {
         <Badge count={stats.approved} offset={[10, 0]}>
           <Space>
             <CheckCircleOutlined />
-            Approved
+            Đã duyệt
           </Space>
         </Badge>
       ),
@@ -338,7 +338,7 @@ const TeacherRequestManagement = () => {
         <Badge count={stats.rejected} offset={[10, 0]}>
           <Space>
             <CloseCircleOutlined />
-            Rejected
+            Từ chối
           </Space>
         </Badge>
       ),
@@ -348,9 +348,9 @@ const TeacherRequestManagement = () => {
   return (
     <div style={{ padding: '24px' }}>
       <div style={{ marginBottom: '24px' }}>
-        <Title level={2}>My Requests</Title>
+        <Title level={2}>Yêu cầu của tôi</Title>
         <Text type="secondary">
-          Manage your classroom requests and track their status
+          Quản lý các yêu cầu liên quan đến lớp học và theo dõi trạng thái xử lý
         </Text>
       </div>
 
@@ -359,7 +359,7 @@ const TeacherRequestManagement = () => {
         <Col span={6}>
           <Card>
             <Statistic 
-              title="Total Requests" 
+              title="Tổng số yêu cầu" 
               value={stats.total}
               prefix={<ExclamationCircleOutlined />}
             />
@@ -368,7 +368,7 @@ const TeacherRequestManagement = () => {
         <Col span={6}>
           <Card>
             <Statistic 
-              title="Pending" 
+              title="Chờ duyệt" 
               value={stats.pending} 
               valueStyle={{ color: '#fa8c16' }}
               prefix={<ClockCircleOutlined />}
@@ -378,7 +378,7 @@ const TeacherRequestManagement = () => {
         <Col span={6}>
           <Card>
             <Statistic 
-              title="Approved" 
+              title="Đã duyệt" 
               value={stats.approved} 
               valueStyle={{ color: '#52c41a' }}
               prefix={<CheckCircleOutlined />}
@@ -388,7 +388,7 @@ const TeacherRequestManagement = () => {
         <Col span={6}>
           <Card>
             <Statistic 
-              title="Rejected" 
+              title="Từ chối" 
               value={stats.rejected} 
               valueStyle={{ color: '#f5222d' }}
               prefix={<CloseCircleOutlined />}
@@ -399,9 +399,9 @@ const TeacherRequestManagement = () => {
 
       {/* Quick Actions */}
       <Card style={{ marginBottom: '24px' }}>
-        <Title level={4}>Quick Actions</Title>
+        <Title level={4}>Tác vụ nhanh</Title>
         <Text type="secondary" style={{ display: 'block', marginBottom: '16px' }}>
-          Create edit requests for your classrooms
+          Tạo yêu cầu chỉnh sửa cho lớp học của bạn
         </Text>
         
         {classrooms.length > 0 ? (
@@ -416,7 +416,7 @@ const TeacherRequestManagement = () => {
                       icon={<EditOutlined />}
                       onClick={() => handleCreateEditRequest(classroom)}
                     >
-                      Request Edit
+                      Yêu cầu chỉnh sửa
                     </Button>
                   ]}
                 >
@@ -438,7 +438,7 @@ const TeacherRequestManagement = () => {
             ))}
           </Row>
         ) : (
-          <Empty description="No classrooms available to edit" />
+          <Empty description="Không có lớp học để chỉnh sửa" />
         )}
       </Card>
 
@@ -515,27 +515,27 @@ const TeacherRequestManagement = () => {
 
       {/* Detail Modal */}
       <Modal
-        title="Request Details"
+        title="Chi tiết yêu cầu"
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={[
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
-            Close
+            Đóng
           </Button>,
           selectedRequest?.status === 'pending' && (
             <Popconfirm
               key="cancel"
-              title="Cancel Request"
-              description="Are you sure you want to cancel this request?"
+              title="Hủy yêu cầu"
+              description="Bạn có chắc chắn muốn hủy yêu cầu này?"
               onConfirm={() => {
                 handleCancelRequest(selectedRequest._id);
                 setDetailModalVisible(false);
               }}
-              okText="Yes"
-              cancelText="No"
+              okText="Có"
+              cancelText="Không"
             >
               <Button danger icon={<DeleteOutlined />}>
-                Cancel Request
+                Hủy yêu cầu
               </Button>
             </Popconfirm>
           )
@@ -549,18 +549,18 @@ const TeacherRequestManagement = () => {
 
       {/* Edit Request Modal */}
       <Modal
-        title="Create Edit Request"
+        title="Tạo yêu cầu chỉnh sửa"
         open={editRequestModalVisible}
         onOk={handleEditRequestSubmit}
         onCancel={() => {
           setEditRequestModalVisible(false);
           editForm.resetFields();
         }}
-        okText="Submit Request"
+        okText="Gửi yêu cầu"
         width={600}
       >
         <div style={{ marginBottom: '16px' }}>
-          <Text strong>Classroom: </Text>
+          <Text strong>Lớp học: </Text>
           <Text>{selectedClassroom?.name} ({selectedClassroom?.code})</Text>
         </div>
         <Divider />
@@ -568,53 +568,53 @@ const TeacherRequestManagement = () => {
         <Form form={editForm} layout="vertical">
           <Form.Item
             name="name"
-            label="Classroom Name"
+            label="Tên lớp học"
             rules={[
-              { required: true, message: 'Please enter classroom name' },
-              { min: 3, message: 'Name must be at least 3 characters' }
+              { required: true, message: 'Vui lòng nhập tên lớp học' },
+              { min: 3, message: 'Tên phải có ít nhất 3 ký tự' }
             ]}
           >
-            <Input placeholder="Enter classroom name" />
+            <Input placeholder="Nhập tên lớp học" />
           </Form.Item>
 
           <Form.Item
             name="description"
-            label="Description"
-            rules={[{ required: true, message: 'Please enter description' }]}
+            label="Mô tả"
+            rules={[{ required: true, message: 'Vui lòng nhập mô tả' }]}
           >
-            <TextArea rows={3} placeholder="Enter classroom description" />
+            <TextArea rows={3} placeholder="Nhập mô tả lớp học" />
           </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="subject"
-                label="Subject"
-                rules={[{ required: true, message: 'Please enter subject' }]}
+                label="Môn học"
+                rules={[{ required: true, message: 'Vui lòng nhập môn học' }]}
               >
-                <Input placeholder="Enter subject" />
+                <Input placeholder="Nhập môn học" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="grade"
-                label="Grade"
-                rules={[{ required: true, message: 'Please enter grade' }]}
+                label="Khối lớp"
+                rules={[{ required: true, message: 'Vui lòng nhập khối lớp' }]}
               >
-                <Input placeholder="Enter grade" />
+                <Input placeholder="Nhập khối lớp" />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item
             name="maxStudents"
-            label="Maximum Students"
+            label="Sĩ số tối đa"
             rules={[
-              { required: true, message: 'Please enter maximum students' },
-              { type: 'number', min: 1, message: 'Must be at least 1' }
+              { required: true, message: 'Vui lòng nhập sĩ số tối đa' },
+              { type: 'number', min: 1, message: 'Phải lớn hơn 0' }
             ]}
           >
-            <Input type="number" placeholder="Enter maximum students" />
+            <Input type="number" placeholder="Nhập sĩ số tối đa" />
           </Form.Item>
         </Form>
       </Modal>

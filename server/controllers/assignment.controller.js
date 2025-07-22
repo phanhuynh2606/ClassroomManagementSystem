@@ -1618,6 +1618,6 @@ module.exports = {
   getAssignmentSubmissions,
   autoGradeMissingSubmissions,
   bulkGradeMissingSubmissions,
-  sendReminderEmails
+  sendReminderEmails,
   getAssignmentsByStudent
 }; 

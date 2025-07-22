@@ -331,7 +331,8 @@ const MaterialList = ({ classId, classData }) => {
 
   const materialColumns = [
     {
-      title: "Title",
+      width: 150,
+      title: "Tiêu đề",
       dataIndex: "title",
       key: "title",
       filteredValue: materialSearchText ? [materialSearchText] : null,
@@ -352,9 +353,10 @@ const MaterialList = ({ classId, classData }) => {
           </div>
         </div>
       ),
+      
     },
     {
-      title: "Type",
+      title: "Loại",
       dataIndex: "type",
       key: "type",
       width: 150,
@@ -363,14 +365,14 @@ const MaterialList = ({ classId, classData }) => {
       ),
     },
     {
-      title: "File Size",
+      title: "Kích thước",
       dataIndex: "fileSize",
       key: "fileSize",
       width: 100,
       render: (size) => formatFileSize(size),
     },
     {
-      title: "Downloads",
+      title: "Tải xuống",
       dataIndex: "downloadCount",
       key: "downloadCount",
       width: 100,
@@ -380,7 +382,7 @@ const MaterialList = ({ classId, classData }) => {
       ),
     },
     {
-      title: "Views",
+      title: "Xem",
       dataIndex: "viewCount",
       key: "viewCount",
       width: 100,
@@ -390,7 +392,7 @@ const MaterialList = ({ classId, classData }) => {
       ),
     },
     {
-      title: "Visibility",
+      title: "Hiển thị",
       dataIndex: "isPublic",
       key: "isPublic",
       width: 100,
@@ -402,7 +404,7 @@ const MaterialList = ({ classId, classData }) => {
       ),
     },
     {
-      title: "Tags",
+      title: "Thẻ",
       dataIndex: "tags",
       key: "tags",
       width: 150,
@@ -420,7 +422,7 @@ const MaterialList = ({ classId, classData }) => {
       ),
     },
     {
-      title: "Created",
+      title: "Ngày tải lên",
       dataIndex: "createdAt",
       key: "createdAt",
       width: 120,
@@ -428,7 +430,7 @@ const MaterialList = ({ classId, classData }) => {
       render: (date) => new Date(date).toLocaleDateString(),
     },
     {
-      title: "Actions",
+      title: "Hành động",
       key: "actions",
       width: 120,
       render: (_, record) => (
@@ -464,7 +466,7 @@ const MaterialList = ({ classId, classData }) => {
     <div>
       <div className="flex justify-between items-center mb-4">
         <Search
-          placeholder="Search materials, descriptions, tags..."
+          placeholder="Tìm kiếm tài liệu, mô tả, thẻ..."
           value={materialSearchText}
           onChange={(e) => setMaterialSearchText(e.target.value)}
           onSearch={setMaterialSearchText}
@@ -472,14 +474,14 @@ const MaterialList = ({ classId, classData }) => {
           prefix={<SearchOutlined />}
         />
         <div className="flex items-center gap-4">
-          <Text type="secondary">Total: {materialsData.length} materials</Text>
+          <Text type="secondary">Tổng: {materialsData.length} tài liệu</Text>
           {classData?.status === "active" && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleCreateMaterial}
             >
-              Upload Material
+              Tải lên
             </Button>
           )}
         </div>
@@ -495,18 +497,18 @@ const MaterialList = ({ classId, classData }) => {
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) =>
-            `${range[0]}-${range[1]} of ${total} materials`,
+            `${range[0]}-${range[1]} của ${total} tài liệu`,
         }}
         locale={{
           emptyText: materialsLoading
-            ? "Loading..."
-            : "No materials uploaded yet",
+            ? "Đang tải..."
+            : "Chưa có tài liệu nào được tải lên",
         }}
       />
 
       {/* Create/Edit Material Modal */}
       <Modal
-        title={isEditMode ? "Edit Material" : "Upload New Material"}
+        title={isEditMode ? "Sửa tài liệu" : "Tải lên tài liệu mới"}
         open={createEditModalVisible}
         onCancel={handleCancelCreateEdit}
         footer={null}
@@ -520,26 +522,26 @@ const MaterialList = ({ classId, classData }) => {
         >
           <Form.Item
             name="title"
-            label="Title"
-            rules={[{ required: true, message: "Please enter material title" }]}
+            label="Tiêu đề"
+            rules={[{ required: true, message: "Vui lòng nhập tiêu đề tài liệu" }]}
           >
-            <Input placeholder="Enter material title" />
+            <Input placeholder="Nhập tiêu đề tài liệu" />
           </Form.Item>
 
-          <Form.Item name="description" label="Description">
+          <Form.Item name="description" label="Mô tả">
             <TextArea
               rows={3}
-              placeholder="Enter material description (optional)"
+              placeholder="Nhập mô tả tài liệu (tùy chọn)"
             />
           </Form.Item>
 
           <Form.Item
-            label={isEditMode ? "Update File (optional)" : "Upload File"}
+            label={isEditMode ? "Cập nhật tài liệu (tùy chọn)" : "Tải lên tài liệu"}
             required={!isEditMode}
           >
             {isEditMode && selectedMaterial?.filename && (
               <div className="mb-2 p-2 bg-gray-50 rounded">
-                <Text type="secondary">Current file: </Text>
+                <Text type="secondary">Tài liệu hiện tại: </Text>
                 <Text strong>{selectedMaterial.filename}</Text>
               </div>
             )}
@@ -548,10 +550,10 @@ const MaterialList = ({ classId, classData }) => {
                 <InboxOutlined />
               </p>
               <p className="ant-upload-text">
-                Click or drag file to this area to {isEditMode ? "replace current file" : "upload"}
+                Nhấn hoặc kéo tài liệu vào vùng này để {isEditMode ? "thay thế tài liệu hiện tại" : "tải lên"}
               </p>
               <p className="ant-upload-hint">
-                Support for PDF, PowerPoint, Videos and other document formats
+                Hỗ trợ PDF, PowerPoint, và các định dạng tài liệu khác
                 {isEditMode && <br />}
                 {isEditMode && "Leave empty to keep current file"}
               </p>
@@ -561,13 +563,13 @@ const MaterialList = ({ classId, classData }) => {
           <Form.Item label="Tags">
             <div className="mb-2">
               <Input
-                placeholder="Add tag"
+                placeholder="Thêm thẻ"
                 value={inputTag}
                 onChange={(e) => setInputTag(e.target.value)}
                 onPressEnter={handleTagAdd}
                 style={{ width: "calc(100% - 80px)", marginRight: 8 }}
               />
-              <Button onClick={handleTagAdd}>Add</Button>
+              <Button onClick={handleTagAdd}>Thêm</Button>
             </div>
             <div className="flex flex-wrap gap-1">
               {tags.map((tag) => (
@@ -578,20 +580,20 @@ const MaterialList = ({ classId, classData }) => {
             </div>
           </Form.Item>
 
-          <Form.Item name="isPublic" label="Visibility" valuePropName="checked">
-            <Switch checkedChildren="Public" unCheckedChildren="Private" />
+          <Form.Item name="isPublic" label="Hiển thị" valuePropName="checked">
+            <Switch checkedChildren="Công khai" unCheckedChildren="Riêng tư" />
           </Form.Item>
 
           <Form.Item className="mb-0 text-right">
             <Space>
-              <Button onClick={handleCancelCreateEdit}>Cancel</Button>
+              <Button onClick={handleCancelCreateEdit}>Hủy</Button>
               <Button
                 type="primary"
                 htmlType="submit"
                 loading={submittingMaterial}
                 icon={<UploadOutlined />}
               >
-                {isEditMode ? "Update Material" : "Upload Material"}
+                {isEditMode ? "Cập nhật tài liệu" : "Tải lên tài liệu"}
               </Button>
             </Space>
           </Form.Item>
@@ -600,7 +602,7 @@ const MaterialList = ({ classId, classData }) => {
 
       {/* Delete Confirmation Modal */}
       <Modal
-        title="Delete Material"
+        title="Xóa tài liệu"
         open={materialDeleteModalVisible}
         onOk={confirmDeleteMaterial}
         onCancel={() => {
@@ -608,15 +610,14 @@ const MaterialList = ({ classId, classData }) => {
           setSelectedMaterial(null);
         }}
         confirmLoading={deletingMaterial}
-        okText="Delete"
-        cancelText="Cancel"
+        okText="Xóa"
+        cancelText="Hủy"
         okButtonProps={{ danger: true }}
       >
         <div className="py-4">
           <ExclamationCircleOutlined className="text-orange-500 mr-2" />
           <Text>
-            Are you sure you want to delete "{selectedMaterial?.title}"? This
-            action cannot be undone.
+            Bạn có chắc chắn muốn xóa "{selectedMaterial?.title}"? Hành động này không thể được hoàn tác.
           </Text>
         </div>
       </Modal>

@@ -240,7 +240,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
   const handleDownloadAllFiles = useCallback(async (submission) => {
     if (!submission.attachments || submission.attachments.length === 0) return;
 
-    message.info(`Starting download of ${submission.attachments.length} files...`);
+    message.info(`Đang bắt đầu tải xuống ${submission.attachments.length} tệp...`);
     
     // Download files with delay to avoid overwhelming the browser
     for (let i = 0; i < submission.attachments.length; i++) {
@@ -253,7 +253,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
 
   const handleDownloadSubmissionFiles = useCallback((submission) => {
     if (!submission.attachments || submission.attachments.length === 0) {
-      message.info('No attachments to download');
+      message.info('Không có tệp đính kèm để tải xuống');
       return;
     }
 
@@ -283,7 +283,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
   if (!assignment) {
     return (
       <Modal
-        title="Loading Assignment..."
+        title="Đang tải bài tập..."
         open={visible}
         onCancel={onCancel}
         footer={null}
@@ -293,7 +293,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
         <div className="py-8">
           <Spin size="large" />
           <div className="mt-4">
-            <Text type="secondary">Loading assignment data...</Text>
+            <Text type="secondary">Đang tải dữ liệu bài tập...</Text>
           </div>
         </div>
       </Modal>
@@ -332,7 +332,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
           </Tag>
         );
       default:
-        return <Tag color="default">Unknown</Tag>;
+        return <Tag color="default">Không xác định</Tag>;
     }
   };
 
@@ -458,7 +458,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
     
     // Check if notifications are enabled
     if (!policy.notifyStudentsOfMissingSubmission) {
-      message.warning("Notification feature is disabled for this assignment. Enable in assignment settings to send reminders.");
+      message.warning("Tính năng thông báo đã bị vô hiệu hóa cho bài tập này. Bạn cần bật trong cài đặt bài tập để gửi nhắc nhở.");
       return;
     }
     
@@ -474,10 +474,10 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
       title: "Gửi nhắc nhở",
       content: (
         <div>
-          <p>Gửi email nhắc nhở đến {missingStudents.length} học sinh chưa nộp bài?</p>
+          <p>Bạn có muốn gửi email nhắc nhở đến {missingStudents.length} học sinh chưa nộp bài?</p>
           {policy.reminderDaysBeforeDue && policy.reminderDaysBeforeDue.length > 0 && (
             <p className="text-sm text-gray-600">
-              📅 Reminder schedule: {policy.reminderDaysBeforeDue.sort((a, b) => a - b).join(', ')} days before deadline
+              📅 Lịch thông báo: {policy.reminderDaysBeforeDue.sort((a, b) => a - b).join(', ')} ngày trước hạn
             </p>
           )}
         </div>
@@ -522,7 +522,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
     
     if (!isAssignmentOverdue()) {
       message.warning(
-        "Assignment is not yet overdue. Auto-grading only available for overdue assignments."
+        "Bài tập chưa quá hạn. Tính năng tự động chấm điểm chỉ có hiệu lực cho bài tập quá hạn."
       );
       return;
     }
@@ -534,11 +534,11 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
       if (daysOverdue < requiredDays) {
         if (requiredDays === 0) {
           message.warning(
-            `Auto-grading is set to trigger immediately after due date. Assignment is ${daysOverdue} days overdue.`
+            `Tính năng tự động chấm điểm được đặt để kích hoạt ngay sau ngày hạn. Bài tập đã quá hạn ${daysOverdue} ngày.`
           );
         } else {
           message.warning(
-            `Auto-grading is scheduled for ${requiredDays} days after due date. Currently ${daysOverdue} days overdue.`
+            `Tính năng tự động chấm điểm được lên lịch cho ${requiredDays} ngày sau ngày hạn. Hiện tại bài tập đã quá hạn ${daysOverdue} ngày.`
           );
         }
         return;
@@ -548,7 +548,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
     const missingCount = getMissingSubmissions().length;
     if (missingCount === 0) {
       message.info(
-        "No missing submissions found. All students have submitted."
+        "Không tìm thấy bài nộp chưa hoàn thành. Tất cả học sinh đã nộp."
       );
       return;
     }
@@ -557,32 +557,31 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
     const gradeValue = policy.autoGradeWhenOverdue ? (policy.autoGradeValue || 0) : 0;
 
     Modal.confirm({
-      title: "Auto-Grade Missing Submissions",
+      title: "Tự động chấm điểm bài nộp chưa hoàn thành",
       content: (
         <div>
           <p>
-            This will automatically assign a grade of <strong>{gradeValue}</strong> to{" "}
-            <strong>{missingCount}</strong> student(s) who haven't submitted
-            their assignment.
+            Điều này sẽ tự động gán điểm <strong>{gradeValue}</strong> cho{" "}
+            <strong>{missingCount}</strong> học sinh chưa nộp bài.
           </p>
           <p className="text-orange-600">
-            Assignment is <strong>{daysOverdue}</strong> day(s) overdue.
+            Bài tập đã quá hạn <strong>{daysOverdue}</strong> ngày.
           </p>
           {policy.autoGradeWhenOverdue ? (
             <p className="text-blue-600">
-              ✅ Auto-grading policy is enabled for this assignment.
+              ✅ Chính sách tự động chấm điểm đã được bật cho bài tập này.
             </p>
           ) : (
             <p className="text-yellow-600">
-              ⚠️ Auto-grading policy is disabled. This is a manual override.
+              ⚠️ Chính sách tự động chấm điểm đã bị vô hiệu hóa. Đây là thay đổi thủ công.
             </p>
           )}
-          <p>This action cannot be undone. Are you sure?</p>
+          <p>Hành động này không thể hoàn tác. Bạn có chắc chắn?</p>
         </div>
       ),
-      okText: `Auto-Grade with ${gradeValue}`,
+      okText: `Tự động chấm điểm với ${gradeValue}`,
       okType: "danger",
-      cancelText: "Cancel",
+      cancelText: "Hủy",
       width: "50%",
       onOk: async () => {
         try {
@@ -596,14 +595,14 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
             fetchSubmissions(); // Refresh data
           } else {
             message.error(
-              response.message || "Failed to auto-grade missing submissions"
+              response.message || "Không thể tự động chấm điểm bài nộp chưa hoàn thành"
             );
           }
         } catch (error) {
           console.error("Auto-grading error:", error);
           message.error(
             error.response?.data?.message ||
-              "Failed to auto-grade missing submissions"
+              "Không thể tự động chấm điểm bài nộp chưa hoàn thành"
           );
         } finally {
           setAutoGradingLoading(false);
@@ -629,31 +628,31 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
         : missingSubmissions.map((sub) => sub.student._id);
 
     if (targetStudents.length === 0) {
-      message.warning("No students selected for bulk grading.");
+      message.warning("Không có học sinh nào được chọn để chấm điểm.");
       return;
     }
 
     Modal.confirm({
-      title: "Bulk Grade Missing Submissions",
+      title: "Chấm điểm hàng loạt bài nộp chưa hoàn thành",
       content: (
         <div>
           <p>
-            This will assign a grade of <strong>{grade}</strong> to{" "}
-            <strong>{targetStudents.length}</strong> student(s) who haven't
-            submitted their assignment.
+            Điều này sẽ gán điểm <strong>{grade}</strong> cho{" "}
+            <strong>{targetStudents.length}</strong> học sinh chưa
+            nộp bài.
           </p>
           {isAssignmentOverdue() && (
             <p className="text-orange-600">
-              Assignment is <strong>{getDaysOverdue()}</strong> day(s) overdue.
+              Bài tập đã quá hạn <strong>{getDaysOverdue()}</strong> ngày.
             </p>
           )}
-          <p>Feedback: "{feedback}"</p>
-          <p>This action cannot be undone. Are you sure?</p>
+          <p>Nhận xét: "{feedback}"</p>
+          <p>Hành động này không thể hoàn tác. Bạn có chắc chắn?</p>
         </div>
       ),
-      okText: `Bulk Grade ${targetStudents.length} Student(s)`,
+      okText: `Chấm điểm ${targetStudents.length} Học sinh`,
       okType: "primary",
-      cancelText: "Cancel",
+      cancelText: "Hủy",
       onOk: async () => {
         try {
           setBulkGradingLoading(true);
@@ -674,14 +673,14 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
             fetchSubmissions(); // Refresh data
           } else {
             message.error(
-              response.message || "Failed to bulk grade missing submissions"
+              response.message || "Không thể chấm điểm hàng loạt bài nộp chưa hoàn thành"
             );
           }
         } catch (error) {
           console.error("Bulk grading error:", error);
           message.error(
             error.response?.data?.message ||
-              "Failed to bulk grade missing submissions"
+              "Không thể chấm điểm hàng loạt bài nộp chưa hoàn thành"
           );
         } finally {
           setBulkGradingLoading(false);
@@ -786,7 +785,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
               <div className="mb-1">
                 <PaperClipOutlined className="mr-1" />
                 <Text>
-                  {record.attachments.length} file(s)
+                  {record.attachments.length} tệp
                   {record.attachments.length === 1 &&
                     record.attachments[0].name && (
                       <span className="text-xs text-gray-500">
@@ -802,7 +801,6 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                   {record.attachments.length > 1 && (
                     <span className="text-xs text-gray-500">
                       {" "}
-                      (
                       {record.attachments
                         .map((f) => f.name?.split(".").pop()?.toUpperCase())
                         .filter(Boolean)
@@ -823,7 +821,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                       className="mr-1"
                       style={{ color: "#52c41a" }}
                     />
-                    <Text>CSV data</Text>
+                    <Text>Dữ liệu CSV</Text>
                   </>
                 )}
                 {contentType === "json" && (
@@ -832,7 +830,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                       className="mr-1"
                       style={{ color: "#1890ff" }}
                     />
-                    <Text>JSON data</Text>
+                    <Text>Dữ liệu JSON</Text>
                   </>
                 )}
                 {contentType === "code" && (
@@ -841,13 +839,13 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                       className="mr-1"
                       style={{ color: "#722ed1" }}
                     />
-                    <Text>Code content</Text>
+                    <Text>Nội dung code</Text>
                   </>
                 )}
                 {contentType === "text" && (
                   <>
                     <FileTextOutlined className="mr-1" />
-                    <Text>Text content</Text>
+                    <Text>Nội dung văn bản</Text>
                   </>
                 )}
               </div>
@@ -956,8 +954,8 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                 <Tooltip 
                   title={
                     record.attachments.length === 1 
-                      ? `Download: ${record.attachments[0].name}`
-                      : `Download ${record.attachments.length} files`
+                      ? `Tải về: ${record.attachments[0].name}`
+                      : `Tải về ${record.attachments.length} tệp`
                   }
                 >
                   <Button
@@ -982,7 +980,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                 title={
                   assignment?.missingSubmissionPolicy?.notifyStudentsOfMissingSubmission 
                     ? "Gửi nhắc nhở cá nhân" 
-                    : "Notification feature is disabled for this assignment"
+                    : "Tính năng thông báo chưa được bật cho bài tập này"
                 }
               >
                 <Button
@@ -995,7 +993,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                       message.info(`Gửi nhắc nhở đến ${record.student.name}`);
                       // TODO: Implement send reminder to specific student
                     } else {
-                      message.warning("Notification feature is disabled for this assignment");
+                      message.warning("Tính năng thông báo chưa được bật cho bài tập này");
                     }
                   }}
                   className={
@@ -1075,13 +1073,13 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                 loading={autoGradingLoading}
                 size="middle"
               >
-                Auto-Grade Missing ({missingCount}) with {policy.autoGradeValue || 0}
+                Tự động chấm điểm chưa nộp ({missingCount}) với {policy.autoGradeValue || 0}
               </Button>
             )}
 
             {/* Manual Auto-Grade for overdue assignments without policy */}
             {isOverdue && !policy.autoGradeWhenOverdue && (
-              <Tooltip title="Auto-grading is disabled for this assignment. Enable in assignment settings to use this feature.">
+              <Tooltip title="Tính năng tự động chấm điểm đã bị vô hiệu hóa cho bài tập này. Bạn cần bật trong cài đặt bài tập để sử dụng tính năng này.">
                 <Button
                   type="primary"
                   danger
@@ -1091,7 +1089,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                   size="middle"
                   disabled={false} // Allow manual override
                 >
-                  Auto-Grade Missing ({missingCount}) with 0
+                  Tự động chấm điểm chưa nộp ({missingCount}) với 0
                 </Button>
               </Tooltip>
             )}
@@ -1104,20 +1102,20 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                 onClick={() => setBulkGradingModalVisible(true)}
                 size="small"
               >
-                Bulk Grade Missing ({missingCount})
+                Chấm điểm hàng loạt chưa nộp ({missingCount})
               </Button>
             )}
 
             {/* Disabled Bulk Grade with tooltip */}
             {!policy.allowBulkGrading && (
-              <Tooltip title="Bulk grading is disabled for this assignment. Enable in assignment settings to use this feature.">
+              <Tooltip title="Tính năng chấm điểm hàng loạt đã bị vô hiệu hóa cho bài tập này. Bạn cần bật trong cài đặt bài tập để sử dụng tính năng này.">
                 <Button
                   type="default"
                   icon={<EditOutlined />}
                   disabled
                   size="small"
                 >
-                  Bulk Grade Missing ({missingCount})
+                  Chấm điểm hàng loạt chưa nộp ({missingCount})
                 </Button>
               </Tooltip>
             )}
@@ -1130,7 +1128,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
           loading={loading}
           size="small"
         >
-          Refresh
+          Làm mới
         </Button>
       </Space>
     );
@@ -1168,7 +1166,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                 <div>
                   {isAssignmentOverdue() ? (
                     <span className="text-red-600">
-                      ⚠️ Assignment đã quá hạn {getDaysOverdue()} ngày. Bạn có thể
+                      ⚠️ Bài tập đã quá hạn {getDaysOverdue()} ngày. Bạn có thể
                       tự động chấm điểm 0 hoặc chấm điểm tùy chỉnh cho các học sinh
                       chưa nộp.
                     </span>
@@ -1193,7 +1191,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <SettingOutlined className="text-blue-600" />
-                <Text strong className="text-blue-800">Missing Submission Policy</Text>
+                <Text strong className="text-blue-800">Chính sách xử lý bài chưa nộp</Text>
               </div>
               <div className="flex items-center gap-4 text-sm">
                 {/* Auto-Grade Status */}
@@ -1202,14 +1200,14 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                     <>
                       <CheckCircleOutlined className="text-green-600" />
                       <span className="text-green-700">
-                        Auto-Grade: {assignment?.missingSubmissionPolicy?.autoGradeValue || 0} 
-                        ({assignment?.missingSubmissionPolicy?.daysAfterDueForAutoGrade || 1} days)
+                        Tự động chấm điểm: {assignment?.missingSubmissionPolicy?.autoGradeValue || 0} 
+                        ({assignment?.missingSubmissionPolicy?.daysAfterDueForAutoGrade || 1} ngày)
                       </span>
                     </>
                   ) : (
                     <>
                       <ExclamationCircleOutlined className="text-gray-500" />
-                      <span className="text-gray-600">Auto-Grade: Disabled</span>
+                      <span className="text-gray-600">Tự động chấm điểm: Vô hiệu hóa</span>
                     </>
                   )}
                 </div>
@@ -1219,12 +1217,12 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                   {assignment?.missingSubmissionPolicy?.allowBulkGrading ? (
                     <>
                       <CheckCircleOutlined className="text-green-600" />
-                      <span className="text-green-700">Bulk Grade: Enabled</span>
+                      <span className="text-green-700">Chấm điểm hàng loạt: Đã bật</span>
                     </>
                   ) : (
                     <>
                       <ExclamationCircleOutlined className="text-gray-500" />
-                      <span className="text-gray-600">Bulk Grade: Disabled</span>
+                      <span className="text-gray-600">Chấm điểm hàng loạt: Vô hiệu hóa</span>
                     </>
                   )}
                 </div>
@@ -1235,10 +1233,10 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                     <>
                       <CheckCircleOutlined className="text-green-600" />
                       <span className="text-green-700">
-                        Notifications: Enabled
+                        Thông báo: Đã bật
                         {assignment?.missingSubmissionPolicy?.reminderDaysBeforeDue?.length > 0 && (
                           <span className="text-xs ml-1">
-                            ({assignment?.missingSubmissionPolicy?.reminderDaysBeforeDue.sort((a, b) => a - b).join(', ')} days)
+                            ({assignment?.missingSubmissionPolicy?.reminderDaysBeforeDue.sort((a, b) => a - b).join(', ')} ngày)
                           </span>
                         )}
                       </span>
@@ -1246,7 +1244,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                   ) : (
                     <>
                       <ExclamationCircleOutlined className="text-gray-500" />
-                      <span className="text-gray-600">Notifications: Disabled</span>
+                      <span className="text-gray-600">Thông báo: Vô hiệu hóa</span>
                     </>
                   )}
                 </div>
@@ -1382,7 +1380,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                             Nhắc nhở ({stats.missing})
                           </Button>
                         ) : (
-                          <Tooltip title="Notification feature is disabled for this assignment">
+                          <Tooltip title="Tính năng thông báo đã bị vô hiệu hóa cho bài tập này">
                             <Button
                               icon={<MailOutlined />}
                               disabled
@@ -1430,7 +1428,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
             key: "analytics",
             label: (
               <span>
-                <StarOutlined /> Analytics
+                <StarOutlined /> Phân tích
               </span>
             ),
             disabled: stats.graded < 3,
@@ -1450,17 +1448,17 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                       />
                     </div>
                     <Title level={3} type="secondary">
-                      Analytics Coming Soon
+                      Phân tích sắp sắp có sẵn
                     </Title>
                     <Text type="secondary" className="text-lg">
-                      Analytics will be available once you have at least 3 graded submissions.
+                      Phân tích sẽ có sẵn khi bạn có ít nhất 3 bài nộp đã chấm.
                     </Text>
                     <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <Text strong>Current Status:</Text>
+                      <Text strong>Trạng thái hiện tại:</Text>
                       <div className="mt-2 space-y-1">
-                        <div>📝 Total Submissions: {stats.submitted}</div>
-                        <div>📊 Graded Submissions: {stats.graded}</div>
-                        <div>⏳ Need {Math.max(3 - stats.graded, 0)} more graded submissions</div>
+                        <div>📝 Tổng bài nộp: {stats.submitted}</div>
+                        <div>📊 Bài nộp đã chấm: {stats.graded}</div>
+                        <div>⏳ Cần thêm {Math.max(3 - stats.graded, 0)} bài nộp đã chấm</div>
                       </div>
                     </div>
                     <div className="mt-6">
@@ -1470,7 +1468,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                         onClick={() => setActiveTab("submissions")}
                         size="large"
                       >
-                        Start Grading Submissions
+                        Bắt đầu chấm điểm bài nộp
                       </Button>
                     </div>
                   </div>
@@ -1536,7 +1534,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
         title={
           <div className="flex items-center gap-2">
             <DownloadOutlined className="text-blue-500" />
-            <span>Download Submission Files</span>
+            <span>Tải xuống tệp đính kèm bài nộp</span>
             <Badge 
               count={selectedSubmissionForDownload?.attachments?.length || 0} 
               showZero={false} 
@@ -1549,7 +1547,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
         width={600}
         footer={[
           <Button key="cancel" onClick={() => setFileDownloadModalVisible(false)}>
-            Cancel
+            Hủy
           </Button>,
           <Button 
             key="download-all" 
@@ -1558,7 +1556,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
             onClick={() => handleDownloadAllFiles(selectedSubmissionForDownload)}
             disabled={!selectedSubmissionForDownload?.attachments?.length}
           >
-            Download All ({selectedSubmissionForDownload?.attachments?.length || 0} files)
+            Tải xuống tất cả ({selectedSubmissionForDownload?.attachments?.length || 0} tệp)
           </Button>
         ]}
       >
@@ -1574,9 +1572,9 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                 <Text strong>{selectedSubmissionForDownload.student?.fullName}</Text>
               </div>
               <Text type="secondary">
-                Submitted: {selectedSubmissionForDownload.submittedAt ? 
+                Thời gian nộp: {selectedSubmissionForDownload.submittedAt ? 
                   moment(selectedSubmissionForDownload.submittedAt).format('DD/MM/YYYY HH:mm') : 
-                  'No submission date'
+                  'Không có thời gian nộp'
                 }
               </Text>
             </div>
@@ -1598,7 +1596,7 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                         loading={isDownloading}
                         onClick={() => handleSingleFileDownload(selectedSubmissionForDownload, index)}
                       >
-                        {isDownloading ? 'Downloading...' : 'Download'}
+                        {isDownloading ? 'Đang tải...' : 'Tải xuống'}
                       </Button>
                     ]}
                   >
@@ -1614,13 +1612,13 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                             {attachment.name}
                           </Text>
                           <Tag color="blue" className="text-xs">
-                            {attachment.name?.split('.').pop()?.toUpperCase() || 'FILE'}
+                            {attachment.name?.split('.').pop()?.toUpperCase() || 'TỆP'}
                           </Tag>
                         </div>
                       }
                       description={
                         <Text type="secondary" className="text-sm">
-                          {attachment.fileSize ? `${(attachment.fileSize / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'} • File {index + 1} of {selectedSubmissionForDownload.attachments.length}
+                          {attachment.fileSize ? `${(attachment.fileSize / 1024 / 1024).toFixed(2)} MB` : 'Kích thước không xác định'} • Tệp {index + 1} trong {selectedSubmissionForDownload.attachments.length}
                         </Text>
                       }
                     />
@@ -1700,11 +1698,11 @@ const BulkGradingModal = ({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <EditOutlined className="text-blue-600" />
-            <span>Bulk Grade Missing Submissions</span>
+            <span>Chấm điểm hàng loạt bài nộp chưa hoàn thành</span>
           </div>
           {isOverdue && (
             <div className="text-sm text-orange-600">
-              ⚠️ Assignment quá hạn {daysOverdue} ngày
+              ⚠️ Bài tập đã quá hạn {daysOverdue} ngày
             </div>
           )}
         </div>
@@ -1714,8 +1712,8 @@ const BulkGradingModal = ({
       onOk={handleSubmit}
       confirmLoading={loading}
       width={800}
-      okText="Bulk Grade Selected"
-      cancelText="Cancel"
+      okText="Chấm điểm"
+      cancelText="Hủy"
     >
       <div className="space-y-4">
         {/* Grading Form */}
@@ -1725,8 +1723,8 @@ const BulkGradingModal = ({
           initialValues={{
             grade: 0,
             feedback: isOverdue
-              ? `No submission received. Assignment was due ${daysOverdue} day(s) ago.`
-              : "No submission received.",
+              ? `Không có bài nộp nào nhận được. Bài tập đã quá hạn ${daysOverdue} ngày.`
+              : "Không có bài nộp nào nhận được.",
             allowResubmit: false,
             hideGradeFromStudent: false,
           }}

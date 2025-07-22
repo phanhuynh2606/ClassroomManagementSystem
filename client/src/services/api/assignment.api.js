@@ -240,7 +240,9 @@ const assignmentAPI = {
       responseType: 'blob'
     });
   },
-
+  getAssignmentStatsByStudent: () => {
+    return axiosClient.get('/assignments/by-student');
+  },
 
   // Duplicate assignment
   duplicate: (assignmentId, newData = {}) => {
@@ -405,10 +407,5 @@ const analyticsHelpers = {
   }
 };
 export { analyticsHelpers };
-  },
-  getAssignmentStatsByStudent: () => {
-    return axiosClient.get('/assignments/by-student');
-  },
-};
 
 export default assignmentAPI; 

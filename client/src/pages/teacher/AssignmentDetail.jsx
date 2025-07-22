@@ -478,7 +478,7 @@ const AssignmentDetail = () => {
       label: (
         <span>
           <BookOutlined />
-          Overview
+          Tổng quan
         </span>
       ),
       children: (
@@ -495,10 +495,10 @@ const AssignmentDetail = () => {
                   </div>
                   <div>
                     <Text strong className="text-lg">
-                      Assignment Details
+                      Chi tiết bài tập
                     </Text>
                     <div className="text-sm text-gray-500">
-                      Content and instructions
+                      Nội dung và hướng dẫn
                     </div>
                   </div>
                 </div>
@@ -526,7 +526,7 @@ const AssignmentDetail = () => {
                 {currentAssignmentData.instructions && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border-l-4 border-blue-400">
                     <Title level={5} className="text-blue-700 mb-3">
-                      📋 Detailed Instructions
+                      📋 Hướng dẫn chi tiết
                     </Title>
                     <div
                       style={{ whiteSpace: "pre-wrap", lineHeight: "1.8" }}
@@ -541,7 +541,7 @@ const AssignmentDetail = () => {
                   currentAssignmentData.attachments.length > 0 && (
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border-l-4 border-purple-400">
                       <Title level={5} className="text-purple-700 mb-4">
-                        📎 Teacher Resources (
+                        📎 Tài liệu đính kèm của giáo viên (
                         {currentAssignmentData.attachments.length})
                       </Title>
                       <div className="space-y-3">
@@ -611,7 +611,7 @@ const AssignmentDetail = () => {
               <Col span={6}>
                 <Card className="text-center shadow-md border-0">
                   <Statistic
-                    title="Submitted"
+                    title="Đã nộp"
                     value={stats.submitted}
                     suffix={`/${
                       backendStats.totalStudents || submissions.length || 0
@@ -624,7 +624,7 @@ const AssignmentDetail = () => {
               <Col span={6}>
                 <Card className="text-center shadow-md border-0">
                   <Statistic
-                    title="Graded"
+                    title="Đã chấm"
                     value={stats.graded}
                     suffix={`/${stats.submitted}`}
                     prefix={<TrophyOutlined className="text-blue-500" />}
@@ -635,7 +635,7 @@ const AssignmentDetail = () => {
               <Col span={6}>
                 <Card className="text-center shadow-md border-0">
                   <Statistic
-                    title="Pending"
+                    title="Chờ chấm"
                     value={stats.pending}
                     prefix={<ClockCircleOutlined className="text-orange-500" />}
                     valueStyle={{ color: "#f59e0b", fontSize: "24px" }}
@@ -645,7 +645,7 @@ const AssignmentDetail = () => {
               <Col span={6}>
                 <Card className="text-center shadow-md border-0">
                   <Statistic
-                    title="Avg Grade"
+                    title="Điểm TB"
                     value={stats.avgGrade}
                     suffix={`/${currentAssignmentData.totalPoints}`}
                     prefix={<StarOutlined className="text-purple-500" />}
@@ -663,7 +663,7 @@ const AssignmentDetail = () => {
               title={
                 <div className="flex items-center gap-2">
                   <InfoCircleOutlined className="text-blue-500" />
-                  <Text strong>Assignment Info</Text>
+                  <Text strong>Thông tin bài tập</Text>
                 </div>
               }
               className="mb-6 shadow-lg border-0"
@@ -671,14 +671,14 @@ const AssignmentDetail = () => {
             >
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Text type="secondary">Points:</Text>
+                  <Text type="secondary">Điểm tối đa:</Text>
                   <Tag color="blue" className="px-3 py-1 text-base">
-                    {currentAssignmentData.totalPoints} pts
+                    {currentAssignmentData.totalPoints} điểm
                   </Tag>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <Text type="secondary">Status:</Text>
+                  <Text type="secondary">Trạng thái:</Text>
                   <Tag
                     color={
                       currentAssignmentData.visibility === "published"
@@ -687,13 +687,12 @@ const AssignmentDetail = () => {
                     }
                     className="px-3 py-1 text-base"
                   >
-                    {currentAssignmentData.visibility?.charAt(0).toUpperCase() +
-                      currentAssignmentData.visibility?.slice(1)}
+                    {currentAssignmentData.visibility === 'published' ? 'Đã đăng' : currentAssignmentData.visibility === 'draft' ? 'Bản nháp' : currentAssignmentData.visibility === 'scheduled' ? 'Đã lên lịch' : currentAssignmentData.visibility}
                   </Tag>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <Text type="secondary">Submission Type:</Text>
+                  <Text type="secondary">Hình thức nộp:</Text>
                   <Tag
                     color="purple"
                     className="px-3 py-1 text-base"
@@ -712,21 +711,21 @@ const AssignmentDetail = () => {
                     }
                   >
                     {currentAssignmentData.submissionSettings?.type === "both"
-                      ? "Text & File"
+                      ? "Văn bản & Tệp"
                       : currentAssignmentData.submissionSettings?.type ===
                         "file"
-                      ? "File Only"
+                      ? "Chỉ tệp"
                       : currentAssignmentData.submissionSettings?.type ===
                         "text"
-                      ? "Text Only"
-                      : "Both"}
+                      ? "Chỉ văn bản"
+                      : "Văn bản & Tệp"}
                   </Tag>
                 </div>
 
                 <Divider className="my-3" />
 
                 <div className="flex justify-between items-center">
-                  <Text type="secondary">Created:</Text>
+                  <Text type="secondary">Ngày tạo:</Text>
                   <Text>
                     {moment(currentAssignmentData.createdAt).format(
                       "DD/MM/YYYY"
@@ -736,7 +735,7 @@ const AssignmentDetail = () => {
 
                 {currentAssignmentData.publishDate && (
                   <div className="flex justify-between items-center">
-                    <Text type="secondary">Published:</Text>
+                    <Text type="secondary">Ngày đăng:</Text>
                     <Text>
                       {moment(currentAssignmentData.publishDate).format(
                         "DD/MM/YYYY HH:mm"
@@ -746,7 +745,7 @@ const AssignmentDetail = () => {
                 )}
 
                 <div className="flex justify-between items-center">
-                  <Text type="secondary">Submissions:</Text>
+                  <Text type="secondary">Số bài nộp:</Text>
                   <Badge count={stats.submitted} showZero color="#52c41a" />
                 </div>
               </div>
@@ -774,7 +773,7 @@ const AssignmentDetail = () => {
                   }`}
                 />
                 <Title level={5} className="mb-1">
-                  Due Date
+                  Hạn nộp
                 </Title>
                 <Text
                   strong
@@ -793,15 +792,15 @@ const AssignmentDetail = () => {
                 <div className="mt-2">
                   {isOverdue ? (
                     <Tag color="red" icon={<WarningOutlined />}>
-                      Overdue
+                      Quá hạn
                     </Tag>
                   ) : daysUntilDue <= 7 ? (
                     <Tag color="orange" icon={<ClockCircleOutlined />}>
-                      Due Soon ({daysUntilDue} days)
+                      Sắp đến hạn ({daysUntilDue} ngày)
                     </Tag>
                   ) : (
                     <Tag color="green" icon={<CheckCircleOutlined />}>
-                      Active
+                      Đang mở
                     </Tag>
                   )}
                 </div>
@@ -809,12 +808,12 @@ const AssignmentDetail = () => {
 
               {currentAssignmentData.allowLateSubmission && (
                 <Alert
-                  message="Late Submission Allowed"
-                  description={`${
+                  message="Cho phép nộp muộn"
+                  description={`Cho phép nộp muộn${
                     currentAssignmentData.maxLateDays
-                      ? `Up to ${currentAssignmentData.maxLateDays} days late. `
+                      ? ` tối đa ${currentAssignmentData.maxLateDays} ngày. `
                       : ""
-                  }Penalty: ${currentAssignmentData.latePenalty}% per day`}
+                  }Phạt: ${currentAssignmentData.latePenalty}% mỗi ngày`}
                   type="info"
                   size="small"
                   showIcon
@@ -831,7 +830,7 @@ const AssignmentDetail = () => {
       label: (
         <span>
           <UserOutlined />
-          Submissions ({stats.submitted})
+          Bài nộp ({stats.submitted})
         </span>
       ),
       children: (
@@ -839,10 +838,10 @@ const AssignmentDetail = () => {
           <div className="flex justify-between items-center mb-6">
             <div>
               <Title level={3} className="mb-1">
-                📝 Student Submissions
+                📝 Danh sách bài nộp
               </Title>
               <Text type="secondary" className="text-base">
-                Monitor and grade student work
+                Theo dõi và chấm điểm bài làm của học sinh
               </Text>
             </div>
             <Space>
@@ -853,7 +852,7 @@ const AssignmentDetail = () => {
                 onMouseEnter={handleAdvancedManagementHover}
                 className="bg-gradient-to-r from-blue-500 to-blue-600 border-0"
               >
-                Advanced Management
+                Quản lý nâng cao
               </Button>
             </Space>
           </div>
@@ -870,13 +869,13 @@ const AssignmentDetail = () => {
                 showSizeChanger: true,
                 showQuickJumper: true,
                 showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} of ${total} submissions`,
+                  `Hiển thị ${range[0]}-${range[1]} trong tổng số ${total} bài nộp`,
               }}
               className="shadow-sm"
             />
           ) : (
             <Empty
-              description="No submissions yet"
+              description="Chưa có bài nộp nào"
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
           )}
@@ -892,7 +891,7 @@ const AssignmentDetail = () => {
           <Spin size="large" />
           <div className="mt-4">
             <Text type="secondary" className="text-lg">
-              Loading assignment data...
+              Đang tải dữ liệu bài tập...
             </Text>
           </div>
         </div>
@@ -905,8 +904,8 @@ const AssignmentDetail = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
         <div className="max-w-2xl mx-auto pt-20">
           <Alert
-            message="Assignment not found"
-            description="The assignment you're looking for doesn't exist or has been deleted."
+            message="Không tìm thấy bài tập"
+            description="Bài tập bạn tìm kiếm không tồn tại hoặc đã bị xóa."
             type="error"
             showIcon
             action={
@@ -916,7 +915,7 @@ const AssignmentDetail = () => {
                   navigate(`/teacher/classroom/${classId}#classwork`)
                 }
               >
-                Back to Classwork
+                Quay lại danh sách bài tập
               </Button>
             }
             className="shadow-lg"
@@ -979,7 +978,7 @@ const AssignmentDetail = () => {
                 }
                 className="flex items-center hover:shadow-md transition-shadow"
               >
-                Back to Classwork
+                Quay lại danh sách bài tập
               </Button>
 
               <div className="hidden md:flex items-center gap-3">
@@ -989,7 +988,7 @@ const AssignmentDetail = () => {
                   color="#52c41a"
                 >
                   <div className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
-                    Submissions
+                    Bài nộp
                   </div>
                 </Badge>
                 <Tag
@@ -1000,8 +999,7 @@ const AssignmentDetail = () => {
                   }
                   className="px-3 py-1"
                 >
-                  {currentAssignmentData.visibility?.charAt(0).toUpperCase() +
-                    currentAssignmentData.visibility?.slice(1)}
+                  {currentAssignmentData.visibility === 'published' ? 'Đã đăng' : currentAssignmentData.visibility === 'draft' ? 'Bản nháp' : currentAssignmentData.visibility === 'scheduled' ? 'Đã lên lịch' : currentAssignmentData.visibility}
                 </Tag>
                 <Tag
                   color={
@@ -1010,10 +1008,10 @@ const AssignmentDetail = () => {
                   className="px-3 py-1"
                 >
                   {isOverdue
-                    ? "⚠️ Overdue"
+                    ? "⚠️ Quá hạn"
                     : daysUntilDue <= 7
-                    ? "⏰ Due Soon"
-                    : "✅ Active"}
+                    ? "⏰ Sắp đến hạn"
+                    : "✅ Đang mở"}
                 </Tag>
               </div>
             </div>
@@ -1028,7 +1026,7 @@ const AssignmentDetail = () => {
                 }
                 className="hover:shadow-md transition-shadow"
               >
-                Edit
+                Chỉnh sửa
               </Button>
               <Button
                 type="primary"
@@ -1037,7 +1035,7 @@ const AssignmentDetail = () => {
                 onMouseEnter={handleAdvancedManagementHover}
                 className="bg-gradient-to-r from-blue-500 to-blue-600 border-0 hover:shadow-lg transition-all duration-300"
               >
-                Grade Submissions
+                Chấm điểm bài nộp
               </Button>
             </Space>
           </div>
@@ -1066,17 +1064,17 @@ const AssignmentDetail = () => {
           currentAssignmentData.publishDate &&
           moment(currentAssignmentData.publishDate).isAfter(moment()) && (
             <Alert
-              message="📅 Assignment is scheduled"
+              message="📅 Bài tập đã lên lịch"
               description={
                 <div>
                   <span>
-                    This assignment will be automatically published on{" "}
+                    Bài tập này sẽ được tự động đăng ký vào{" "}
                     <strong>
                       {moment(currentAssignmentData.publishDate).format(
                         "DD/MM/YYYY HH:mm"
                       )}
                     </strong>
-                    . Students cannot see it until then.
+                    . Học sinh không thể xem được cho đến thời điểm đó.
                   </span>
                 </div>
               }
@@ -1089,8 +1087,8 @@ const AssignmentDetail = () => {
 
         {currentAssignmentData.visibility === "draft" && (
           <Alert
-            message="📝 Assignment is in draft mode"
-            description="This assignment is not visible to students. Publish it when you're ready."
+            message="📝 Bài tập đang ở chế độ nháp"
+            description="Bài tập này chưa được hiển thị cho học sinh. Hãy đăng nó khi bạn đã sẵn sàng."
             type="warning"
             showIcon
             className="mb-6 shadow-sm"
@@ -1099,25 +1097,25 @@ const AssignmentDetail = () => {
 
         {isOverdue && (
           <Alert
-            message="⚠️ Assignment is overdue"
+            message="⚠️ Bài tập đã quá hạn"
             description={
               <div className="flex items-center justify-between">
                 <span>
-                  Due:{" "}
+                  Hạn:{" "}
                   {moment(currentAssignmentData.dueDate).format(
                     "DD/MM/YYYY HH:mm"
                   )}
                   {currentAssignmentData.allowLateSubmission &&
-                    ` • Late submissions allowed${
+                    ` • Cho phép nộp muộn${
                       currentAssignmentData.maxLateDays
-                        ? ` for up to ${currentAssignmentData.maxLateDays} days`
+                        ? ` tối đa ${currentAssignmentData.maxLateDays} ngày`
                         : ""
-                    } with ${
+                    } với phạt ${
                       currentAssignmentData.latePenalty
-                    }% penalty per day`}
+                    }% mỗi ngày`}
                 </span>
                 <Button size="small" type="link" icon={<SettingOutlined />}>
-                  Extend Deadline
+                  Gia hạn hạn
                 </Button>
               </div>
             }
@@ -1160,7 +1158,7 @@ const AssignmentDetail = () => {
         title={
           <div className="flex items-center gap-2">
             <DownloadOutlined className="text-blue-500" />
-            <span>Download Submission Files</span>
+            <span>Tải file bài nộp</span>
             <Badge
               count={selectedSubmissionForDownload?.attachments?.length || 0}
               showZero={false}
@@ -1176,7 +1174,7 @@ const AssignmentDetail = () => {
             key="cancel"
             onClick={() => setFileDownloadModalVisible(false)}
           >
-            Cancel
+            Hủy
           </Button>,
           <Button
             key="download-all"
@@ -1187,8 +1185,8 @@ const AssignmentDetail = () => {
             }
             disabled={!selectedSubmissionForDownload?.attachments?.length}
           >
-            Download All (
-            {selectedSubmissionForDownload?.attachments?.length || 0} files)
+            Tải tất cả (
+            {selectedSubmissionForDownload?.attachments?.length || 0} tệp)
           </Button>,
         ]}
       >
@@ -1235,7 +1233,7 @@ const AssignmentDetail = () => {
                           )
                         }
                       >
-                        {isDownloading ? "Downloading..." : "Download"}
+                        {isDownloading ? "Đang tải..." : "Tải về"}
                       </Button>,
                     ]}
                   >

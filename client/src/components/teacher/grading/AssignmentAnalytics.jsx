@@ -244,14 +244,14 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
 
   const renderGradeDistributionChart = () => {
     if (!analyticsData?.gradeDistribution || !Array.isArray(analyticsData.gradeDistribution)) {
-      return <Empty description="No grade data available" />;
+      return <Empty description="Không có dữ liệu điểm số" />;
     }
 
     // Ensure data is properly formatted and is an array
     const chartData = analyticsData.gradeDistribution
       .filter(item => item && typeof item === 'object') // Filter out invalid items
       .map((item, index) => ({
-        name: item.label || `Grade ${index + 1}`,
+        name: item.label || `Điểm ${index + 1}`,
         count: Number(item.count) || 0,
         percentage: Math.round((Number(item.percentage) || 0) * 10) / 10,
         fill: item.color || '#1890ff'
@@ -259,7 +259,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
 
     // Double check that we have valid array data
     if (!Array.isArray(chartData) || chartData.length === 0) {
-      return <Empty description="No valid chart data available" />;
+      return <Empty description="Không có dữ liệu biểu đồ hợp lệ" />;
     }
 
     if (chartType === 'pie') {
@@ -301,19 +301,19 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
 
   const renderSubmissionTimelineChart = () => {
     if (!analyticsData?.submissionTimeline || analyticsData?.submissionTimeline?.grouped?.length === 0) {
-      return <Empty description="No timeline data available" />;
+      return <Empty description="Không có dữ liệu bảng thời gian nộp bài" />;
     }
 
     // Ensure data is properly formatted
     const timelineData = analyticsData?.submissionTimeline?.grouped
       ?.filter(item => item && typeof item === 'object')
       ?.map((item, index) => ({
-        date: item.date || `Day ${index + 1}`,
+        date: item.date || `Ngày ${index + 1}`,
         grade: Number(item.grade) || 0,
         count: Number(item.count) || 1
       }));
     if (timelineData?.length === 0) {
-      return <Empty description="No valid timeline data available" />;
+      return <Empty description="Không có dữ liệu biểu đồ thời gian hợp lệ" />;
     }
 
     return (
@@ -336,7 +336,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
   };
 
   const renderPerformanceRadar = () => {
-    if (!analyticsData?.overview) return <Empty description="No performance data available" />;
+    if (!analyticsData?.overview) return <Empty description="Không có dữ liệu hiệu suất" />;
 
     const maxGrade = assignment?.totalPoints || 100;
     const overview = analyticsData.overview;
@@ -350,22 +350,22 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
 
     const radarData = [
       {
-        subject: 'Average Score',
+        subject: 'Điểm trung bình',
         A: Math.min(Math.round((avgGrade / maxGrade) * 100), 100),
         fullMark: 100
       },
       {
-        subject: 'Completion Rate',
+        subject: 'Tỷ lệ hoàn thành',
         A: Math.min(Math.round((submittedCount / totalStudents) * 100), 100),
         fullMark: 100
       },
       {
-        subject: 'Passing Rate',
+        subject: 'Tỷ lệ đậu',
         A: Math.min(Math.round(passingRate), 100),
         fullMark: 100
       },
       {
-        subject: 'On-time Rate',
+        subject: 'Tỷ lệ đúng hạn',
         A: submittedCount > 0 ? Math.min(Math.round(((submittedCount - lateCount) / submittedCount) * 100), 100) : 0,
         fullMark: 100
       }
@@ -411,7 +411,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
       .slice(0, 5)
       .map((submission, index) => ({
         rank: index + 1,
-        student: submission.student || { fullName: 'Unknown Student' },
+        student: submission.student || { fullName: 'Học sinh không rõ' },
         grade: Number(submission.grade) || 0,
         percentage: Math.round(((Number(submission.grade) || 0) / (assignment?.totalPoints || 100)) * 100)
       }));
@@ -428,14 +428,14 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
       insights.push({
         type: 'success',
         icon: <CheckCircleOutlined />,
-        title: 'Excellent Class Performance',
-        description: `${Math.round(overview.passingRate)}% của lớp đạt điểm đậu. Lớp học hiểu bài rất tốt!`
+        title: 'Hiệu suất lớp tốt',
+        description: `${Math.round(overview.passingRate)}% học sinh đạt điểm đậu. Lớp học hiểu bài rất tốt!`
       });
     } else if (overview.passingRate < 60) {
       insights.push({
         type: 'warning',
         icon: <WarningOutlined />,
-        title: 'Needs Review',
+        title: 'Cần xem lại',
         description: `Chỉ ${Math.round(overview.passingRate)}% đạt điểm đậu. Cần xem lại nội dung bài học.`
       });
     }
@@ -445,7 +445,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
       insights.push({
         type: 'info',
         icon: <StarOutlined />,
-        title: 'Perfect Scores',
+        title: 'Điểm tuyệt đối',
         description: `${performanceInsights.perfectScores} học sinh đạt điểm tuyệt đối!`
       });
     }
@@ -455,7 +455,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
       insights.push({
         type: 'warning',
         icon: <ClockCircleOutlined />,
-        title: 'Many Late Submissions',
+        title: 'Nhiều bài nộp muộn',
         description: `${overview.lateCount} bài nộp muộn (${Math.round((overview.lateCount/overview.submittedCount)*100)}%). Cần nhắc nhở về deadline.`
       });
     }
@@ -500,7 +500,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
         <div className="mb-6 flex justify-between items-center">
           <div>
             <Title level={3} className="mb-2">
-              📊 Assignment Analytics
+              📊 Phân tích bài tập
             </Title>
             <Text type="secondary">
               Phân tích chi tiết về hiệu suất và kết quả bài tập
@@ -513,14 +513,14 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
               style={{ width: 120 }}
             >
               <Option value="bar">
-                <BarChartOutlined /> Bar Chart
+                <BarChartOutlined /> Biểu đồ thanh
               </Option>
               <Option value="pie">
-                <PieChartOutlined /> Pie Chart
+                <PieChartOutlined /> Biểu đồ tròn
               </Option>
             </Select>
             <Button icon={<ReloadOutlined />} onClick={fetchAnalytics}>
-              Refresh
+              Làm mới
             </Button>
           </Space>
         </div>
@@ -530,7 +530,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
           <Col xs={24} sm={12} md={6}>
             <Card className="text-center">
               <Statistic
-                title="Total Students"
+                title="Tổng số học sinh"
                 value={analyticsData?.overview?.totalStudents || 0}
                 prefix={<UserOutlined className="text-blue-500" />}
                 valueStyle={{ color: '#1890ff' }}
@@ -545,7 +545,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
           <Col xs={24} sm={12} md={6}>
             <Card className="text-center">
               <Statistic
-                title="Average Grade"
+                title="Điểm trung bình"
                 value={analyticsData?.overview?.avgGrade || 0}
                 suffix={`/${assignment?.totalPoints || 100}`}
                 prefix={<TrophyOutlined className="text-gold" />}
@@ -554,14 +554,14 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                 }}
               />
               <Text type="secondary">
-                Median: {analyticsData?.overview?.medianGrade || 0}
+                Trung vị: {analyticsData?.overview?.medianGrade || 0}
               </Text>
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Card className="text-center">
               <Statistic
-                title="Passing Rate"
+                title="Tỷ lệ đậu"
                 value={Math.round(analyticsData?.overview?.passingRate || 0)}
                 suffix="%"
                 prefix={<CheckCircleOutlined className="text-green-500" />}
@@ -570,21 +570,21 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                 }}
               />
               <Text type="secondary">
-                {(analyticsData?.overview?.submittedCount || 0) - Math.round(((analyticsData?.overview?.passingRate || 0)/100) * (analyticsData?.overview?.submittedCount || 0))} need improvement
+                {(analyticsData?.overview?.submittedCount || 0) - Math.round(((analyticsData?.overview?.passingRate || 0)/100) * (analyticsData?.overview?.submittedCount || 0))} cần cải thiện
               </Text>
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Card className="text-center">
               <Statistic
-                title="Late Submissions"
+                title="Bài nộp muộn"
                 value={analyticsData?.overview?.lateCount || 0}
                 suffix={`/${analyticsData?.overview?.submittedCount || 0}`}
                 prefix={<ClockCircleOutlined className="text-orange-500" />}
                 valueStyle={{ color: '#fa8c16' }}
               />
               <Text type="secondary">
-                {Math.round(((analyticsData?.overview?.lateCount || 0)/(analyticsData?.overview?.submittedCount || 1))*100) || 0}% late rate
+                {Math.round(((analyticsData?.overview?.lateCount || 0)/(analyticsData?.overview?.submittedCount || 1))*100) || 0}% tỷ lệ nộp muộn
               </Text>
             </Card>
           </Col>
@@ -605,14 +605,14 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
               title={
                 <div className="flex items-center gap-2">
                   <BarChartOutlined className="text-blue-500" />
-                  <span>Grade Distribution</span>
+                  <span>Phân bố điểm số</span>
                   <Badge count={analyticsData?.overview?.gradedCount || 0} showZero color="#52c41a" />
                 </div>
               }
               extra={
                 <Space>
                   <Tag color="blue">
-                    Avg: {analyticsData?.overview?.avgGrade || 0}/{assignment?.totalPoints || 100}
+                    Trung bình: {analyticsData?.overview?.avgGrade || 0}/{assignment?.totalPoints || 100}
                   </Tag>
                 </Space>
               }
@@ -622,7 +622,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
               <Row gutter={16}>
                 <Col span={12}>
                   <Statistic
-                    title="Highest"
+                    title="Điểm cao nhất"
                     value={analyticsData?.overview?.highestGrade || 0}
                     prefix={<RiseOutlined className="text-green-500" />}
                     valueStyle={{ color: '#52c41a', fontSize: '16px' }}
@@ -630,7 +630,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                 </Col>
                 <Col span={12}>
                   <Statistic
-                    title="Lowest"
+                    title="Điểm thấp nhất"
                     value={analyticsData?.overview?.lowestGrade || 0}
                     prefix={<FallOutlined className="text-red-500" />}
                     valueStyle={{ color: '#ff4d4f', fontSize: '16px' }}
@@ -646,7 +646,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
               title={
                 <div className="flex items-center gap-2">
                   <RadarChartOutlined className="text-purple-500" />
-                  <span>Performance Overview</span>
+                  <span>Tổng quan hiệu suất</span>
                 </div>
               }
             >
@@ -656,13 +656,13 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                   <div className="text-2xl font-bold text-blue-600">
                     {analyticsData?.overview ? Math.round((analyticsData.overview.submittedCount / analyticsData.overview.totalStudents) * 100) : 0}%
                   </div>
-                  <Text type="secondary">Completion Rate</Text>
+                  <Text type="secondary">Tỷ lệ hoàn thành</Text>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
                     {analyticsData?.overview ? Math.round(((analyticsData.overview.submittedCount - analyticsData.overview.lateCount) / analyticsData.overview.submittedCount) * 100) || 0 : 0}%
                   </div>
-                  <Text type="secondary">On-time Rate</Text>
+                  <Text type="secondary">Tỷ lệ đúng hạn</Text>
                 </div>
               </div>
             </Card>
@@ -674,7 +674,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
               title={
                 <div className="flex items-center gap-2">
                   <StarOutlined className="text-gold" />
-                  <span>Top Performers</span>
+                  <span>Học sinh xuất sắc</span>
                 </div>
               }
             >
@@ -694,8 +694,8 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                           <div>
                             <Text strong>
                               {typeof item.student === 'object' 
-                                ? item.student?.fullName || item.student?.name || 'Unknown Student'
-                                : String(item.student || 'Unknown Student')
+                                ? item.student?.fullName || item.student?.name || 'Học sinh không rõ'
+                                : String(item.student || 'Học sinh không rõ')
                               }
                             </Text>
                           </div>
@@ -713,7 +713,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                   )}
                 />
               ) : (
-                <Empty description="No graded submissions yet" />
+                <Empty description="Chưa có bài nộp được chấm điểm" />
               )}
             </Card>
           </Col>
@@ -724,7 +724,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
               title={
                 <div className="flex items-center gap-2">
                   <PieChartOutlined className="text-green-500" />
-                  <span>Detailed Grade Breakdown</span>
+                  <span>Phân tích chi tiết điểm số</span>
                 </div>
               }
             >
@@ -737,29 +737,29 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                   }))}
                   columns={[
                     {
-                      title: 'Grade Range',
+                      title: 'Khoảng điểm',
                       dataIndex: 'label',
                       key: 'label',
                       render: (text, record) => (
-                        <Tag color={record.color || '#1890ff'}>{text || 'Unknown'}</Tag>
+                        <Tag color={record.color || '#1890ff'}>{text || 'Không rõ'}</Tag>
                       )
                     },
                     {
-                      title: 'Count',
+                      title: 'Số lượng',
                       dataIndex: 'count',
                       key: 'count',
                       align: 'center',
                       render: (count) => <Badge count={Number(count) || 0} showZero color="#1890ff" />
                     },
                     {
-                      title: 'Percentage',
+                      title: 'Phần trăm',
                       dataIndex: 'percentage',
                       key: 'percentage',
                       align: 'center',
                       render: (percentage) => `${Math.round((Number(percentage) || 0) * 10) / 10}%`
                     },
                     {
-                      title: 'Progress',
+                      title: 'Tiến trình',
                       key: 'progress',
                       render: (_, record) => (
                         <Progress 
@@ -775,7 +775,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                   className="grade-breakdown-table"
                 />
               ) : (
-                <Empty description="No grade breakdown data available" />
+                <Empty description="Không có dữ liệu phân tích điểm số" />
               )}
             </Card>
           </Col>
@@ -790,7 +790,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                 title={
                   <div className="flex items-center gap-2">
                     <LineChartOutlined className="text-indigo-500" />
-                    <span>Submission Timeline</span>
+                    <span>Bảng thời gian nộp bài</span>
                   </div>
                 }
               >
@@ -804,20 +804,20 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                 title={
                   <div className="flex items-center gap-2">
                     <CalendarOutlined className="text-orange-500" />
-                    <span>Submission Patterns</span>
+                    <span>Mẫu nộp bài</span>
                   </div>
                 }
               >
                 <div className="space-y-4">
                   <div>
-                    <Text strong>Peak Submission Hour:</Text>
+                    <Text strong>Giờ nộp bài đỉnh điểm:</Text>
                     <div className="mt-1">
                       {(() => {
                         const peakHour = analyticsData.timeAnalysis.submissionsByHour
                           ?.reduce((max, hour) => (hour.count || 0) > (max.count || 0) ? hour : max, { count: 0, hour: '00:00' });
                         return (
                           <Tag color="blue" icon={<ClockCircleOutlined />}>
-                            {peakHour.hour} ({peakHour.count} submissions)
+                            {peakHour.hour} ({peakHour.count} bài nộp)
                           </Tag>
                         );
                       })()}
@@ -825,14 +825,14 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                   </div>
 
                   <div>
-                    <Text strong>Most Active Day:</Text>
+                    <Text strong>Ngày nộp bài nhiều nhất:</Text>
                     <div className="mt-1">
                       {(() => {
                         const peakDay = analyticsData.timeAnalysis.submissionsByDay
-                          ?.reduce((max, day) => (day.count || 0) > (max.count || 0) ? day : max, { count: 0, day: 'Monday' });
+                          ?.reduce((max, day) => (day.count || 0) > (max.count || 0) ? day : max, { count: 0, day: 'Thứ Hai' });
                         return (
                           <Tag color="green" icon={<CalendarOutlined />}>
-                            {peakDay.day} ({peakDay.count} submissions)
+                            {peakDay.day} ({peakDay.count} bài nộp)
                           </Tag>
                         );
                       })()}
@@ -842,10 +842,10 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                   <Divider />
 
                   <div>
-                    <Text type="secondary">Submission Speed:</Text>
+                    <Text type="secondary">Tốc độ nộp bài:</Text>
                     <div className="mt-2 space-y-2">
                       <div className="flex justify-between">
-                        <span>Early Birds (&gt;3 days before):</span>
+                        <span>Sớm vượt trước (&gt;3 ngày trước):</span>
                         <Badge count={
                           submissions?.filter(s => 
                             s.submittedAt && assignment?.dueDate &&
@@ -854,7 +854,7 @@ const AssignmentAnalytics = ({ assignmentId, assignment, submissions = [] }) => 
                         } color="#52c41a" />
                       </div>
                       <div className="flex justify-between">
-                        <span>Last Minute (same day):</span>
+                        <span>Cuối cùng (cùng ngày):</span>
                         <Badge count={
                           submissions?.filter(s => 
                             s.submittedAt && assignment?.dueDate &&

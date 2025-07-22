@@ -192,21 +192,21 @@ const ClassworkTab = ({ classId: propClassId }) => {
   const createMenuItems = [
     {
       key: 'assignment',
-      label: 'Assignment',
+      label: 'Bài tập',
       icon: <BookOutlined />,
       onClick: () => {
         setAssignmentCreateVisible(true);
       }
     },
-    {
-      key: 'material',
-      label: 'Material',
-      icon: <FileTextOutlined />,
-      onClick: () => {
-        setCreateType('material');
-        setCreateModalVisible(true);
-      }
-    }
+    // {
+    //   key: 'material',
+    //   label: 'Tài liệu',
+    //   icon: <FileTextOutlined />,
+    //   onClick: () => {
+    //     setCreateType('material');
+    //     setCreateModalVisible(true);
+    //   }
+    // }
   ];
 
   const getTypeIcon = (type) => {
@@ -493,14 +493,14 @@ const ClassworkTab = ({ classId: propClassId }) => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <Title level={3} className="mb-0">Assignments</Title>
+        <Title level={3} className="mb-0">Danh sách bài tập</Title>
         <Dropdown 
           menu={{ items: createMenuItems }}
           placement="bottomRight"
           trigger={['click']}
         >
           <Button type="primary" icon={<PlusOutlined />}>
-            Create <DownOutlined />
+            Tạo mới 
           </Button>
         </Dropdown>
       </div>
@@ -515,7 +515,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
       ) : assignments.length === 0 ? (
         <Card>
           <Empty 
-            description="No assignments created yet"
+            description="Chưa có bài tập nào được tạo"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           />
         </Card>
@@ -529,7 +529,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => 
-              `${range[0]}-${range[1]} of ${total} assignments`,
+              `Hiển thị ${range[0]}-${range[1]} trong tổng số ${total} bài tập`,
             onChange: (page, pageSize) => {
               setPagination(prev => ({ ...prev, page, limit: pageSize }));
               fetchAssignments(page);
@@ -553,10 +553,10 @@ const ClassworkTab = ({ classId: propClassId }) => {
                       </Title>
                       <Space>
                         <Tag color="blue" className="capitalize">
-                          Assignment
+                          Bài tập
                         </Tag>
                         {item.totalPoints && (
-                          <Text type="secondary">{item.totalPoints} points</Text>
+                          <Text type="secondary">{item.totalPoints} điểm</Text>
                         )}
                         <Tag color={
                           item.visibility === 'published' ? 'green' : 
@@ -566,10 +566,10 @@ const ClassworkTab = ({ classId: propClassId }) => {
                           {item.visibility === 'scheduled' && item.publishDate && moment(item.publishDate).isAfter(moment()) ? (
                             <>
                               <ClockCircleOutlined className="mr-1" />
-                              Scheduled • {moment(item.publishDate).format('DD/MM HH:mm')}
+                              Đã lên lịch • {moment(item.publishDate).format('DD/MM HH:mm')}
                             </>
                           ) : (
-                            item.visibility.charAt(0).toUpperCase() + item.visibility.slice(1)
+                            item.visibility === 'published' ? 'Đã đăng' : item.visibility === 'draft' ? 'Bản nháp' : item.visibility
                           )}
                         </Tag>
                       </Space>
@@ -588,7 +588,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
                         icon={<EditOutlined />}
                         size="small"
                         onClick={() => handleEditAssignment(item)}
-                        title="Chỉnh sửa assignment"
+                        title="Chỉnh sửa bài tập"
                       />
                       <Button 
                         type="text" 
@@ -597,7 +597,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
                         onClick={() => handleGradeSubmission(item)}
                         className="text-green-600 hover:text-green-700"
                       >
-                        Grade
+                        Chấm điểm
                       </Button>
                       <Button 
                         type="text" 
@@ -606,7 +606,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
                         onClick={() => handleViewAllSubmissions(item)}
                         className="text-blue-600 hover:text-blue-700"
                       >
-                        Submissions
+                        Bài nộp
                       </Button>
                       <Button 
                         type="text" 
@@ -640,19 +640,19 @@ const ClassworkTab = ({ classId: propClassId }) => {
                       )}
                       
                       <Text type="secondary">
-                        {item.submissionsCount || 0} submissions
+                        {item.submissionsCount || 0} bài nộp
                       </Text>
                       
                       {item.attachments && item.attachments.length > 0 && (
                         <div className="flex items-center gap-1">
                           <PaperClipOutlined className="text-gray-500" />
-                          <Text type="secondary">{item.attachments.length} attachment(s)</Text>
+                          <Text type="secondary">{item.attachments.length} tệp đính kèm</Text>
                         </div>
                       )}
                     </div>
                     
                     <Text type="secondary" className="text-sm">
-                      Created {moment(item.createdAt).fromNow()}
+                      Tạo {moment(item.createdAt).fromNow()}
                     </Text>
                   </div>
                 </div>
@@ -664,13 +664,13 @@ const ClassworkTab = ({ classId: propClassId }) => {
 
       {/* Create Modal */}
       <Modal
-        title={`Create ${createType.charAt(0).toUpperCase() + createType.slice(1)}`}
+        title={`Tạo ${createType === 'assignment' ? 'bài tập' : 'tài liệu'}`}
         open={createModalVisible}
         onOk={() => form.submit()}
         onCancel={handleCancel}
         confirmLoading={loading}
         width={600}
-        okText="Create"
+        okText="Tạo mới"
       >
         <Form
           form={form}
@@ -679,19 +679,19 @@ const ClassworkTab = ({ classId: propClassId }) => {
         >
           <Form.Item
             name="title"
-            label="Title"
-            rules={[{ required: true, message: 'Please enter a title' }]}
+            label="Tiêu đề"
+            rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}
           >
-            <Input placeholder={`Enter ${createType} title`} />
+            <Input placeholder={`Nhập tiêu đề ${createType === 'assignment' ? 'bài tập' : 'tài liệu'}`} />
           </Form.Item>
 
           <Form.Item
             name="description"
-            label="Description"
+            label="Mô tả"
           >
             <TextArea 
               rows={4} 
-              placeholder={`Enter ${createType} description`} 
+              placeholder={`Nhập mô tả ${createType === 'assignment' ? 'bài tập' : 'tài liệu'}`} 
             />
           </Form.Item>
 
@@ -699,23 +699,23 @@ const ClassworkTab = ({ classId: propClassId }) => {
             <>
               <Form.Item
                 name="points"
-                label="Points"
+                label="Điểm tối đa"
               >
                 <Input 
                   type="number" 
-                  placeholder="Enter points (optional)"
+                  placeholder="Nhập điểm tối đa (không bắt buộc)"
                   min={0}
                 />
               </Form.Item>
 
               <Form.Item
                 name="dueDate"
-                label="Due date"
+                label="Hạn nộp"
               >
                 <DatePicker 
                   showTime
                   format="YYYY-MM-DD HH:mm"
-                  placeholder="Select due date (optional)"
+                  placeholder="Chọn hạn nộp (không bắt buộc)"
                   className="w-full"
                 />
               </Form.Item>
@@ -724,7 +724,7 @@ const ClassworkTab = ({ classId: propClassId }) => {
 
           <Form.Item
             name="attachments"
-            label="Attachments"
+            label="Tệp đính kèm"
           >
             <Upload.Dragger
               multiple
@@ -735,10 +735,10 @@ const ClassworkTab = ({ classId: propClassId }) => {
                 <PaperClipOutlined />
               </p>
               <p className="ant-upload-text">
-                Click or drag files to upload
+                Bấm hoặc kéo thả tệp để tải lên
               </p>
               <p className="ant-upload-hint">
-                Support for documents, images, and other files
+                Hỗ trợ các loại tài liệu, hình ảnh và tệp khác
               </p>
             </Upload.Dragger>
           </Form.Item>

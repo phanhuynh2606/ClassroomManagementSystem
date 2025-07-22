@@ -33,10 +33,10 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
         <div className="text-center py-8">
           <InfoCircleOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />
           <Title level={4} type="secondary" className="mt-4">
-            Analytics Insights
+            Thống kê phân tích
           </Title>
           <Text type="secondary">
-            Insights will be generated as more data becomes available.
+            Thống kê sẽ được tạo khi dữ liệu có sẵn.
           </Text>
         </div>
       </Card>
@@ -56,15 +56,15 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       insights.push({
         type: 'success',
         icon: <TrophyOutlined />,
-        title: '🎉 Excellent Class Performance!',
-        description: `Outstanding! ${Math.round(passingRate)}% của lớp đạt điểm đậu. Lớp học đã hiểu bài rất tốt!`,
+        title: '🎉 Hiệu suất lớp tuyệt vời!',
+        description: `Tuyệt vời! ${Math.round(passingRate)}% của lớp đạt điểm đậu. Lớp học đã hiểu bài rất tốt!`,
         priority: 1
       });
     } else if (passingRate >= 80) {
       insights.push({
         type: 'info',
         icon: <CheckCircleOutlined />,
-        title: '👍 Good Class Performance',
+        title: '👍 Hiệu suất lớp tốt',
         description: `Tốt! ${Math.round(passingRate)}% của lớp đạt điểm đậu. Phần lớn học sinh đã nắm vững bài học.`,
         priority: 2
       });
@@ -72,7 +72,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       insights.push({
         type: 'warning',
         icon: <InfoCircleOutlined />,
-        title: '📚 Average Performance',
+        title: '📚 Hiệu suất trung bình',
         description: `${Math.round(passingRate)}% của lớp đạt điểm đậu. Cần hỗ trợ thêm một số học sinh.`,
         priority: 3
       });
@@ -80,7 +80,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       insights.push({
         type: 'error',
         icon: <WarningOutlined />,
-        title: '🚨 Performance Needs Attention',
+        title: '🚨 Cần chú ý đến hiệu suất',
         description: `Chỉ ${Math.round(passingRate)}% đạt điểm đậu. Cần xem lại phương pháp giảng dạy hoặc nội dung bài học.`,
         priority: 1,
         actionable: true,
@@ -102,7 +102,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
         insights.push({
           type: 'info',
           icon: <StarOutlined />,
-          title: '⭐ High Achievers Detected',
+          title: '⭐ Nhận diện học sinh đạt điểm cao',
           description: `Tuyệt vời! ${aGrades.count || 0} học sinh (${Math.round((aGrades.percentage || 0) * 10) / 10}%) đạt loại A. Có thể cân nhắc tăng độ khó cho lần sau.`,
           priority: 2
         });
@@ -112,7 +112,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
         insights.push({
           type: 'warning',
           icon: <WarningOutlined />,
-          title: '📉 Many Students Struggling',
+          title: '📉 Nhiều học sinh gặp khó khăn',
           description: `${fGrades.count || 0} học sinh (${Math.round((fGrades.percentage || 0) * 10) / 10}%) đạt điểm F. Cần hỗ trợ đặc biệt.`,
           priority: 1,
           actionable: true,
@@ -131,7 +131,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       insights.push({
         type: 'success',
         icon: <TrophyOutlined />,
-        title: '🏆 Perfect Scores Achievement',
+        title: '🏆 Đạt điểm tuyệt đối',
         description: `${performanceInsights.perfectScores} học sinh đạt điểm tuyệt đối ${maxGrade}/${maxGrade}! Xuất sắc!`,
         priority: 2
       });
@@ -145,7 +145,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       insights.push({
         type: 'warning',
         icon: <ClockCircleOutlined />,
-        title: '⏰ High Late Submission Rate',
+        title: '⏰ Tỷ lệ nộp muộn cao',
         description: `${lateCount} bài nộp muộn (${Math.round((lateCount/submittedCount)*100)}%). Cần nhắc nhở về deadline và quản lý thời gian.`,
         priority: 2,
         actionable: true,
@@ -165,8 +165,8 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       insights.push({
         type: 'warning',
         icon: <InfoCircleOutlined />,
-        title: '📝 Incomplete Submissions',
-        description: `${missingCount} học sinh chưa nộp bài (${(100-completionRate).toFixed(1)}% missing). Cần follow-up.`,
+        title: '📝 Bài nộp chưa hoàn thành',
+        description: `${missingCount} học sinh chưa nộp bài (${(100-completionRate).toFixed(1)}% chưa hoàn thành). Cần follow-up.`,
         priority: 1,
         actionable: true,
         suggestions: [
@@ -184,7 +184,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       insights.push({
         type: 'info',
         icon: <InfoCircleOutlined />,
-        title: '📊 High Grade Variance',
+        title: '📊 Độ lệch chuẩn điểm cao',
         description: `Điểm số phân tán cao (độ lệch chuẩn: ${standardDeviation.toFixed(1)}). Có sự chênh lệch lớn giữa học sinh giỏi và yếu.`,
         priority: 2,
         actionable: true,
@@ -232,7 +232,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       <Col xs={12} sm={6}>
         <Card size="small" className="text-center">
           <Statistic
-            title="Class Rank"
+            title="Xếp hạng lớp"
             value={
               (overview.passingRate || 0) >= 90 ? 'A+' : 
               (overview.passingRate || 0) >= 80 ? 'A' : 
@@ -251,7 +251,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       <Col xs={12} sm={6}>
         <Card size="small" className="text-center">
           <Statistic
-            title="Completion"
+            title="Hoàn thành"
             value={Math.round(overview.completionRate || 0)}
             suffix="%"
             valueStyle={{ color: (overview.completionRate || 0) >= 90 ? '#52c41a' : '#faad14' }}
@@ -262,7 +262,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       <Col xs={12} sm={6}>
         <Card size="small" className="text-center">
           <Statistic
-            title="On Time"
+            title="Đúng hạn"
             value={
               (overview.submittedCount || 0) > 0 ? 
               Math.round(((Number(overview.submittedCount) - Number(overview.lateCount || 0)) / Number(overview.submittedCount)) * 100) : 
@@ -277,7 +277,7 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       <Col xs={12} sm={6}>
         <Card size="small" className="text-center">
           <Statistic
-            title="Excellence"
+            title="Xuất sắc"
             value={
               performanceInsights && (overview.gradedCount || 0) > 0 ? 
               Math.round(((performanceInsights.excellentPerformance || 0) / (overview.gradedCount || 1)) * 100) : 
@@ -298,10 +298,10 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
         <div className="text-center py-8">
           <InfoCircleOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />
           <Title level={4} type="secondary" className="mt-4">
-            Analytics Insights
+            Thống kê phân tích
           </Title>
           <Text type="secondary">
-            Insights will be generated as more data becomes available.
+            Thống kê sẽ được tạo khi dữ liệu có sẵn.
           </Text>
         </div>
       </Card>
@@ -314,10 +314,10 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <Title level={4} className="mb-1">
-              🔍 Key Insights & Recommendations
+              🔍 Các thông tin quan trọng & Gợi ý
             </Title>
             <Text type="secondary">
-              AI-powered analysis of assignment performance and actionable suggestions
+              Phân tích AI và gợi ý hành động có tác động
             </Text>
           </div>
           <Badge count={insights.length} showZero color="#1890ff" />
@@ -344,8 +344,8 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
               action={
                 insight.actionable && (
                   <Space>
-                    <Tag color="blue">Action Required</Tag>
-                    {insight.priority === 1 && <Tag color="red">High Priority</Tag>}
+                    <Tag color="blue">Yêu cầu hành động</Tag>
+                    {insight.priority === 1 && <Tag color="red">Mức độ ưu tiên cao</Tag>}
                   </Space>
                 )
               }
@@ -358,25 +358,25 @@ const AnalyticsInsights = ({ analyticsData, assignment }) => {
       <Card className="mt-6" size="small">
         <div className="flex items-center justify-between">
           <div>
-            <Text strong>Overall Assessment:</Text>
+            <Text strong>Đánh giá chung:</Text>
             <div className="mt-1">
               {(overview.passingRate || 0) >= 85 ? (
                 <Space>
                   <RiseOutlined style={{ color: '#52c41a' }} />
-                  <Text type="success">Class is performing excellently</Text>
-                  <Tag color="green">Strong Understanding</Tag>
+                  <Text type="success">Lớp đang hoạt động tuyệt vời</Text>
+                  <Tag color="green">Hiểu biết sâu sắc</Tag>
                 </Space>
               ) : (overview.passingRate || 0) >= 70 ? (
                 <Space>
                   <ThunderboltOutlined style={{ color: '#1890ff' }} />
-                  <Text>Class performance is satisfactory</Text>
-                  <Tag color="blue">Good Progress</Tag>
+                  <Text>Lớp đang hoạt động tốt</Text>
+                  <Tag color="blue">Tiến bộ tốt</Tag>
                 </Space>
               ) : (
                 <Space>
                   <FallOutlined style={{ color: '#ff4d4f' }} />
-                  <Text type="danger">Class needs additional support</Text>
-                  <Tag color="red">Needs Intervention</Tag>
+                  <Text type="danger">Lớp cần hỗ trợ thêm</Text>
+                  <Tag color="red">Cần can thiệp</Tag>
                 </Space>
               )}
             </div>
