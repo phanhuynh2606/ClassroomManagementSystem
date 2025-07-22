@@ -24,6 +24,7 @@ import './AdminLayout.css';
 const { Header, Sider, Content } = Layout;
 import logo from '../images/logo.png';
 import useUnreadCount from '../hooks/useUnreadCount';
+import NotificationBell from '../components/notifications/NotificationBell';
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState(['2']);
@@ -294,6 +295,7 @@ const AdminLayout = () => {
             }}
           />
           <Space align="center" style={{ marginRight: 16 }}>
+            <NotificationBell />
             <Avatar
               src={user?.image}
               icon={<UserOutlined />}

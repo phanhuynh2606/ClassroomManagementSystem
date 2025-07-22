@@ -187,7 +187,7 @@ const StudentClassroomDetail = () => {
               {classroom.recentActivities.map((activity) => (
                 <Timeline.Item 
                   key={activity.id}
-                  color={activity.type === 'announcement' ? 'blue' : 'green'}
+                  color={activity.type === 'system' ? 'blue' : 'green'}
                 >
                   <div>
                     <Text strong>{activity.title}</Text>

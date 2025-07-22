@@ -1,0 +1,140 @@
+.notification-bell-button {
+  border: none !important;
+  box-shadow: none !important;
+  padding: 4px 8px;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.notification-bell-button:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  color: #1890ff;
+}
+
+.notification-dropdown {
+  width: 380px;
+  max-height: 500px;
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+}
+
+.notification-header {
+  padding: 16px 16px 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notification-title-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notification-list {
+  max-height: 350px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.notification-item {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item:hover {
+  background-color: #fafafa;
+}
+
+.notification-item.unread {
+  background-color: #f6ffed;
+  border-left: 3px solid #52c41a;
+}
+
+.notification-item.unread:hover {
+  background-color: #f0f9e7;
+}
+
+.notification-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #f5f5f5;
+}
+
+.notification-title {
+  width: 100%;
+}
+
+.notification-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.notification-time {
+  font-size: 12px !important;
+}
+
+.notification-content {
+  margin-top: 4px;
+}
+
+.notification-sender {
+  margin-top: 4px;
+}
+
+.notification-footer {
+  padding: 8px 0;
+  border-top: 1px solid #f0f0f0;
+  text-align: center;
+}
+
+.notification-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+}
+
+.notification-badge {
+  display: inline-flex;
+}
+
+/* Dropdown overlay styles */
+.notification-dropdown-overlay .ant-dropdown-menu {
+  padding: 0 !important;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+}
+
+.notification-dropdown-overlay .ant-dropdown-menu-item {
+  padding: 0 !important;
+  height: auto !important;
+}
+
+.notification-dropdown-overlay .ant-dropdown-menu-item:hover {
+  background-color: transparent !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .notification-dropdown {
+    width: 320px;
+  }
+  
+  .notification-list {
+    max-height: 300px;
+  }
+} 

@@ -26,9 +26,8 @@ const sendNotification = async (title, content, type, sender, recipients, classr
       content,
       type,
       sender,
-      recipients: recipients.map(recipient => ({ user: recipient })),
-      classroom,
-      action: 'announcement'
+      recipients,
+      classroom
     });
     await notification.save();
   } catch (error) {
@@ -1424,7 +1423,7 @@ const getClassroomDetail = async (req, res) => {
     responseData.recentActivities = [
       {
         id: 1,
-        type: 'announcement',
+        type: 'system',
         title: 'Welcome to the class!',
         content: 'Please check the course materials regularly.',
         createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago

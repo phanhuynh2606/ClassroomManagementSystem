@@ -4,6 +4,7 @@ const adminRoutes = require('./admin.route.js');
 const classroomRoutes = require('./classroom.route.js');
 const requestRoutes = require('./request.route.js');
 const chatRoutes = require('./chat.route.js');
+const notificationRoutes = require('./notification.route.js');
 const initRoutes = (app) => {
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
@@ -11,6 +12,7 @@ const initRoutes = (app) => {
   app.use('/api/classrooms',classroomRoutes);
   app.use('/api/requests', requestRoutes);
   app.use('/api/chats', chatRoutes);
+  app.use('/api/notifications', notificationRoutes);
 };
 
 module.exports = initRoutes;

@@ -169,11 +169,7 @@ io.on('connection', async (socket) => {
     console.log(`Sent to room ${roomId}: ${message}`);
   });
 
-  // Handle notification events
-  socket.on('mark-notification-read', (notificationId) => {
-    console.log(`User ${socket.userId} marked notification ${notificationId} as read`);
-    // You can add additional real-time updates here if needed
-  });
+
 
   // Handle typing indicators for chat (future feature)
   socket.on('typing', ({ roomId, isTyping }) => {

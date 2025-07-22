@@ -20,9 +20,9 @@ import ClassroomManagement from '../pages/admin/components/ClassroomManagement';
 import AdminClassroomDetail from '../pages/admin/components/AdminClassroomDetail';
 import QuizManagement from '../pages/admin/components/QuizManagement';
 import QuestionManagement from '../pages/admin/components/QuestionManagement';
-import NotificationManagement from '../pages/admin/components/NotificationManagement';
 import AdminRequestManagement from '../pages/admin/components/AdminRequestManagement';
 import AdminProfile from '../pages/admin/AdminProfile';
+import AdminNotifications from '../pages/admin/AdminNotifications';
 
 // Teacher Pages
 import TeacherDashboard from '../pages/teacher/TeacherDashboard';
@@ -31,12 +31,14 @@ import TeacherClassroomDetail from '../pages/teacher/ClassroomDetail';
 import EditClassForm from '../pages/teacher/EditClassForm';
 import TeacherProfile from '../pages/teacher/TeacherProfile';
 import TeacherRequestManagement from '../pages/teacher/TeacherRequestManagement';
+import TeacherNotifications from '../pages/teacher/TeacherNotifications';
 
 // Student Pages
 import StudentProfile from '../pages/student/StudentProfile';
 import StudentClassroomManagement from '../pages/student/StudentClassroomManagement';
 import StudentDashboard from '../pages/student/StudentDashboard';
 import StudentClassroomDetail from '../pages/student/StudentClassroomDetail';
+import StudentNotifications from '../pages/student/StudentNotifications';
 // import MyClassess from '../pages/student/MyCourses';
 // import TakeQuiz from '../pages/student/TakeQuiz';
 // import MyGrades from '../pages/student/MyGrades';
@@ -102,7 +104,7 @@ const AppRouter = () => {
         <Route path="classrooms/:classroomId" element={<AdminClassroomDetail />} />
         <Route path="quizzes" element={<QuizManagement />} />
         <Route path="questions" element={<QuestionManagement />} />
-        <Route path="notifications" element={<NotificationManagement />} />
+        <Route path="notifications" element={<AdminNotifications />} />
         <Route path="requests" element={<AdminRequestManagement />} />
         <Route path="chat" element={<AdminChat />} />
       </Route>
@@ -138,7 +140,7 @@ const AppRouter = () => {
         <Route path="reports" element={<ComingSoon title="Báo cáo & Thống kê" />} />
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
         <Route path="students" element={<ComingSoon title="Quản lý Học sinh" />} />
-        <Route path="notifications" element={<ComingSoon title="Thông báo" />} />
+        <Route path="notifications" element={<TeacherNotifications />} />
         <Route path="chat" element={<TeacherChat />} />
       </Route>
 
@@ -160,6 +162,7 @@ const AppRouter = () => {
         <Route path="assignments" element={<ComingSoon title="Bài tập" />} />
         <Route path="grades" element={<ComingSoon title="Điểm số" />} />
         <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
+        <Route path="notifications" element={<StudentNotifications />} />
         <Route path="chat" element={<StudentChat />} />
       </Route>
 

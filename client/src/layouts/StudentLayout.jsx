@@ -10,6 +10,7 @@ import {
   LineChartOutlined,
   LogoutOutlined,
   MessageOutlined,
+  BellOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -17,6 +18,7 @@ import { logout } from '../store/slices/authSlice';
 import logo from '../images/logo.png';
 import { useLocation } from 'react-router-dom';
 import useUnreadCount from '../hooks/useUnreadCount';
+import NotificationBell from '../components/notifications/NotificationBell';
 const { Header, Sider, Content } = Layout;
 
 const StudentLayout = () => {
@@ -66,6 +68,12 @@ const StudentLayout = () => {
       icon: <LineChartOutlined />,
       label: 'Schedule',
       onClick: () => navigate('/student/schedule'),
+    },
+    {
+      key: 'notifications',
+      icon: <BellOutlined />,
+      label: 'Notifications',
+      onClick: () => navigate('/student/notifications'),
     },
     {
       key: 'chat',
@@ -163,7 +171,8 @@ const StudentLayout = () => {
               height: 64,
             }}
           />
-          <div style={{ marginRight: 16 }}>
+          <div style={{ marginRight: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <NotificationBell />
             <span 
               style={{ 
                 marginRight: 16,

@@ -20,6 +20,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import useUnreadCount from '../hooks/useUnreadCount';
+import NotificationBell from '../components/notifications/NotificationBell';
 
 const { Header, Sider, Content } = Layout;
 
@@ -130,6 +131,12 @@ const TeacherLayout = () => {
       onClick: () => navigate('/teacher/requests'),
     },
     {
+      key: 'notifications',
+      icon: <BellOutlined />,
+      label: 'Notifications',
+      onClick: () => navigate('/teacher/notifications'),
+    },
+    {
       type: 'divider',
     },
     {
@@ -193,12 +200,12 @@ const TeacherLayout = () => {
       ),
       onClick: () => navigate('/teacher/chat'),
     },
-    {
-      key: 'notifications',
-      icon: <BellOutlined />,
-      label: 'Notifications',
-      onClick: () => navigate('/teacher/notifications'),
-    },
+    // {
+    //   key: 'notifications',
+    //   icon: <BellOutlined />,
+    //   label: 'Notifications',
+    //   onClick: () => navigate('/teacher/notifications'),
+    // },
   ];
 
   return (
@@ -256,6 +263,7 @@ const TeacherLayout = () => {
             }}
           />
           <div style={{ marginRight: 16, display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <NotificationBell />
             <span 
               style={{ 
                 marginRight: 16, 
