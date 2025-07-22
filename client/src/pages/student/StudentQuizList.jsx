@@ -17,9 +17,10 @@ const StudentQuizList = ({ classroomId, onNavigateTab }) => {
 
   const fetchQuizzes = async () => {
     try {
-      // Simulate fetching quizzes data
       const response = await quizAPI.getByClassroom(classroomId);
-      setDataQuizzes(response.data);
+      if (response.data) {
+        setDataQuizzes(response.data);
+      }
     } catch (error) {
       message.error('Failed to load quizzes');
     }
@@ -142,6 +143,19 @@ title: 'Duration',
         const { type, text } = getVisibilityProps(visibility);
         return <Text type={type}>{text}</Text>;
       }
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => (
+        <Text
+          type="primary"
+          style={{ cursor: 'pointer' }}
+          onClick={() => navigate(`/student/classrooms/${classroomId}/quizzes/${record._id}/results`)}
+        >
+         View Result
+        </Text>
+      )
     }
   ];
 

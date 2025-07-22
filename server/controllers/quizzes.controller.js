@@ -2,6 +2,8 @@ const Quiz = require('../models/quiz.model');
 const Question = require('../models/question.model');
 const { shuffleArray } = require('../helper/shufferArray');
 const { arraysEqual } = require('../helper/arraysEqual');
+const cron = require('node-cron');
+const Stream = require('../models/stream.model');
 
 const createQuiz = async (req, res) => {
     try {
@@ -26,6 +28,18 @@ const createQuiz = async (req, res) => {
             randomizeQuestions,
         } = req.body;
 
+        let visibility = 'draft';
+        const now = new Date();
+
+        if (now < new Date(startTime)) {
+            visibility = 'scheduled';
+        } else if (now >= new Date(startTime) && now <= new Date(endTime)) {
+            visibility = 'published';
+        } else {
+            visibility = 'draft';
+        }
+
+
         const createdBy = req.user._id;
 
         const quiz = new Quiz({
@@ -48,13 +62,34 @@ const createQuiz = async (req, res) => {
             copyAllowed,
             checkTab,
             randomizeQuestions,
-            visibility: 'draft',
+            visibility: visibility,
             isActive: true,
             submissions: [],
             createdAt: new Date(),
         });
 
+        const existingQuiz = await Quiz.findOne({ title, classroom });
+        if (existingQuiz) {
+            return res.status(400).json({
+                message: 'Quiz with this title already exists in the selected classroom'
+            });
+        }
+
         await quiz.save();
+
+        if (visibility === 'published') {
+            await Stream.create({
+                title: quiz.title,
+                content: quiz.description,
+                type: 'quiz',
+                classroom: quiz.classroom,
+                author: createdBy,
+                resourceId: quiz._id,
+                resourceModel: 'Quiz',
+                dueDate: quiz.endTime,
+                totalPoints: quiz.questions.reduce((sum, q) => sum + (q.points || 1), 0),
+            })
+        }
 
         res.status(201).json({
             success: 'Quiz created successfully',
@@ -114,7 +149,7 @@ const getQuizzesForStudent = async (req, res) => {
 
 const getQuizById = async (req, res) => {
     try {
-        const quiz = await Quiz.findById(req.params.id)
+        const quiz = await Quiz.findById(req.params._id)
             .populate('createdBy', 'name email')
             .populate('classroom', 'name')
             .populate('questions')
@@ -123,6 +158,7 @@ const getQuizById = async (req, res) => {
         if (!quiz) {
             return res.status(404).json({ message: 'Quiz not found' });
         }
+
         res.status(200).json({
             success: 'Quiz fetched successfully',
             data: quiz
@@ -317,6 +353,7 @@ const submitQuiz = async (req, res) => {
         let totalScore = 0;
         const processedAnswers = [];
         const bulkUpdates = [];
+        const usagePromises = [];
 
         for (const answer of answers) {
             if (!submission.questionsOrder.includes(answer.questionId)) continue;
@@ -349,6 +386,12 @@ const submitQuiz = async (req, res) => {
                     }
                 }
             });
+
+            usagePromises.push(
+                Question.findById(question._id).then(q =>
+                    q.addUsage(quiz._id, quiz.classroom)
+                )
+            );
         }
 
         submission.answers = processedAnswers;
@@ -394,6 +437,150 @@ const submitQuiz = async (req, res) => {
     }
 };
 
+const autoPublishQuizzes = () => {
+    cron.schedule('* * * * *', async () => {
+        try {
+            const now = new Date();
+
+            const quizzesToPublish = await Quiz.find({
+                visibility: 'scheduled',
+                startTime: { $lte: now },
+                isActive: true,
+                deleted: false
+            });
+
+            if (quizzesToPublish.length > 0) {
+                console.log(`[${now.toISOString()}] Found ${quizzesToPublish.length} quiz(es) to auto-publish`);
+
+                const bulkOps = quizzesToPublish.map(quiz => ({
+                    updateOne: {
+                        filter: { _id: quiz._id },
+                        update: {
+                            visibility: 'published',
+                            publishedAt: now
+                        }
+                    }
+                }));
+
+                const result = await Quiz.bulkWrite(bulkOps);
+
+                console.log(`[${now.toISOString()}] Auto-published ${result.modifiedCount} quiz(es):`,
+                    quizzesToPublish.map(q => `"${q.title}" (ID: ${q._id})`));
+
+                await Promise.all(
+                    quizzesToPublish.map(async quiz => {
+                        try {
+                            await Stream.create({
+                                title: quiz.title,
+                                content: quiz.description,
+                                type: 'quiz',
+                                classroom: quiz.classroom,
+                                author: quiz.createdBy,
+                                resourceId: quiz._id,
+                                resourceModel: 'Quiz',
+                                dueDate: quiz.endTime,
+                                totalPoints: quiz.questions.reduce((sum, q) => sum + (q.points || 1), 0),
+                            });
+                            console.log(`Created stream for quiz "${quiz.title}"`);
+                        } catch (err) {
+                            console.error(`Failed to create stream for quiz "${quiz.title}":`, err.message);
+                        }
+                    })
+                );
+            }
+
+            const expiredQuizzes = await Quiz.find({
+                visibility: 'published',
+                endTime: { $lt: now },
+                isActive: true,
+                deleted: false
+            });
+
+            if (expiredQuizzes.length > 0) {
+                console.log(`[${now.toISOString()}] Found ${expiredQuizzes.length} expired quiz(es) to archive`);
+
+                const archiveBulkOps = expiredQuizzes.map(quiz => ({
+                    updateOne: {
+                        filter: { _id: quiz._id },
+                        update: {
+                            isArchived: true,
+                            archivedAt: now
+                        }
+                    }
+                }));
+
+                const archiveResult = await Quiz.bulkWrite(archiveBulkOps);
+                console.log(`[${now.toISOString()}] Archived ${archiveResult.modifiedCount} expired quiz(es)`);
+            }
+
+        } catch (error) {
+            console.error('[Auto-publish Quiz Error]:', error.message);
+        }
+    });
+
+    console.log('🤖 Quiz auto-publish cron job started - running every minute');
+};
+
+const viewResults = async (req, res) => {
+    try {
+        const { quizId } = req.params;
+        const studentId = req.user._id;
+
+        const quiz = await Quiz.findById(quizId)
+            .populate('submissions.student', ' name email')
+            .populate('submissions.answers.question');
+        if (!quiz) {
+            return res.status(404).json({ message: 'Quiz not found' });
+        }
+
+        const submissions = quiz.submissions
+            .filter(sub => sub.student._id.toString() === studentId.toString() && sub.status === 'completed')
+            .map(submission => {
+                const totalPossibleScore = quiz.questions.reduce((sum, q) => sum + (q.points || 1), 0);
+                const percentage = totalPossibleScore > 0 ? (submission.score / totalPossibleScore) * 100 : 0;
+
+                return {
+                    submissionId: submission._id,
+                    score: submission.score,
+                    totalPossibleScore,
+                    percentage: Math.round(percentage * 100) / 100,
+                    passed: percentage >= quiz.passingScore,
+                    passingScore: quiz.passingScore,
+                    submittedAt: submission.submittedAt,
+                    timeTaken: Math.round((submission.submittedAt - submission.startedAt) / 1000),
+                    answers: submission.answers.map(ans => ({
+                        questionId: ans.question._id.toString(),
+                        questionContent: ans.question.content,
+                        questionOptions: ans.question.options,
+                        selectedOption: ans.selectedOption,
+                        isCorrect: ans.isCorrect
+                    }))
+
+                };
+            });
+
+        if (!submissions.length) {
+            return res.status(200).json({
+                success: true,
+                message: 'No completed submissions found for this quiz',
+                data: []
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Quiz results fetched successfully',
+            data: submissions
+        });
+    }
+    catch (error) {
+        console.error('Error viewing quiz results:', error);
+        res.status(500).json({
+            message: 'Error fetching quiz results',
+            error: error.message
+        });
+    }
+}
 
 module.exports = {
     createQuiz,
@@ -404,5 +591,7 @@ module.exports = {
     deleteQuiz,
     changeQuizVisibility,
     takeQuizById,
-    submitQuiz
+    submitQuiz,
+    autoPublishQuizzes,
+    viewResults
 };

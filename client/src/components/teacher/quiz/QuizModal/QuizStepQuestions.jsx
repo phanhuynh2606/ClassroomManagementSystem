@@ -45,7 +45,7 @@ const questionBankColumns = [
 
 const QuizStepQuestions = ({
   questionDataRendered,
-setQuestionDataRendered,
+  setQuestionDataRendered,
   questionSource,
   setQuestionSource,
 }) => {
@@ -59,6 +59,17 @@ setQuestionDataRendered,
     total: 0,
   });
   const [selectedQuestions, setSelectedQuestions] = useState([]);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [aiQuestions, setAiQuestions] = useState(
+    {
+      topic: '',
+      numberOfQuestions: 1,
+      difficulty: 'medium',
+      category: 'PT1',
+      subjectCode: '',
+      file: null,
+    }
+  );
 
   const categoryOptions = [
     { value: 'PT1', label: 'PT1' },
@@ -124,7 +135,6 @@ setQuestionDataRendered,
           ...manualQuestion,
         };
         setQuestionDataRendered(prev => [...prev, newQuestion]);
-        // setQuizQuestions(prev => [...prev, { _id: response.data._id }]);
         setManualQuestion({
           content: '',
           options: [
@@ -198,34 +208,100 @@ setQuestionDataRendered,
   );
 
   // Handle add selected questions locally
-const handleAddSelectedQuestionsLocal = () => {
+  const handleAddSelectedQuestionsLocal = () => {
 
-  const existingIds = new Set(questionDataRendered.map(q => q._id));
-  const questionsToAdd = questionBank.filter(
-    q => selectedQuestions.includes(q._id) && !existingIds.has(q._id)
-  );
+    const existingIds = new Set(questionDataRendered.map(q => q._id));
+    const questionsToAdd = questionBank.filter(
+      q => selectedQuestions.includes(q._id) && !existingIds.has(q._id)
+    );
 
-  const formattedQuestions = questionsToAdd.map(q => ({
-    ...q,
-    source: 'bank',
-    id: q._id || Date.now() + Math.random()
-  }));
+    const formattedQuestions = questionsToAdd.map(q => ({
+      ...q,
+      source: 'bank',
+      id: q._id || Date.now() + Math.random()
+    }));
 
-  // const formattedQuestionsId = formattedQuestions.map(q => ({
-  //   _id: q._id,
-  // }));
+    // const formattedQuestionsId = formattedQuestions.map(q => ({
+    //   _id: q._id,
+    // }));
 
-  setQuestionDataRendered(prev => [...prev, ...formattedQuestions]);
-  // setQuizQuestions(prev => [...prev, ...formattedQuestionsId]);
-  setSelectedQuestions([]);
-};
+    setQuestionDataRendered(prev => [...prev, ...formattedQuestions]);
+    // setQuizQuestions(prev => [...prev, ...formattedQuestionsId]);
+    setSelectedQuestions([]);
+  };
 
-  
+  const handleAddAiQuestions = async () => {
+    if (!aiQuestions.topic.trim()) {
+      message.error('Vui lòng nhập chủ đề hoặc từ khóa');
+      return;
+    }
+    if (aiQuestions.numberOfQuestions < 1) {
+      message.error('Số lượng câu hỏi phải lớn hơn 0');
+      return;
+    }
+    if (!aiQuestions.category) {
+      message.error('Vui lòng chọn danh mục cho câu hỏi');
+      return;
+    }
+    if (!aiQuestions.subjectCode.trim()) {
+      message.error('Mã môn học không được để trống');
+      return;
+    }
+    if (!aiQuestions.difficulty) {
+      message.error('Vui lòng chọn độ khó cho câu hỏi');
+      return;
+    }
+
+    try {
+
+      const formData = new FormData();
+      formData.append('topic', aiQuestions.topic);
+      formData.append('numberOfQuestions', aiQuestions.numberOfQuestions);
+      formData.append('difficulty', aiQuestions.difficulty);
+      formData.append('file', uploadedFile);
+
+      const response = await questionAPI.genderAi(formData);
+      const generatedWithFormValues = response.answer.parsed.map((q, index) => {
+        const correctIndex = q.answer.toLowerCase().charCodeAt(0) - 97;
+
+        return {
+          content: q.question,
+          difficulty: aiQuestions.difficulty,
+          category: aiQuestions.category,
+          subjectCode: aiQuestions.subjectCode,
+          options: q.options.map((opt, i) => ({
+            content: opt,
+            isCorrect: i === correctIndex,
+          })),
+          points: 1,
+          explanation: q.explanation || '',
+        };
+      });
+
+      const responseQuestions = await questionAPI.createAI(generatedWithFormValues)
+      if (responseQuestions.success) {
+        const newQuestions = responseQuestions.data.map((q, index) => ({
+          key: q._id,
+          ...q,
+          source: 'ai',
+        }));
+
+        setQuestionDataRendered(prev => [...prev, ...newQuestions]);
+        message.success('Question created successfully');
+        fetchQuestions(pagination.current, pagination.pageSize, searchText);
+      }
+
+    } catch (error) {
+      message.error('Failed to create AI questions');
+      console.error('Error creating AI questions:', error);
+    }
+  }
+
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <Title level={4}>❓ Quản lý câu hỏi</Title>
+        <Title level={4}>Quản lý câu hỏi</Title>
         <div className="text-right">
           <Text strong>Tổng câu hỏi: {questionDataRendered.length}</Text><br />
           <Text type="secondary">
@@ -273,7 +349,7 @@ const handleAddSelectedQuestionsLocal = () => {
       </Card>
       {/* Manual Question Creation */}
       {questionSource === 'manual' && (
-        <Card title="➕ Tạo câu hỏi thủ công" size="small" className="mb-4">
+        <Card title="Tạo câu hỏi thủ công" size="small" className="mb-4">
           <Row gutter={16}>
             <Col span={16}>
               <TextArea
@@ -393,59 +469,113 @@ const handleAddSelectedQuestionsLocal = () => {
       )}
       {/* AI Question Generation */}
       {questionSource === 'ai' && (
-        <Card title="🤖 AI tạo câu hỏi" size="small" className="mb-4">
+        <Card
+          title="AI Tạo Câu Hỏi"
+          size="default"
+          className="rounded-2xl shadow-md mb-6"
+        >
           <Alert
             message="Tính năng AI"
-            description="Upload tài liệu hoặc nhập chủ đề để AI tự động tạo câu hỏi trắc nghiệm"
+            description="Upload tài liệu hoặc nhập chủ đề để AI tự động tạo câu hỏi trắc nghiệm."
             type="info"
             showIcon
-            className="mb-4"
+            className="rounded-lg mb-6"
           />
-          <Row gutter={16}>
-            <Col span={12}>
+
+          <Row gutter={[24, 24]}>
+            <Col xs={24} md={12}>
               <Upload.Dragger
                 multiple={false}
-                beforeUpload={() => false}
-                showUploadList={false}
+                showUploadList={true}
+                className="rounded-xl border-dashed mb-7"
+                beforeUpload={(file) => {
+                  const isPdfOrImage =
+                    file.type === 'application/pdf' || file.type.startsWith('image/');
+                  if (!isPdfOrImage) {
+                    message.error('Only PDF or image files are allowed!');
+                    return false;
+                  }
+
+                  setUploadedFile(file);
+                  return false;
+                }}
+                onRemove={() => setUploadedFile(null)}
+                fileList={uploadedFile ? [uploadedFile] : []}
+                maxCount={1}
               >
+
                 <p className="ant-upload-drag-icon">
-                  <UploadOutlined />
+                  <UploadOutlined style={{ fontSize: 32 }} />
                 </p>
-                <p className="ant-upload-text">Upload tài liệu</p>
-                <p className="ant-upload-hint">
-                  Hỗ trợ PDF, DOCX, TXT
-                </p>
+                <p className="text-lg font-semibold">Upload Tài Liệu</p>
+                <p className="text-sm text-gray-500">Hỗ trợ PDF, Hình ảnh</p>
               </Upload.Dragger>
             </Col>
-            <Col span={12}>
-              <Input.TextArea
-                placeholder="Hoặc nhập chủ đề, nội dung cần tạo câu hỏi..."
-                rows={6}
-                className="mb-3"
-              />
-              {/* <Button
-                type="primary"
-                onClick={handleGenerateAIQuestions}
-                loading={aiGenerating}
-                style={{ width: '100%' }}
-                icon={<RobotOutlined />}
-              >
-                {aiGenerating ? 'Đang tạo câu hỏi...' : 'Tạo câu hỏi với AI'}
-              </Button>
-              {aiGenerating && (
-                <Progress
-                  percent={aiProgress}
-                  status="active"
-                  className="mt-2"
+
+            <Col xs={24} md={12}>
+              <div className="space-y-3">
+                <Input
+                  value={aiQuestions.topic}
+                  onChange={(e) => setAiQuestions({ ...aiQuestions, topic: e.target.value })}
+                  placeholder="Nhập chủ đề hoặc từ khóa"
+                  className="rounded-lg"
                 />
-              )} */}
+                <Input
+                  type="number"
+                  value={aiQuestions.numberOfQuestions}
+                  onChange={(e) => setAiQuestions({ ...aiQuestions, numberOfQuestions: e.target.value })}
+                  min={1}
+                  placeholder="Số lượng câu hỏi mong muốn"
+                  className="rounded-lg"
+                />
+
+                <Select
+                  value={aiQuestions.difficulty}
+                  onChange={(value) => setAiQuestions({ ...aiQuestions, difficulty: value })}
+                  defaultValue="medium"
+                  className="w-full rounded-lg"
+                >
+                  <Option value="easy">Dễ</Option>
+                  <Option value="medium">Trung bình</Option>
+                  <Option value="hard">Khó</Option>
+                </Select>
+
+                <Select
+                  value={aiQuestions.category}
+                  onChange={(value) => setAiQuestions({ ...aiQuestions, category: value })}
+                  defaultValue={categoryOptions?.[0]?.value || ""}
+                  className="w-full rounded-lg"
+                >
+                  {categoryOptions.map((cat) => (
+                    <Option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </Option>
+                  ))}
+                </Select>
+
+                <Input
+                  value={aiQuestions.subjectCode}
+                  onChange={(e) => setAiQuestions({ ...aiQuestions, subjectCode: e.target.value })}
+                  placeholder="Mã môn học"
+                  className="rounded-lg"
+                />
+              </div>
+
+              <Button
+                type="primary"
+                className="mt-4 w-full rounded-lg"
+                icon={<RobotOutlined />}
+                onClick={handleAddAiQuestions}
+              >
+                Tạo Câu Hỏi
+              </Button>
             </Col>
           </Row>
         </Card>
       )}
       {/* Current Questions List */}
       {questionDataRendered.length > 0 && (
-        <Card title="📋 Câu hỏi đã thêm" size="small">
+        <Card title=" Câu hỏi đã thêm" size="small">
           <List
             dataSource={questionDataRendered}
             renderItem={(question, index) => (
@@ -458,7 +588,6 @@ const handleAddSelectedQuestionsLocal = () => {
                     size="small"
                     onClick={() => {
                       setQuestionDataRendered(prev => prev.filter((_, i) => i !== index))
-                      // setQuizQuestions(prev => prev.filter((_, i) => i !== index));
                     }}
                   >
                     Xóa

@@ -389,17 +389,32 @@ const QuizManagement = ({ classId }) => {
                           />
                         </Tooltip>
 
-                        {quiz.visibility === 'published' && (
-                          <Tooltip title="View Results">
+                        {quiz.visibility === 'draft' && (
+                          <Tooltip title="Publish Quiz">
                             <Button
                               type="text"
-                              icon={<BarChartOutlined />}
+                              icon={<PlayCircleOutlined />}
                               size="small"
-                              onClick={() => handleViewResults(quiz?._id, "draft")}
-                              className="text-blue-600 hover:text-blue-700"
+                              onClick={() => {
+                                const now = new Date();
+                                const startTime = new Date(quiz.startTime);
+                                const endTime = new Date(quiz.endTime);
+
+                                let targetVisibility = 'draft';
+
+                                if (now < startTime) {
+                                  targetVisibility = 'scheduled';
+                                } else if (now >= startTime && now <= endTime) {
+                                  targetVisibility = 'published';
+                                }
+
+                                handleChangeVisibilityQuiz(quiz?._id, targetVisibility);
+                              }}
+                              className="text-green-600 hover:text-green-700"
                             />
                           </Tooltip>
                         )}
+
 
                         {(quiz.visibility === 'published' || quiz.visibility === 'scheduled') && (
                           <Tooltip title="Unpublish Quiz">
