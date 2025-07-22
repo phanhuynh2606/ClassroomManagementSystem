@@ -10,6 +10,7 @@ const quizAPI = {
   changeVisibility: (id, data) => axiosClient.patch(`/quizzes/${id}/visibility`, data),
   takeQuiz: (quizId) => axiosClient.get(`/quizzes/${quizId}/take`),
   submit: (quizId, answers) => axiosClient.post(`/quizzes/${quizId}/submit`, answers),
+  viewResults: (quizId) => axiosClient.get(`/quizzes/${quizId}/results`),
 };
 
 export default quizAPI; 

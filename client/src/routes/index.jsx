@@ -88,6 +88,9 @@ const StudentClassroomDetail = lazy(() =>
 const StudentAssignmentDetail = lazy(() =>
   import("../pages/student/StudentAssignmentDetail")
 );
+const QuizResults = lazy(() =>
+  import("../pages/student/QuizResults")
+);
 const QuizPage = lazy(() => import("../pages/student/QuizPage"));
 
 // Loading Components
@@ -398,6 +401,14 @@ const AppRouter = () => {
             element={
               <Suspense fallback={<PageLoader />}>
                 <QuizPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="classrooms/:classroomId/quizzes/:quizId/results"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <QuizResults />
               </Suspense>
             }
           />

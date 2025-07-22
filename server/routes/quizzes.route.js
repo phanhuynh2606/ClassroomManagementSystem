@@ -12,5 +12,6 @@ router.patch('/:id/visibility', protect, authorize('teacher'), quizCtrl.changeQu
 router.get('/classroom/:classroomId', protect, authorize('student'), quizCtrl.getQuizzesForStudent);
 router.post('/:quizId/submit', protect, authorize('student'), quizCtrl.submitQuiz);
 router.get('/:quizId/take', protect, authorize('student'), quizCtrl.takeQuizById);
+router.get('/:quizId/results', protect, authorize('student'), quizCtrl.viewResults);
 
 module.exports = router;
