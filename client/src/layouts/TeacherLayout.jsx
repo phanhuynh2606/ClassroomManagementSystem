@@ -107,21 +107,15 @@ const TeacherLayout = () => {
     {
       type: 'divider',
     },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: 'Cài đặt',
-      onClick: () => navigate('/teacher/settings'),
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'grading-demo',
-      icon: <TrophyOutlined />,
-      label: 'Demo Chấm điểm',
-      onClick: () => navigate('/teacher/grading-demo'),
-    },
+    // {
+    //   key: 'settings',
+    //   icon: <SettingOutlined />,
+    //   label: 'Cài đặt',
+    //   onClick: () => navigate('/teacher/settings'),
+    // },
+    // {
+    //   type: 'divider',
+    // },
   ];
 
   return (

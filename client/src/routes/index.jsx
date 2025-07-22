@@ -27,8 +27,6 @@ import TeacherMaterials from "../pages/teacher/TeacherMaterials";
 import TeacherRequestManagement from "../pages/teacher/TeacherRequestManagement";
 import CreateClassForm from "../pages/teacher/CreateClassForm";
 import EditClassForm from "../pages/teacher/EditClassForm";
-import GradingSystemDemo from "../pages/teacher/GradingSystemDemo";
-import BackgroundDemo from "../pages/teacher/BackgroundDemo";
 
 // Student Pages
 import StudentProfile from "../pages/student/StudentProfile";
@@ -340,12 +338,8 @@ const AppRouter = () => {
           <Route path="notifications" element={<TeacherNotifications />} />
 
           {/* Settings & Profile */}
-          <Route path="settings" element={<TeacherSettings />} />
+          {/* <Route path="settings" element={<TeacherSettings />} /> */}
           <Route path="profile" element={<TeacherProfile />} />
-
-          {/* Demo & Help */}
-          <Route path="grading-demo" element={<GradingSystemDemo />} />
-          <Route path="background-demo" element={<BackgroundDemo />} />
         </Route>
 
         {/* Student Routes */}

@@ -11,6 +11,7 @@ const fileRoutes = require('./file.route.js');
 const materialRoutes = require('./material.route.js');
 const teacherTodoRoutes = require('./teacher.todo.route.js');
 const quizRoutes = require('./quizzes.route.js');
+const teacherDashboardRoutes = require('./teacher.dashboard.route.js');
 
 const initRoutes = (app) => {
   app.use('/api/auth', authRoutes);
@@ -25,6 +26,7 @@ const initRoutes = (app) => {
   app.use('/api/files', fileRoutes);
   app.use('/api/materials', materialRoutes);
   app.use('/api/teacher-todo', teacherTodoRoutes);
+  app.use('/api/teacher-dashboard', teacherDashboardRoutes);
   app.use('/api/quizzes', quizRoutes);
 };
 
