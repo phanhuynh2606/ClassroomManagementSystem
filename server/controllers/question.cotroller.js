@@ -122,6 +122,68 @@ const deleteQuestion = async (req, res) => {
     }
 };
 
+const randomQuestion = async (req, res) => {
+    try {
+        const { difficulty, category, subjectCode, numberOfQuestions = 1 } = req.query;
+
+        const numQuestions = parseInt(numberOfQuestions, 10);
+        if (isNaN(numQuestions) || numQuestions <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: '`numberOfQuestions` must be a positive integer'
+            });
+        }
+
+        const query = {};
+        if (subjectCode) query.subjectCode = subjectCode;
+        if (difficulty) query.difficulty = difficulty;
+        if (category) query.category = category;
+
+        const count = await Question.countDocuments(query);
+
+        if (count === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No questions found matching criteria'
+            });
+        }
+
+        if (numQuestions > count) {
+            return res.status(400).json({
+                success: false,
+                message: `Requested ${numQuestions} questions but only ${count} available`
+            });
+        }
+
+        const randomIndexes = [];
+        while (randomIndexes.length < numQuestions) {
+            const idx = Math.floor(Math.random() * count);
+            if (!randomIndexes.includes(idx)) {
+                randomIndexes.push(idx);
+            }
+        }
+
+        // Fetch questions at those indexes
+        const questions = await Promise.all(
+            randomIndexes.map(idx =>
+                Question.findOne(query).skip(idx).lean())
+        );
+
+        res.status(200).json({
+            success: true,
+            data: questions
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error'
+        });
+    }
+};
+
+
 const updateQuestion = async (req, res) => {
     try {
         const { id } = req.params;
@@ -228,6 +290,14 @@ const createQuestionManual = async (req, res) => {
             deleted: false
         });
 
+        const existingQuestion = await Question.findOne({ content, subjectCode, difficulty, category });
+        if (existingQuestion) {
+            return res.status(400).json({
+                success: false,
+                message: 'Question already exists'
+            });
+        }
+
         await newQuestion.save();
 
         res.status(201).json({
@@ -320,6 +390,19 @@ const createQuestionFromExcel = async (req, res) => {
             deleted: false
         }));
 
+        // Check for duplicate questions
+        const uniqueQuestions = new Set();
+        for (const question of questions) {
+            const key = `${question.content}-${question.subjectCode}-${question.difficulty}-${question.category}`;
+            if (uniqueQuestions.has(key)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Duplicate question found: ${question.content}`
+                });
+            }
+            uniqueQuestions.add(key);
+        }
+
         await Question.insertMany(questions);
 
         res.status(201).json({
@@ -374,11 +457,25 @@ const createQuestionFromAI = async (req, res) => {
             deleted: false
         }));
 
+        // Check for duplicate questions
+        const uniqueQuestions = new Set();
+        for (const question of questions) {
+            const key = `${question.content}-${question.subjectCode}-${question.difficulty}-${question.category}`;
+            if (uniqueQuestions.has(key)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Duplicate question found: ${question.content}`
+                });
+            }
+            uniqueQuestions.add(key);
+        }
+
         await Question.insertMany(questions);
 
         res.status(201).json({
             success: true,
-            message: `${questions.length} questions created successfully`
+            message: `${questions.length} questions created successfully`,
+            data: questions
         });
     } catch (error) {
         console.error('Error creating questions from Excel:', error);
@@ -397,5 +494,6 @@ module.exports = {
     createQuestionManual,
     downLoadTemplateExcel,
     createQuestionFromExcel,
-    createQuestionFromAI
+    createQuestionFromAI,
+    randomQuestion
 }

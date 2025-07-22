@@ -16,7 +16,8 @@ import {
   Statistic,
   Progress,
   Tooltip,
-  Avatar
+  Avatar,
+  Tabs
 } from 'antd';
 import { 
   ClockCircleOutlined, 
@@ -30,11 +31,15 @@ import {
   ExclamationCircleOutlined,
   ArrowLeftOutlined,
   EyeOutlined,
-  FileTextOutlined
+  FileTextOutlined,
+  TeamOutlined,
+  TrophyOutlined,
+  BarChartOutlined
 } from '@ant-design/icons';
 import { quizAPI } from '../../../services/api';
 
 const { Title, Text } = Typography;
+const { TabPane } = Tabs;
 
 function QuizDetail() {
   const [quizDetail, setQuizDetail] = useState();
@@ -107,11 +112,37 @@ function QuizDetail() {
     const texts = {
       'MID_TERM_EXAM': 'Kiểm tra giữa kỳ',
       'FINAL_EXAM': 'Kiểm tra cuối kỳ',
+      'PROGRESS_TEST': 'Kiểm tra tiến độ',
       'QUIZ': 'Bài kiểm tra nhỏ',
       'PRACTICE': 'Luyện tập'
     };
     return texts[category] || category;
   };
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getSubmissionStats = (submissions) => {
+    const completed = submissions.filter(sub => sub.status === 'completed');
+    const totalScore = completed.reduce((sum, sub) => sum + sub.score, 0);
+    const totalPossible = quizDetail?.questions?.reduce((sum, q) => sum + (q.points || 1), 0) || 0;
+    const passed = completed.filter(sub => {
+      const percentage = totalPossible > 0 ? (sub.score / totalPossible) * 100 : 0;
+      return percentage >= quizDetail.passingScore;
+    });
+
+    return {
+      totalSubmissions: completed.length,
+      averageScore: completed.length > 0 ? (totalScore / completed.length).toFixed(1) : 0,
+      passRate: completed.length > 0 ? Math.round((passed.length / completed.length) * 100) : 0,
+      uniqueStudents: [...new Set(completed.map(sub => sub.student._id))].length
+    };
+  };
+
+  const submissionStats = getSubmissionStats(quizDetail?.submissions || []);
 
   if (loading) {
     return (
@@ -234,71 +265,173 @@ function QuizDetail() {
             </Row>
           </Card>
 
-          {/* Questions List */}
-          <Card 
-            title={`❓ Danh sách câu hỏi (${quizDetail.questions?.length || 0} câu)`}
-            extra={
-              <Button type="primary" icon={<EditOutlined />} size="small">
-                Chỉnh sửa câu hỏi
-              </Button>
-            }
-          >
-            <List
-              dataSource={quizDetail.questions || []}
-              renderItem={(question, index) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar 
-                        style={{ backgroundColor: '#1890ff' }}
-                        size="large"
-                      >
-                        {index + 1}
-                      </Avatar>
-                    }
-                    title={
-                      <div className="flex items-center gap-2">
-                        <Text strong>{question.content}</Text>
-                        <Tag color={getDifficultyColor(question.difficulty)}>
-                          {getDifficultyText(question.difficulty)}
-                        </Tag>
-                        <Tag>{question.points} điểm</Tag>
-                        {question.isAI && <Tag color="orange">AI</Tag>}
-                      </div>
-                    }
-                    description={
-                      <div className="mt-2">
-                        {question.options?.map((option, optIndex) => (
-                          <div 
-                            key={option._id} 
-                            className={`p-2 mb-1 rounded ${
-                              option.isCorrect 
-                                ? 'bg-green-50 border border-green-200 text-green-700' 
-                                : 'bg-gray-50'
-                            }`}
+          {/* Questions and Submissions Tabs */}
+          <Card>
+            <Tabs defaultActiveKey="1" size="large">
+              <TabPane 
+                tab={
+                  <span>
+                    <QuestionCircleOutlined />
+                    Danh sách câu hỏi ({quizDetail.questions?.length || 0})
+                  </span>
+                } 
+                key="1"
+              >
+                <List
+                  dataSource={quizDetail.questions || []}
+                  renderItem={(question, index) => (
+                    <List.Item>
+                      <List.Item.Meta
+                        avatar={
+                          <Avatar 
+                            style={{ backgroundColor: '#1890ff' }}
+                            size="large"
                           >
-                            <span className="font-medium mr-2">
-                              {String.fromCharCode(65 + optIndex)}.
-                            </span>
-                            {option.content}
-                            {option.isCorrect && (
-                              <CheckCircleOutlined className="ml-2 text-green-500" />
+                            {index + 1}
+                          </Avatar>
+                        }
+                        title={
+                          <div className="flex items-center gap-2">
+                            <Text strong>{question.content}</Text>
+                            <Tag color={getDifficultyColor(question.difficulty)}>
+                              {getDifficultyText(question.difficulty)}
+                            </Tag>
+                            <Tag>{question.points} điểm</Tag>
+                            {question.isAI && <Tag color="orange">AI</Tag>}
+                          </div>
+                        }
+                        description={
+                          <div className="mt-2">
+                            {question.options?.map((option, optIndex) => (
+                              <div 
+                                key={option._id} 
+                                className={`p-2 mb-1 rounded ${
+                                  option.isCorrect 
+                                    ? 'bg-green-50 border border-green-200 text-green-700' 
+                                    : 'bg-gray-50'
+                                }`}
+                              >
+                                <span className="font-medium mr-2">
+                                  {String.fromCharCode(65 + optIndex)}.
+                                </span>
+                                {option.content}
+                                {option.isCorrect && (
+                                  <CheckCircleOutlined className="ml-2 text-green-500" />
+                                )}
+                              </div>
+                            ))}
+                            {question.explanation && (
+                              <div className="mt-2 p-2 bg-blue-50 rounded">
+                                <Text type="secondary">
+                                  <QuestionCircleOutlined /> Giải thích: {question.explanation}
+                                </Text>
+                              </div>
                             )}
                           </div>
-                        ))}
-                        {question.explanation && (
-                          <div className="mt-2 p-2 bg-blue-50 rounded">
-                            <Text type="secondary">
-                              <QuestionCircleOutlined /> Giải thích: {question.explanation}
-                            </Text>
-                          </div>
-                        )}
-                      </div>
-                    }
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              </TabPane>
+
+              <TabPane 
+                tab={
+                  <span>
+                    <FileTextOutlined />
+                    Danh sách nộp bài ({quizDetail.submissions?.filter(sub => sub.status === 'completed').length || 0})
+                  </span>
+                } 
+                key="2"
+              >
+                {quizDetail.submissions && quizDetail.submissions.length > 0 ? (
+                  <List
+                    dataSource={quizDetail.submissions
+                      .filter(sub => sub.status === 'completed')
+                      .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))}
+                    renderItem={(submission) => {
+                      const totalPossible = quizDetail.questions?.reduce((sum, q) => sum + (q.points || 1), 0) || 0;
+                      const percentage = totalPossible > 0 ? Math.round((submission.score / totalPossible) * 100) : 0;
+                      const passed = percentage >= quizDetail.passingScore;
+                      const timeTaken = submission.submittedAt && submission.startedAt 
+                        ? Math.round((new Date(submission.submittedAt) - new Date(submission.startedAt)) / 1000)
+                        : 0;
+
+                      return (
+                        <List.Item
+                          actions={[
+                            <Button 
+                              type="link" 
+                              icon={<EyeOutlined />} 
+                              size="small"
+                              onClick={() => navigate(`/teacher/class/${classId}/quiz/${quizId}/submission/${submission._id}`)}
+                            >
+                              Xem chi tiết
+                            </Button>
+                          ]}
+                        >
+                          <List.Item.Meta
+                            avatar={
+                              <Avatar 
+                                style={{ 
+                                  backgroundColor: passed ? '#52c41a' : '#ff4d4f',
+                                  fontSize: '16px'
+                                }}
+                                icon={passed ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
+                              />
+                            }
+                            title={
+                              <div className="flex items-center gap-2">
+                                <Text strong>{submission.student.fullName || submission.student.email}</Text>
+                                <Tag color={passed ? 'success' : 'error'}>
+                                  {submission.score}/{totalPossible} ({percentage}%)
+                                </Tag>
+                                <Tag color="blue">Lần {submission.attempt}</Tag>
+                                {passed && <Tag color="green" icon={<TrophyOutlined />}>Đạt</Tag>}
+                              </div>
+                            }
+                            description={
+                              <div>
+                                <Space size="middle">
+                                  <Text type="secondary">
+                                    <CalendarOutlined /> {formatDate(submission.submittedAt)}
+                                  </Text>
+                                  <Text type="secondary">
+                                    <ClockCircleOutlined /> {formatTime(timeTaken)}
+                                  </Text>
+                                  <Text type="secondary">
+                                    <UserOutlined /> {submission.student.email}
+                                  </Text>
+                                </Space>
+                                <div className="mt-2">
+                                  <Progress 
+                                    percent={percentage} 
+                                    strokeColor={passed ? '#52c41a' : '#ff4d4f'}
+                                    size="small"
+                                    format={percent => `${percent}%`}
+                                  />
+                                </div>
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      );
+                    }}
+                    pagination={{
+                      pageSize: 10,
+                      showSizeChanger: false,
+                      showQuickJumper: true,
+                      showTotal: (total, range) => 
+                        `${range[0]}-${range[1]} của ${total} bài nộp`
+                    }}
                   />
-                </List.Item>
-              )}
-            />
+                ) : (
+                  <div className="text-center py-8">
+                    <Text type="secondary">Chưa có bài nộp nào</Text>
+                  </div>
+                )}
+              </TabPane>
+            </Tabs>
           </Card>
         </Col>
 
@@ -327,16 +460,33 @@ function QuizDetail() {
               <Col span={12}>
                 <Statistic
                   title="Lượt nộp bài"
-                  value={quizDetail.submissions?.length || 0}
+                  value={submissionStats.totalSubmissions}
                   prefix={<UserOutlined />}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
                   title="Tỷ lệ qua môn"
-                  value={0}
+                  value={submissionStats.passRate}
                   suffix="%"
                   prefix={<CheckCircleOutlined />}
+                />
+              </Col>
+            </Row>
+            <Divider />
+            <Row gutter={16}>
+              <Col span={12}>
+                <Statistic
+                  title="Học sinh tham gia"
+                  value={submissionStats.uniqueStudents}
+                  prefix={<TeamOutlined />}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="Điểm trung bình"
+                  value={submissionStats.averageScore}
+                  prefix={<BarChartOutlined />}
                 />
               </Col>
             </Row>
@@ -398,7 +548,7 @@ function QuizDetail() {
           </Card>
 
           {/* Question Distribution */}
-          <Card title="📈 Phân bố câu hỏi theo độ khó">
+          <Card title="📈 Phân bố câu hỏi theo độ khó" className="mb-6">
             {(() => {
               const distribution = (quizDetail.questions || []).reduce((acc, q) => {
                 acc[q.difficulty] = (acc[q.difficulty] || 0) + 1;
@@ -428,6 +578,58 @@ function QuizDetail() {
               );
             })()}
           </Card>
+
+          {/* Submission Summary */}
+          {quizDetail.submissions && quizDetail.submissions.length > 0 && (
+            <Card title="📊 Tóm tắt bài nộp">
+              <div className="space-y-4">
+                <div className="text-center">
+                  <Progress
+                    type="circle"
+                    percent={submissionStats.passRate}
+                    strokeColor='#52c41a'
+                    format={percent => `${percent}%`}
+                    size={80}
+                  />
+                  <div className="mt-2">
+                    <Text strong>Tỷ lệ đạt</Text>
+                  </div>
+                </div>
+                
+                <Divider />
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Text type="secondary">Học sinh tham gia:</Text>
+                    <Text strong>{submissionStats.uniqueStudents}</Text>
+                  </div>
+                  <div className="flex justify-between">
+                    <Text type="secondary">Tổng lượt làm:</Text>
+                    <Text strong>{submissionStats.totalSubmissions}</Text>
+                  </div>
+                  <div className="flex justify-between">
+                    <Text type="secondary">Điểm TB:</Text>
+                    <Text strong>{submissionStats.averageScore}</Text>
+                  </div>
+                  <div className="flex justify-between">
+                    <Text type="secondary">Số học sinh đạt:</Text>
+                    <Text strong style={{ color: '#52c41a' }}>
+                      {Math.round(submissionStats.totalSubmissions * submissionStats.passRate / 100)}
+                    </Text>
+                  </div>
+                </div>
+
+                <Button 
+                  type="primary" 
+                  block 
+                  icon={<BarChartOutlined />}
+                  onClick={() => navigate(`/teacher/class/${classId}/quiz/${quizId}/analytics`)}
+                >
+                  Xem báo cáo chi tiết
+                </Button>
+              </div>
+            </Card>
+          )}
         </Col>
       </Row>
     </div>

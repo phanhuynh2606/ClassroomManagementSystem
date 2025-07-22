@@ -21,6 +21,7 @@ router.post('/questions-manual', protect, authorize('admin', 'teacher'), questio
 router.post('/questions-excel', protect, authorize('admin', 'teacher'), questionCtrl.createQuestionFromExcel);
 router.post('/questions-ai', protect, authorize('admin', 'teacher'), questionCtrl.createQuestionFromAI);
 router.get('/download-excel', protect, authorize('admin', 'teacher'), questionCtrl.downLoadTemplateExcel);
+router.get('/random-questions', protect, authorize('admin', 'teacher'), questionCtrl.randomQuestion);
 
 
 module.exports = router; 
