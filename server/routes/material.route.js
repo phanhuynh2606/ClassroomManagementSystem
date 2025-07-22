@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { protect, authorize } = require('../middleware/auth.middleware');
 const { materialUpload } = require('../middleware/upload.middleware');
 const ctrls = require('../controllers/material.controller');
+
 router.post('/teacher/library',
   protect,
   authorize('teacher'),
@@ -26,12 +27,26 @@ router.get('/',
   authorize('teacher'),
   ctrls.getMaterialByTeacher
 );
+ 
+router.put('/teacher/:materialId',
+  protect,
+  authorize('teacher'),
+  materialUpload.single('file'),
+  ctrls.updateMaterial
+);
 
 router.put('/:materialId',
   protect,
   authorize('teacher'),
   ctrls.shareMaterialToClass
 );
+
+router.delete('/teacher/library/:materialId',
+  protect,
+  authorize('teacher'),
+  ctrls.deleteMaterialFromLibrary
+);
+
 
 router.delete('/teacher/:classroomId/:materialId',
   protect,
