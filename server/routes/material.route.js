@@ -27,6 +27,13 @@ router.get('/',
   ctrls.getMaterialByTeacher
 );
 
+router.put('/teacher/:materialId',
+  protect,
+  authorize('teacher'),
+  materialUpload.single('file'),
+  ctrls.updateMaterial
+);
+
 router.put('/:materialId',
   protect,
   authorize('teacher'),

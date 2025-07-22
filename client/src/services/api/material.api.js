@@ -34,8 +34,8 @@ const materialAPI = {
   shareMaterial: (materialId, classroomId) =>
     axiosClient.put(`/materials/${materialId}`, { classroomId }),
 
-  updateMaterial: (classroomId, materialId, data) =>
-    axiosClient.put(`/materials/teacher/${classroomId}/${materialId}`, data)
+  updateMaterial: (materialId, data) =>
+    axiosClient.put(`/materials/teacher/${materialId}`, data)
 };
 
 export default materialAPI;

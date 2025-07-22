@@ -134,8 +134,7 @@ const getMaterialByTeacher = async (req, res) => {
 
     const materials = await Material.find({
       uploadedBy: currentUser._id,
-      deleted: false,
-      isPublic: true,
+      deleted: false, 
     }).sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
@@ -172,7 +171,7 @@ const uploadMaterialToLibrary = async (req, res) => {
     const { title, description, isPublic, tags, sharedWith } = req.body;
     const uploadedFile = req.file;
     const currentUser = req.user;
-    const parsedSharedWith = sharedWith ? JSON.parse(sharedWith) : []; 
+    const parsedSharedWith = sharedWith ? JSON.parse(sharedWith) : [];
     if (!uploadedFile) {
       return res.status(400).json({
         success: false,
@@ -203,9 +202,7 @@ const uploadMaterialToLibrary = async (req, res) => {
         console.warn("Failed to parse tags:", error);
         parsedTags = [];
       }
-    }
-
-    // Validate and filter ObjectIds for classroom
+    } 
     let validClassroomIds = [];
     if (Array.isArray(parsedSharedWith)) {
       validClassroomIds = parsedSharedWith.filter(id => {
@@ -215,17 +212,12 @@ const uploadMaterialToLibrary = async (req, res) => {
           if (id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id)) {
             return true;
           }
-        } 
+        }
         return false;
       });
     }
- 
-    // Determine material type from file if not provided
     const materialType = getMaterialType(uploadedFile.mimetype);
-
-    // Extract public ID from Cloudinary URL for future reference
     const publicId = extractPublicId(uploadedFile.path);
-
     const materialData = {
       title: title.trim(),
       description: description ? description.trim() : "",
@@ -233,21 +225,18 @@ const uploadMaterialToLibrary = async (req, res) => {
       fileUrl: uploadedFile.path,
       fileSize: uploadedFile.size,
       fileType: uploadedFile.mimetype,
-      classroom: validClassroomIds, // Use validated classroom IDs
+      classroom: validClassroomIds,
       uploadedBy: currentUser._id,
       isPublic: isPublic === "true" || isPublic === true,
       tags: parsedTags,
       cloudinaryPublicId: publicId,
       originalFileName: uploadedFile.originalname,
-    }; 
+    };
 
     const material = new Material(materialData);
-    await material.save();
-
-    // Populate uploadedBy field with user details for response
+    await material.save(); 
     await material.populate("uploadedBy", "fullName email role");
-
-    // Only populate classroom if there are valid classroom IDs
+ 
     if (validClassroomIds.length > 0) {
       await material.populate("classroom", "name subject");
     }
@@ -342,21 +331,18 @@ const uploadMaterial = async (req, res) => {
         parsedTags = [];
       }
     }
-    //Determine material type from file if not provided
     const materialType = getMaterialType(uploadedFile.mimetype);
-
-    // Extract public ID from Cloudinary URL for future reference
     const publicId = extractPublicId(uploadedFile.path);
     const materialData = {
       title: title.trim(),
       description: description ? description.trim() : "",
       type: materialType,
-      fileUrl: uploadedFile.path, // Cloudinary URL
-      fileSize: uploadedFile.size, // File size in bytes
-      fileType: uploadedFile.mimetype, // MIME type
+      fileUrl: uploadedFile.path, 
+      fileSize: uploadedFile.size, 
+      fileType: uploadedFile.mimetype,  
       classroom: classroomId,
       uploadedBy: currentUser._id,
-      isPublic: isPublic === "true" || isPublic === true, // Convert string to boolean
+      isPublic: isPublic === "true" || isPublic === true,  
       tags: parsedTags,
       // Additional metadata for tracking
       cloudinaryPublicId: publicId,
@@ -590,7 +576,149 @@ const downloadMaterial = async (req, res) => {
     res.status(500).json({ error: "Download failed" });
   }
 };
+const updateMaterial = async (req, res) => {
+  try {
+    const { materialId } = req.params;
+    const { title, description, isPublic, tags, sharedWith } = req.body;
+    const currentUser = req.user;
 
+    const existingMaterial = await Material.findById(materialId);
+    if (!existingMaterial) {
+      return res.status(404).json({
+        success: false,
+        error: "Material not found",
+        message: "The specified material does not exist",
+      });
+    }
+
+    if (
+      existingMaterial.uploadedBy.toString() !== currentUser._id.toString() &&
+      currentUser.role !== "admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        error: "Access denied",
+        message: "You are not authorized to update this material",
+      });
+    }
+
+    const updateData = {
+      updatedAt: new Date(),
+    };
+
+    if (title && title.trim() !== "") {
+      updateData.title = title.trim();
+    }
+
+    if (description !== undefined) {
+      updateData.description = description ? description.trim() : "";
+    }
+
+    if (isPublic !== undefined) {
+      updateData.isPublic = isPublic === "true" || isPublic === true;
+    }
+
+    if (tags) {
+      try {
+        let parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
+        parsedTags = Array.isArray(parsedTags)
+          ? parsedTags
+            .filter((tag) => tag && tag.trim() !== "")
+            .map((tag) => tag.trim().toLowerCase())
+          : [];
+        updateData.tags = parsedTags;
+      } catch (error) {
+        console.warn("Failed to parse tags:", error);
+        updateData.tags = existingMaterial.tags;
+      }
+    }
+
+    if (sharedWith) {
+      try {
+        let parsedClassroom = typeof sharedWith === "string" ? JSON.parse(sharedWith) : sharedWith;
+        if (Array.isArray(parsedClassroom)) {
+          // Validate ObjectIds for classroom
+          const validClassroomIds = parsedClassroom.filter(id => {
+            if (typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)) {
+              if (id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id)) {
+                return true;
+              }
+            }
+            return false;
+          });
+          updateData.classroom = validClassroomIds;
+        }
+      } catch (error) {
+        console.warn("Failed to parse classroom:", error);
+      }
+    }
+ 
+    if (req.file) {
+      const previousVersion = {
+        version: existingMaterial.version,
+        fileUrl: existingMaterial.fileUrl,
+        fileSize: existingMaterial.fileSize,
+        fileType: existingMaterial.fileType,
+        cloudinaryPublicId: existingMaterial.cloudinaryPublicId,
+        updatedAt: existingMaterial.updatedAt || existingMaterial.createdAt,
+      };
+
+      updateData.fileUrl = req.file.path;
+      updateData.fileSize = req.file.size;
+      updateData.fileType = req.file.mimetype;
+      updateData.type = getMaterialType(req.file.mimetype);
+      updateData.cloudinaryPublicId = extractPublicId(req.file.path);
+      updateData.originalFileName = req.file.originalname;
+      updateData.version = (existingMaterial.version || 1) + 1;
+
+      const previousVersions = existingMaterial.previousVersions || [];
+      updateData.previousVersions = [...previousVersions, previousVersion];
+    }
+ 
+    const updatedMaterial = await Material.findByIdAndUpdate(
+      materialId,
+      updateData,
+      { new: true, runValidators: true }
+    )
+      .populate("uploadedBy", "fullName email role")
+      .populate("classroom", "name subject");
+ 
+    res.status(200).json({
+      success: true,
+      message: req.file
+        ? "Material and file updated successfully"
+        : "Material updated successfully",
+      data: {
+        material: {
+          _id: updatedMaterial._id,
+          title: updatedMaterial.title,
+          description: updatedMaterial.description,
+          type: updatedMaterial.type,
+          fileUrl: updatedMaterial.fileUrl,
+          fileSize: updatedMaterial.fileSize,
+          fileType: updatedMaterial.fileType,
+          isPublic: updatedMaterial.isPublic,
+          tags: updatedMaterial.tags,
+          downloadCount: updatedMaterial.downloadCount,
+          viewCount: updatedMaterial.viewCount,
+          uploadedBy: updatedMaterial.uploadedBy,
+          classroom: updatedMaterial.classroom,
+          createdAt: updatedMaterial.createdAt,
+          updatedAt: updatedMaterial.updatedAt,
+          version: updatedMaterial.version,
+        },
+      },
+    });
+
+  } catch (error) {
+    console.error("Error updating material:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "Failed to update material. Please try again later.",
+    });
+  }
+};
 module.exports = {
   uploadMaterial,
   deleteMaterial,
@@ -598,5 +726,6 @@ module.exports = {
   downloadMaterial,
   getMaterialByTeacher,
   shareMaterialToClass,
-  uploadMaterialToLibrary
+  uploadMaterialToLibrary,
+  updateMaterial
 };

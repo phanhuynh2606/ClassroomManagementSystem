@@ -54,16 +54,15 @@ const TeacherMaterials = () => {
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [viewMode, setViewMode] = useState("list");
   const [materials, setMaterials] = useState([]);
   const [classes, setClasses] = useState([]);
   const [currMaterial, setCurrMaterial] = useState(null);
-
-  // New states for upload functionality
   const [fileList, setFileList] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [tags, setTags] = useState([]);
   const [inputTag, setInputTag] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
 
   useEffect(() => {
     fetchMaterialsData();
@@ -101,7 +100,6 @@ const TeacherMaterials = () => {
     }
   };
 
-  // Helper functions from file 1
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -155,7 +153,6 @@ const TeacherMaterials = () => {
     return `${material.title || "download"}.${extension}`;
   };
 
-  // Download functionality from file 1
   const handleDownloadMaterial = async (material) => {
     try {
       const loadingMessage = message.loading("Downloading", 0);
@@ -196,38 +193,63 @@ const TeacherMaterials = () => {
     }
   };
 
-  // Updated upload functionality
+  const handleEditMaterial = (material) => {
+    setIsEditMode(true);
+    setSelectedMaterial(material);
+    setTags(material.tags || []);
+    setFileList([]);
+    const sharedWithIds = (material.classroom || [])
+      .map(classroomItem => {
+        return typeof classroomItem === 'string' ? classroomItem : classroomItem._id || classroomItem.id;
+      })
+      .filter(Boolean);
+
+    form.setFieldsValue({
+      title: material.title,
+      description: material.description,
+      isPublic: material.isPublic,
+      sharedWith: sharedWithIds,
+    });
+
+    setUploadModalVisible(true);
+  };
   const handleUpload = async (values) => {
-    if (fileList.length === 0) {
+    if (!isEditMode && fileList.length === 0) {
       message.error("Please upload a file");
       return;
     }
-
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append("title", values.title);
       formData.append("description", values.description || "");
       formData.append("isPublic", values.isPublic || false);
-      formData.append("tags", JSON.stringify(tags));
-
+      formData.append("tags", JSON.stringify(tags)); 
+      
       if (values.sharedWith && values.sharedWith.length > 0) {
         formData.append("sharedWith", JSON.stringify(values.sharedWith));
       }
-      console.log("Shared with:", JSON.stringify(values.sharedWith));
+
       if (fileList.length > 0) {
         const file = fileList[0].originFileObj || fileList[0].file || fileList[0];
         formData.append("file", file);
       }
-      const response = await materialAPI.createMaterialInLibrary(formData);
 
-      message.success("Material uploaded successfully");
+      if (isEditMode) {
+        await materialAPI.updateMaterial(selectedMaterial._id, formData);
+        message.success("Material updated successfully");
+      } else {
+        const response = await materialAPI.createMaterialInLibrary(formData);
+        message.success("Material uploaded successfully");
+      }
       setUploadModalVisible(false);
       resetUploadForm();
       fetchMaterialsData();
     } catch (error) {
-      console.error("Error uploading material:", error);
-      message.error("Failed to upload material");
+      console.error("Error submitting material:", error);
+      message.error(
+        isEditMode ? "Failed to update material" : "Failed to upload material"
+      );
     } finally {
       setUploading(false);
     }
@@ -238,6 +260,8 @@ const TeacherMaterials = () => {
     setFileList([]);
     setTags([]);
     setInputTag("");
+    setIsEditMode(false);
+    setSelectedMaterial(null);
   };
 
   const handleTagAdd = () => {
@@ -351,7 +375,7 @@ const TeacherMaterials = () => {
       key: "edit",
       label: "Edit",
       icon: <EditOutlined />,
-      onClick: () => message.info(`Editing ${material.title}`),
+      onClick: () => handleEditMaterial(material),
     },
     {
       type: "divider",
@@ -372,22 +396,15 @@ const TeacherMaterials = () => {
     const matchesType = filterType === "all" || material.type === filterType;
     return matchesSearch && matchesType;
   });
-
-  const totalSize = materials
-    .filter((m) => m.size)
-    .reduce((sum, m) => sum + parseFloat(m.size), 0);
-
   const totalFiles = materials.filter((m) => m.type !== "folder").length;
-  const totalFolders = materials.filter((m) => m.type === "folder").length;
 
-  // Upload props
   const uploadProps = {
     name: "file",
     multiple: false,
     fileList: fileList,
     beforeUpload: (file) => {
       setFileList([file]);
-      return false; // Prevent auto upload
+      return false;
     },
     onRemove: () => {
       setFileList([]);
@@ -543,16 +560,16 @@ const TeacherMaterials = () => {
         )}
       </Card>
 
-      {/* Updated Upload Modal */}
+      {/* Updated Upload Modal - now handles both create and edit */}
       <Modal
-        title="Tải lên tài liệu"
+        title={isEditMode ? "Chỉnh sửa tài liệu" : "Tải lên tài liệu"}
         open={uploadModalVisible}
         onOk={() => form.submit()}
         onCancel={() => {
           setUploadModalVisible(false);
           resetUploadForm();
         }}
-        okText="Tải lên"
+        okText={isEditMode ? "Cập nhật" : "Tải lên"}
         cancelText="Hủy"
         confirmLoading={uploading}
         width={700}
@@ -575,16 +592,27 @@ const TeacherMaterials = () => {
             <TextArea rows={3} placeholder="Mô tả ngắn về tài liệu" />
           </Form.Item>
 
-          <Form.Item label="Upload File" required>
+          <Form.Item
+            label={isEditMode ? "Cập nhật file (tùy chọn)" : "Upload File"}
+            required={!isEditMode}
+          >
+            {isEditMode && selectedMaterial?.filename && (
+              <div className="mb-2 p-2 bg-gray-50 rounded">
+                <Text type="secondary">File hiện tại: </Text>
+                <Text strong>{selectedMaterial.filename}</Text>
+              </div>
+            )}
             <Upload.Dragger {...uploadProps}>
               <p className="ant-upload-drag-icon">
                 <InboxOutlined />
               </p>
               <p className="ant-upload-text">
-                Kéo thả file hoặc click để chọn
+                Kéo thả file hoặc click để {isEditMode ? "thay thế file hiện tại" : "chọn"}
               </p>
               <p className="ant-upload-hint">
                 Hỗ trợ: PDF, Word, Excel, PowerPoint, Video, Images
+                {isEditMode && <br />}
+                {isEditMode && "Bỏ trống để giữ file hiện tại"}
               </p>
             </Upload.Dragger>
           </Form.Item>
@@ -610,21 +638,21 @@ const TeacherMaterials = () => {
           </Form.Item>
 
           <Form.Item name="isPublic" label="Hiển thị" valuePropName="checked">
-            <Switch checkedChildren="Công khai" unCheckedChildren="Riêng tư" />
+            <Switch checkedChildren="Public" unCheckedChildren="Private" />
           </Form.Item>
 
-          <Form.Item name="sharedWith" label="Chia sẻ với lớp">
+          <Form.Item
+            name="sharedWith"
+            label="Shared With"
+          >
             <Select
               mode="multiple"
-              placeholder="Chọn lớp để chia sẻ"
-              allowClear
-            >
-              {classes.map((c) => (
-                <Option key={c._id} value={c._id}>
-                  {c.name}
-                </Option>
-              ))}
-            </Select>
+              placeholder="Select classes"
+              options={classes.map(cls => ({
+                label: cls.name,        // Hiển thị tên
+                value: cls._id || cls.id // Value là _id
+              }))}
+            />
           </Form.Item>
         </Form>
       </Modal>
