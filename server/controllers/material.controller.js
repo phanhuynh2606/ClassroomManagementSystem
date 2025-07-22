@@ -1,6 +1,7 @@
 const Material = require("../models/material.model");
 const Classroom = require("../models/classroom.model");
 const axios = require("axios");
+const { default: mongoose } = require("mongoose");
 
 const getMaterials = async (req, res) => {
   try {
@@ -16,6 +17,7 @@ const getMaterials = async (req, res) => {
         message: "The specified classroom does not exist",
       });
     }
+    console.log("Classroom details:", classroom);
     if (
       currentUser.role === "student" &&
       !classroom.students.some(
@@ -76,6 +78,213 @@ const getMaterials = async (req, res) => {
     });
   }
 };
+const shareMaterialToClass = async (req, res) => {
+  try {
+    const { classroomId } = req.body;
+    const { materialId } = req.params;
+
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        error: "Classroom not found",
+        message: "The specified classroom does not exist",
+      });
+    }
+
+    const material = await Material.findById(materialId);
+    if (!material) {
+      return res.status(404).json({
+        success: false,
+        message: "Material not found",
+      });
+    }
+
+    if (material.classroom.includes(classroomId)) {
+      return res.status(200).json({
+        success: false,
+        message: `File ${material.title} đã tồn tại trong tài liệu lớp ${classroom.name}!`,
+        material,
+      });
+    }
+
+    const updatedMaterial = await Material.findByIdAndUpdate(
+      materialId,
+      { $push: { classroom: classroomId } },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: `Đã chia sẻ thành công file ${material.title} cho lớp ${classroom.name}`,
+      material: updatedMaterial,
+    });
+  } catch (error) {
+    console.error("Error sharing material to classroom:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "Failed to share material. Please try again later.",
+    });
+  }
+};
+const getMaterialByTeacher = async (req, res) => {
+  try {
+    const currentUser = req.user;
+
+    const materials = await Material.find({
+      uploadedBy: currentUser._id,
+      deleted: false,
+      isPublic: true,
+    }).sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      message: "Materials fetched successfully",
+      data: {
+        materials: materials.map((material) => ({
+          _id: material._id,
+          title: material.title,
+          description: material.description,
+          type: material.type,
+          fileUrl: material.fileUrl,
+          fileSize: material.fileSize,
+          fileType: material.fileType,
+          isPublic: material.isPublic,
+          tags: material.tags,
+          downloadCount: material.downloadCount,
+          viewCount: material.viewCount,
+          classroom: material.classroom,
+          createdAt: material.createdAt,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching materials:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "Failed to fetch materials. Please try again later.",
+    });
+  }
+};
+const uploadMaterialToLibrary = async (req, res) => {
+  try {
+    const { title, description, isPublic, tags, sharedWith } = req.body;
+    const uploadedFile = req.file;
+    const currentUser = req.user;
+    const parsedSharedWith = sharedWith ? JSON.parse(sharedWith) : []; 
+    if (!uploadedFile) {
+      return res.status(400).json({
+        success: false,
+        error: "No file uploaded",
+        message: "Please select a file to upload",
+      });
+    }
+
+    if (!title || title.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        error: "Title is required",
+        message: "Please provide a title for the material",
+      });
+    }
+
+    // Parse tags from string to array if needed
+    let parsedTags = [];
+    if (tags) {
+      try {
+        parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
+        parsedTags = Array.isArray(parsedTags)
+          ? parsedTags
+            .filter((tag) => tag && tag.trim() !== "")
+            .map((tag) => tag.trim().toLowerCase())
+          : [];
+      } catch (error) {
+        console.warn("Failed to parse tags:", error);
+        parsedTags = [];
+      }
+    }
+
+    // Validate and filter ObjectIds for classroom
+    let validClassroomIds = [];
+    if (Array.isArray(parsedSharedWith)) {
+      validClassroomIds = parsedSharedWith.filter(id => {
+        // Check if it's a valid ObjectId
+        if (typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)) {
+          // Additional check: ensure it's exactly 24 hex characters
+          if (id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id)) {
+            return true;
+          }
+        } 
+        return false;
+      });
+    }
+ 
+    // Determine material type from file if not provided
+    const materialType = getMaterialType(uploadedFile.mimetype);
+
+    // Extract public ID from Cloudinary URL for future reference
+    const publicId = extractPublicId(uploadedFile.path);
+
+    const materialData = {
+      title: title.trim(),
+      description: description ? description.trim() : "",
+      type: materialType,
+      fileUrl: uploadedFile.path,
+      fileSize: uploadedFile.size,
+      fileType: uploadedFile.mimetype,
+      classroom: validClassroomIds, // Use validated classroom IDs
+      uploadedBy: currentUser._id,
+      isPublic: isPublic === "true" || isPublic === true,
+      tags: parsedTags,
+      cloudinaryPublicId: publicId,
+      originalFileName: uploadedFile.originalname,
+    }; 
+
+    const material = new Material(materialData);
+    await material.save();
+
+    // Populate uploadedBy field with user details for response
+    await material.populate("uploadedBy", "fullName email role");
+
+    // Only populate classroom if there are valid classroom IDs
+    if (validClassroomIds.length > 0) {
+      await material.populate("classroom", "name subject");
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Material uploaded successfully",
+      data: {
+        material: {
+          _id: material._id,
+          title: material.title,
+          description: material.description,
+          type: material.type,
+          fileUrl: material.fileUrl,
+          fileSize: material.fileSize,
+          fileType: material.fileType,
+          isPublic: material.isPublic,
+          tags: material.tags,
+          downloadCount: material.downloadCount,
+          viewCount: material.viewCount,
+          uploadedBy: material.uploadedBy,
+          classroom: material.classroom,
+          createdAt: material.createdAt,
+          version: material.version,
+        },
+      },
+    });
+
+  } catch (error) {
+    console.error("Error uploading material:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "Failed to upload material. Please try again later.",
+    });
+  }
+};
 const uploadMaterial = async (req, res) => {
   try {
     const { classroomId } = req.params;
@@ -125,8 +334,8 @@ const uploadMaterial = async (req, res) => {
         // Ensure it's an array and clean up tags
         parsedTags = Array.isArray(parsedTags)
           ? parsedTags
-              .filter((tag) => tag && tag.trim() !== "")
-              .map((tag) => tag.trim().toLowerCase())
+            .filter((tag) => tag && tag.trim() !== "")
+            .map((tag) => tag.trim().toLowerCase())
           : [];
       } catch (error) {
         console.warn("Failed to parse tags:", error);
@@ -191,6 +400,7 @@ const uploadMaterial = async (req, res) => {
     });
   }
 };
+
 
 const deleteMaterial = async (req, res) => {
   try {
@@ -284,7 +494,7 @@ const getMaterialType = (mimeType) => {
   ) {
     return "presentation";
   } else if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) {
-    return "spreadsheet";
+    return "excel";
   } else if (
     mimeType.includes("zip") ||
     mimeType.includes("rar") ||
@@ -386,4 +596,7 @@ module.exports = {
   deleteMaterial,
   getMaterials,
   downloadMaterial,
+  getMaterialByTeacher,
+  shareMaterialToClass,
+  uploadMaterialToLibrary
 };
