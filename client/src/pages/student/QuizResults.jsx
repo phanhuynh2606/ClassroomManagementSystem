@@ -231,7 +231,7 @@ function QuizResults() {
               color={result.passed ? 'green' : 'red'}
               label={
                 <div>
-                  <Text strong>Lần {quizResults.length - index}</Text>
+                  <Text strong>Lần {index + 1}</Text>
                   <br />
                   <Text type="secondary">{formatDate(result.submittedAt)}</Text>
                 </div>
