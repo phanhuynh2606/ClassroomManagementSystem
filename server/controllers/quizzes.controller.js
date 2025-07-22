@@ -128,6 +128,7 @@ const getQuizzes = async (req, res) => {
 const getQuizzesForStudent = async (req, res) => {
     try {
         const { classroomId } = req.params;
+        const studentId = req.user._id;
         const quizzes = await Quiz.find({ classroom: classroomId, isActive: true, deleted: false, visibility: { $in: ['published', 'scheduled'] } })
             .populate('createdBy', 'name email')
             .populate('classroom', 'name').populate('questions').
@@ -135,9 +136,17 @@ const getQuizzesForStudent = async (req, res) => {
             .populate('submissions.answers.question')
             .sort({ createdAt: -1 });
 
+        const data = quizzes.map(quiz => {
+            quiz = quiz.toObject();
+            quiz.submissions = quiz.submissions.filter(
+                sub => sub.student && sub.student._id.toString() === studentId.toString()
+            );
+            return quiz;
+        });
+
         res.status(200).json({
             success: 'Quizzes fetched successfully',
-            data: quizzes
+            data: data
         });
     } catch (error) {
         res.status(500).json({
