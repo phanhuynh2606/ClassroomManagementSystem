@@ -3,7 +3,7 @@ import axiosClient from '../axiosClient';
 // Helper function to normalize assignment data
 const normalizeAssignmentData = (assignment) => {
   if (!assignment) return null;
-  
+
   return {
     ...assignment,
     // Ensure submissionSettings has default values
@@ -39,17 +39,17 @@ const handleResponse = (responsePromise) => {
   return responsePromise
     .then(response => {
       const data = response;
-      
+
       // Normalize single assignment
       if (data.data && !Array.isArray(data.data) && typeof data.data === 'object') {
         data.data = normalizeAssignmentData(data.data);
       }
-      
+
       // Normalize assignment list
       if (data.data && data.data.docs && Array.isArray(data.data.docs)) {
         data.data.docs = data.data.docs.map(normalizeAssignmentData);
       }
-      
+
       return data;
     })
     .catch(error => {
@@ -76,13 +76,13 @@ const assignmentAPI = {
   // Create new assignment
   create: (classroomId, assignmentData) => {
     const formData = new FormData();
-    
+
     Object.keys(assignmentData).forEach(key => {
       if (key === 'attachments') {
         // Handle file attachments
         if (assignmentData.attachments && assignmentData.attachments.length > 0) {
           assignmentData.attachments.forEach((file, index) => {
-            
+
             if (file.originFileObj) {
               formData.append('attachments', file.originFileObj);
             }
@@ -100,9 +100,9 @@ const assignmentAPI = {
         formData.append(key, assignmentData[key]);
       }
     });
-    
-    
-    
+
+
+
     return handleResponse(
       axiosClient.post(`/assignments/classroom/${classroomId}`, formData, {
         headers: {
@@ -115,13 +115,13 @@ const assignmentAPI = {
   // Update assignment
   update: (assignmentId, assignmentData) => {
     const formData = new FormData();
-    
+
     Object.keys(assignmentData).forEach(key => {
       if (key === 'attachments') {
         // Handle file attachments
         if (assignmentData.attachments && assignmentData.attachments.length > 0) {
           assignmentData.attachments.forEach((file, index) => {
-            
+
             if (file.originFileObj) {
               formData.append('attachments', file.originFileObj);
             }
@@ -157,7 +157,7 @@ const assignmentAPI = {
   // Submit assignment (for students)
   submit: (assignmentId, submissionData) => {
     const formData = new FormData();
-    
+
     if (submissionData.content) {
       formData.append('content', submissionData.content);
     }
@@ -190,8 +190,8 @@ const assignmentAPI = {
   // Student specific methods
   getStudentAssignments: (classroomId, params = {}) => {
     return handleResponse(
-      axiosClient.get(`/assignments/classroom/${classroomId}`, { 
-        params: { ...params, role: 'student' } 
+      axiosClient.get(`/assignments/classroom/${classroomId}`, {
+        params: { ...params, role: 'student' }
       })
     );
   },
@@ -204,8 +204,8 @@ const assignmentAPI = {
 
   // Teacher specific methods
   getTeacherAssignments: (classroomId, params = {}) => {
-    return axiosClient.get(`/assignments/classroom/${classroomId}`, { 
-      params: { ...params, role: 'teacher' } 
+    return axiosClient.get(`/assignments/classroom/${classroomId}`, {
+      params: { ...params, role: 'teacher' }
     });
   },
 
@@ -259,7 +259,10 @@ const assignmentAPI = {
   // Validate submission before submit
   validateSubmission: (assignmentId, submissionData) => {
     return axiosClient.post(`/assignments/${assignmentId}/validate-submission`, submissionData);
-  }
+  },
+  getAssignmentStatsByStudent: () => {
+    return axiosClient.get('/assignments/by-student');
+  },
 };
 
 export default assignmentAPI; 

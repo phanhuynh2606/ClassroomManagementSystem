@@ -11,6 +11,8 @@ const quizAPI = {
   takeQuiz: (quizId) => axiosClient.get(`/quizzes/${quizId}/take`),
   submit: (quizId, answers) => axiosClient.post(`/quizzes/${quizId}/submit`, answers),
   viewResults: (quizId) => axiosClient.get(`/quizzes/${quizId}/results`),
+  getQuizStatsByStudent: () =>
+    axiosClient.get('/quizzes/by-student'),
 };
 
 export default quizAPI; 

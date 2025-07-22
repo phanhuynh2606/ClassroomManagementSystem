@@ -5,6 +5,7 @@ const { arraysEqual } = require('../helper/arraysEqual');
 const cron = require('node-cron');
 const Stream = require('../models/stream.model');
 
+const Classroom = require('../models/classroom.model');
 const createQuiz = async (req, res) => {
     try {
         const {
@@ -38,7 +39,6 @@ const createQuiz = async (req, res) => {
         } else {
             visibility = 'draft';
         }
-
 
         const createdBy = req.user._id;
 
@@ -74,9 +74,7 @@ const createQuiz = async (req, res) => {
                 message: 'Quiz with this title already exists in the selected classroom'
             });
         }
-
         await quiz.save();
-
         if (visibility === 'published') {
             await Stream.create({
                 title: quiz.title,
@@ -90,7 +88,6 @@ const createQuiz = async (req, res) => {
                 totalPoints: quiz.questions.reduce((sum, q) => sum + (q.points || 1), 0),
             })
         }
-
         res.status(201).json({
             success: 'Quiz created successfully',
             quiz
@@ -167,7 +164,6 @@ const getQuizById = async (req, res) => {
         if (!quiz) {
             return res.status(404).json({ message: 'Quiz not found' });
         }
-
         res.status(200).json({
             success: 'Quiz fetched successfully',
             data: quiz
@@ -445,7 +441,6 @@ const submitQuiz = async (req, res) => {
         });
     }
 };
-
 const autoPublishQuizzes = () => {
     cron.schedule('* * * * *', async () => {
         try {
@@ -590,6 +585,88 @@ const viewResults = async (req, res) => {
         });
     }
 }
+const getQuizzesByStudent = async (req, res) => {
+  try {
+    const studentId = req.user._id;
+
+    const classrooms = await Classroom.find({ 'students.student': studentId }).select('_id');
+    const classroomIds = classrooms.map(c => c._id);
+
+    if (classroomIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'Student is not in any classrooms',
+        data: [],
+        total: 0,
+        completedCount: 0,
+        notCompletedCount: 0,
+        passedCount: 0
+      });
+    }
+
+    const quizzes = await Quiz.find({
+      classroom: { $in: classroomIds },
+      deleted: false,
+      visibility: 'published',
+      isActive: true
+    }).populate('classroom', 'name').sort({ startTime: -1 });
+
+    let completedCount = 0;
+    let notCompletedCount = 0;
+    let passedCount = 0;
+
+    const result = quizzes.map((quiz) => {
+      const submission = quiz.submissions.find(
+        (s) => s.student.toString() === studentId.toString()
+      );
+
+      if (submission) {
+        completedCount++;
+        if (submission.score >= quiz.passingScore) passedCount++;
+      } else {
+        notCompletedCount++;
+      }
+
+      return {
+        _id: quiz._id,
+        title: quiz.title,
+        description: quiz.description,
+        category: quiz.category,
+        classroom: quiz.classroom,
+        startTime: quiz.startTime,
+        endTime: quiz.endTime,
+        duration: quiz.duration,
+        maxAttempts: quiz.maxAttempts,
+        totalQuestions: quiz.questions?.length || 0,
+        passingScore: quiz.passingScore,
+        submission: submission ? {
+          status: submission.status,
+          score: submission.score,
+          attempt: submission.attempt,
+          startedAt: submission.startedAt,
+          submittedAt: submission.submittedAt
+        } : null
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Quizzes for current student retrieved successfully',
+      data: result,
+      total: result.length,
+      completedCount,
+      notCompletedCount,
+      passedCount
+    });
+
+  } catch (error) {
+    console.error('getQuizzesByStudent error:', error); 
+    res.status(500).json({
+      success: false,
+      message: 'Server error while getting quizzes',
+    });
+  }
+};
 
 module.exports = {
     createQuiz,
@@ -602,5 +679,6 @@ module.exports = {
     takeQuizById,
     submitQuiz,
     autoPublishQuizzes,
-    viewResults
+    viewResults,
+    getQuizzesByStudent
 };

@@ -4,7 +4,9 @@ const { assignmentUpload, submissionUpload } = require('../middleware/upload.mid
 const { resolveClassroomId, checkScheduledAssignments, checkSingleAssignment } = require('../middleware/assignment.middleware');
 const ctrls = require('../controllers/assignment.controller');
 const router = express.Router();
-
+router.get('/by-student', protect, 
+  authorize('student'), 
+  ctrls.getAssignmentsByStudent);
 // Assignment CRUD operations
 router.post('/classroom/:classroomId', 
   protect, 
