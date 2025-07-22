@@ -3,6 +3,7 @@
 import { fixVietnameseEncoding } from "./convertStr";
 import { message } from "antd";
 import axiosClient from "../services/axiosClient";
+import * as XLSX from 'xlsx';
 
 /**
  * Format file size to human readable format
@@ -231,8 +232,34 @@ export const handleSecureDownload = async (options) => {
 
     onProgress?.('processing');
 
-    // axiosClient returns response.data directly, which is the blob
-    const blob = response;
+    // / ✅ FIX: Get the actual blob from response.data
+    let blob;
+    
+    // Handle different response formats
+    if (response instanceof Blob) {
+      // If axiosClient is configured to return data directly
+      blob = response;
+    } else if (response.data instanceof Blob) {
+      // Standard axios response format
+      blob = response.data;
+    } else if (response.data) {
+      // Fallback: try to create blob from response data
+      blob = new Blob([response.data]);
+    } else {
+      throw new Error('Invalid response format - no blob data received');
+    }
+
+    // Validate that we have a valid blob
+    if (!(blob instanceof Blob)) {
+      console.error('Invalid blob object:', blob);
+      throw new Error('Failed to create blob from response');
+    }
+    
+    console.log('✅ Blob created successfully:', {
+      size: blob.size,
+      type: blob.type,
+      fileName: fixedFileName
+    });
     const blobUrl = window.URL.createObjectURL(blob);
     
     const link = document.createElement('a');
@@ -308,4 +335,130 @@ export const downloadGenericFile = async (file) => {
     fileName: file.name,
     type: 'file'
   });
+}; 
+
+/**
+ * Export assignment analytics data to Excel file
+ * @param {Object} analyticsData - Analytics data object
+ * @param {Object} assignment - Assignment object (for title, totalPoints, etc.)
+ * @param {Array} submissions - Array of submissions (for top performers, etc.)
+ * @param {string} fileName - File name for export (default: 'Assignment-Analytics.xlsx')
+ */
+export const exportAnalyticsToExcel = (analyticsData, assignment, submissions, fileName = 'Assignment-Analytics.xlsx') => {
+  if (!analyticsData) {
+    message.error('Không có dữ liệu để xuất báo cáo!');
+    return;
+  }
+  try {
+    // 1. Overview sheet
+    const overviewSheet = [
+      ['Assignment Title', assignment?.title || ''],
+      ['Total Points', assignment?.totalPoints || ''],
+      ['Total Students', analyticsData.overview?.totalStudents || ''],
+      ['Submitted', analyticsData.overview?.submittedCount || ''],
+      ['Graded', analyticsData.overview?.gradedCount || ''],
+      ['Late Submissions', analyticsData.overview?.lateCount || ''],
+      ['Average Grade', analyticsData.overview?.avgGrade || ''],
+      ['Median Grade', analyticsData.overview?.medianGrade || ''],
+      ['Highest Grade', analyticsData.overview?.highestGrade || ''],
+      ['Lowest Grade', analyticsData.overview?.lowestGrade || ''],
+      ['Passing Rate (%)', analyticsData.overview?.passingRate || ''],
+    ];
+
+    // 2. Grade Distribution sheet
+    const gradeDistSheet = [
+      ['Grade Range', 'Count', 'Percentage'],
+      ...(analyticsData.gradeDistribution || []).map(g => [g.label, g.count, Math.round(g.percentage * 10) / 10])
+    ];
+
+    // 3. Top Performers sheet
+    const topPerformers = (submissions || [])
+      .filter(s => s && s.grade !== null && s.grade !== undefined && !isNaN(s.grade))
+      .sort((a, b) => (Number(b.grade) || 0) - (Number(a.grade) || 0))
+      .slice(0, 10)
+      .map((s, idx) => [
+        idx + 1,
+        s.student?.fullName || 'Unknown',
+        s.student?.email || '',
+        s.grade,
+        Math.round(((Number(s.grade) || 0) / (assignment?.totalPoints || 100)) * 100) + '%',
+        s.status,
+        s.submittedAt ? new Date(s.submittedAt).toLocaleString() : ''
+      ]);
+    const topPerformersSheet = [
+      ['Rank', 'Student Name', 'Email', 'Grade', 'Percentage', 'Status', 'Submitted At'],
+      ...topPerformers
+    ];
+
+    // 4. Submission Timeline sheet
+    const timelineSheet = [
+      ['Date', 'Hour', 'Is Late', 'Grade'],
+      ...((analyticsData.submissionTimeline || []).map(item => [
+        item.date,
+        item.hour,
+        item.isLate ? 'Yes' : 'No',
+        item.grade
+      ]))
+    ];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    wb.Props = {
+      Title: assignment?.title || 'Assignment Analytics',
+      Subject: 'Assignment Analytics',
+      Author: 'LMS Export',
+      CreatedDate: new Date()
+    };
+    wb.SheetNames = ['Overview', 'Grade Distribution', 'Top Performers', 'Timeline'];
+    wb.Sheets = {
+      'Overview': XLSX.utils.aoa_to_sheet(overviewSheet),
+      'Grade Distribution': XLSX.utils.aoa_to_sheet(gradeDistSheet),
+      'Top Performers': XLSX.utils.aoa_to_sheet(topPerformersSheet),
+      'Timeline': XLSX.utils.aoa_to_sheet(timelineSheet)
+    };
+
+    // Export to file
+    XLSX.writeFile(wb, fixVietnameseEncoding(fileName));
+    message.success('Xuất báo cáo thành công!');
+  } catch (err) {
+    console.error('Export analytics to Excel failed:', err);
+    message.error('Xuất báo cáo thất bại!');
+  }
+}; 
+
+/**
+ * Export assignment grades to Excel file
+ * @param {Array} submissions - Array of submission objects
+ * @param {Object} assignment - Assignment object (for title, totalPoints, etc.)
+ * @param {string} fileName - File name for export (default: 'Assignment-Grades.xlsx')
+ */
+export const exportGradesToExcel = (submissions, assignment, fileName = 'Assignment-Grades.xlsx') => {
+  if (!Array.isArray(submissions) || submissions.length === 0) {
+    message.error('Không có dữ liệu điểm để xuất!');
+    return;
+  }
+  try {
+    const maxGrade = assignment?.totalPoints || 100;
+    const sheetData = [
+      ['STT', 'Tên học sinh', 'Email', 'Điểm', 'Tỉ lệ (%)', 'Trạng thái', 'Nộp lúc', 'Ghi chú/Feedback'],
+      ...submissions.map((s, idx) => [
+        idx + 1,
+        s.student?.fullName || s.student?.name || 'Unknown',
+        s.student?.email || '',
+        s.grade !== null && s.grade !== undefined ? s.grade : '',
+        s.grade !== null && s.grade !== undefined ? Math.round(((Number(s.grade) || 0) / maxGrade) * 100) + '%' : '',
+        s.status === 'graded' ? 'Đã chấm' : s.status === 'missing' ? 'Chưa nộp' : 'Chưa chấm',
+        s.submittedAt ? new Date(s.submittedAt).toLocaleString() : "",
+        s.feedback || ''
+      ])
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Grades');
+    XLSX.writeFile(wb, fixVietnameseEncoding(fileName));
+    message.success('Xuất file điểm thành công!');
+  } catch (err) {
+    console.error('Export grades to Excel failed:', err);
+    message.error('Xuất file điểm thất bại!');
+  }
 }; 

@@ -12,7 +12,7 @@ const materialRoutes = require('./material.route.js');
 const teacherTodoRoutes = require('./teacher.todo.route.js');
 const quizRoutes = require('./quizzes.route.js');
 const teacherDashboardRoutes = require('./teacher.dashboard.route.js');
-
+const assignmentAnalyticsRoutes = require('./assginment.analyze.route.js');
 const initRoutes = (app) => {
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
@@ -20,6 +20,7 @@ const initRoutes = (app) => {
   app.use("/api/questions/ai/", genderAIRoute);
   app.use('/api/classrooms', classroomRoutes);
   app.use('/api/assignments', assignmentRoutes);
+  app.use('/api/assignments/analytics', assignmentAnalyticsRoutes);
   app.use('/api/requests', requestRoutes);
   app.use('/api/stream', streamRoutes);
   app.use('/api/video-watch', videoWatchRoutes);

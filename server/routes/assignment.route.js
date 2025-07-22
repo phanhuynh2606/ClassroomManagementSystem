@@ -77,4 +77,11 @@ router.post('/:assignmentId/bulk-grade-missing',
   ctrls.bulkGradeMissingSubmissions
 );
 
+// Send reminder emails to students who haven't submitted
+router.post('/:assignmentId/send-reminder', 
+  protect, 
+  authorize('teacher', 'admin'), 
+  ctrls.sendReminderEmails
+);
+
 module.exports = router; 

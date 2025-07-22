@@ -28,7 +28,7 @@ import { useSelector } from 'react-redux';
 import { fixVietnameseEncoding } from '../../../utils/convertStr';
 // Import react-doc-viewer
 import DocViewer, { DocViewerRenderers } from 'react-doc-viewer';
-
+import axiosClient from '../../../services/axiosClient';
 const { Text } = Typography;
 
 const FileViewer = ({ 
@@ -79,12 +79,13 @@ const FileViewer = ({
     setLoadingBlob(true);
     const fileUrl = file.url || file.previewUrl || file.downloadUrl;
     
-    fetch(fileUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': '*/*'
-      }
+    axiosClient.get(fileUrl, { responseType: 'blob' })
+    .then(response => {
+      // Nếu response là full object (do interceptor), lấy response.data
+      const blob = response.data || response;
+      const url = window.URL.createObjectURL(blob);
+      setBlobUrl(url);
+      setLoadingBlob(false);
     })
     .then(response => {
       if (!response.ok) throw new Error('Failed to fetch file for preview');

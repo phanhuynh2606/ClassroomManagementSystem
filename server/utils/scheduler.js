@@ -3,6 +3,7 @@ const moment = require('moment');
 const Assignment = require('../models/assignment.model');
 const Stream = require('../models/stream.model');
 const User = require('../models/user.model');
+const { sendEmail, emailTemplates } = require('../config/email.config');
 
 /**
  * Auto-publish scheduled assignments when publishDate is reached
@@ -183,12 +184,304 @@ const startAllSchedulers = () => {
   startAssignmentScheduler();
   startQuizScheduler();
   startCleanupScheduler();
+  scheduleAssignmentReminders();
   autoGradeScheduler.start(); // Start auto-grade scheduler
   
   console.log('✅ All schedulers are running!');
   console.log('=================================\n');
 };
 
+/**
+ * Gửi nhắc nhở cho một assignment cụ thể
+ * @param {Object} assignment - Assignment object đã populate classroom và submissions.student
+ * @param {Date} now - Thời gian hiện tại
+ */
+const sendAssignmentReminderForAssignment = async (assignment, now = new Date()) => {
+  try {
+    // 1. Kiểm tra xem có được phép gửi thông báo không
+    if (!assignment.missingSubmissionPolicy?.notifyStudentsOfMissingSubmission) {
+      console.log(`⏩ Bỏ qua reminder cho assignment '${assignment.title}' - notifyStudentsOfMissingSubmission = false`);
+      return;
+    }
+
+    // 2. Lấy cấu hình reminder days
+    const reminderDays = assignment.missingSubmissionPolicy?.reminderDaysBeforeDue || [3, 1];
+    
+    // 3. Tính số ngày còn lại đến deadline (chính xác hơn)
+    const dueDate = new Date(assignment.dueDate);
+    const timeDiff = dueDate.getTime() - now.getTime();
+    const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    
+    console.log(`📅 Assignment '${assignment.title}': ${daysLeft} ngày còn lại`);
+    console.log(`⚙️  Reminder days configured: [${reminderDays.join(', ')}]`);
+    
+    // 4. Kiểm tra xem hôm nay có phải ngày gửi reminder không
+    if (!reminderDays.includes(daysLeft)) {
+      console.log(`⏩ Không phải ngày gửi reminder cho assignment '${assignment.title}'`);
+      return;
+    }
+
+    // 5. Kiểm tra classroom có tồn tại không
+    if (!assignment.classroom) {
+      console.log(`❌ Assignment '${assignment.title}' không có classroom`);
+      return;
+    }
+
+    // 6. Lấy danh sách học sinh đã nộp bài
+    const submittedStudentIds = new Set();
+    if (assignment.submissions && assignment.submissions.length > 0) {
+      assignment.submissions.forEach(submission => {
+        if (submission.student && submission.submittedAt) {
+          const studentId = submission.student._id ? 
+            submission.student._id.toString() : 
+            submission.student.toString();
+          submittedStudentIds.add(studentId);
+        }
+      });
+    }
+
+    console.log(`📝 Đã có ${submittedStudentIds.size} học sinh nộp bài`);
+
+    // 7. Lấy danh sách học sinh trong lớp
+    let classroomStudentIds = assignment.classroom.students || [];
+    if (classroomStudentIds.length === 0) {
+      console.log(`⚠️  Classroom '${assignment.classroom.name}' không có học sinh nào`);
+      return;
+    }
+
+    classroomStudentIds = classroomStudentIds.map(student => student.student.toString());
+
+    // 8. Tìm học sinh chưa nộp bài và có email
+    const studentsToRemind = await User.find({
+      _id: { $in: classroomStudentIds },
+      role: 'student',
+      email: { $exists: true, $ne: null, $ne: '' },
+      isActive: { $ne: false }
+    }).select('fullName email');
+
+    const studentsNotSubmitted = studentsToRemind.filter(student => 
+      !submittedStudentIds.has(student._id.toString())
+    );
+
+    console.log(`📧 Sẽ gửi reminder cho ${studentsNotSubmitted.length} học sinh`);
+
+    // 9. Gửi email nhắc nhở
+    const emailResults = {
+      success: 0,
+      failed: 0,
+      errors: []
+    };
+
+    for (const student of studentsNotSubmitted) {
+      console.log("--------------------------------");
+      console.log("Student:", student);
+      console.log("--------------------------------");
+      try {
+        const subject = `🔔 Nhắc nhở: Sắp đến hạn nộp bài tập "${assignment.title}"`;
+        
+        // Tạo nội dung email
+        const emailData = {
+          studentName: student.fullName,
+          assignmentTitle: assignment.title,
+          dueDate: dueDate.toLocaleString('vi-VN', { 
+            timeZone: 'Asia/Ho_Chi_Minh',
+            year: 'numeric',
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          daysLeft: daysLeft,
+          classroomName: assignment.classroom.name || 'Không xác định',
+          assignmentDescription: assignment.description?.substring(0, 200) || '',
+          isUrgent: daysLeft <= 1
+        };
+
+        const html = emailTemplates.assignmentReminder(emailData);
+        
+        await sendEmail(
+          student.email,
+          subject,
+          html
+        );
+
+        console.log(`✅ Gửi reminder thành công cho ${student.fullName} (${student.email})`);
+        emailResults.success++;
+        
+      } catch (emailError) {
+        console.error(`❌ Lỗi gửi email reminder cho ${student.fullName} (${student.email}):`, emailError.message);
+        emailResults.failed++;
+        emailResults.errors.push({
+          student: student.fullName,
+          email: student.email,
+          error: emailError.message
+        });
+      }
+    }
+
+    // 10. Log kết quả
+    console.log(`📊 Kết quả gửi reminder cho assignment '${assignment.title}':
+      ✅ Thành công: ${emailResults.success}
+      ❌ Thất bại: ${emailResults.failed}
+      📝 Tổng số học sinh chưa nộp: ${studentsNotSubmitted.length}`);
+
+    return emailResults;
+
+  } catch (error) {
+    console.error(`💥 Lỗi trong sendAssignmentReminderForAssignment:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Gửi nhắc nhở trước hạn nộp bài cho tất cả assignments
+ */
+const sendAssignmentReminders = async () => {
+  const startTime = Date.now();
+  console.log(`🚀 Bắt đầu gửi assignment reminders lúc ${new Date().toLocaleString('vi-VN')}`);
+  
+  try {
+    const now = new Date();
+    
+    // Tìm tất cả assignments đang active, chưa đến hạn, và cho phép gửi reminder
+    const assignments = await Assignment.find({
+      isActive: true,
+      deleted: false,
+      visibility: 'published', // Chỉ gửi reminder cho assignments đã publish
+      dueDate: { $gte: now }, // Chưa đến hạn
+      'missingSubmissionPolicy.notifyStudentsOfMissingSubmission': true
+    })
+    .populate('classroom', 'name students') // Populate classroom info
+    .populate('submissions.student', 'fullName email') // Populate student info in submissions
+    .sort({ dueDate: 1 }); // Sắp xếp theo deadline gần nhất trước
+
+    console.log(`📋 Tìm thấy ${assignments.length} assignments cần kiểm tra reminder`);
+
+    if (assignments.length === 0) {
+      console.log(`ℹ️  Không có assignment nào cần gửi reminder`);
+      return {
+        total: 0,
+        processed: 0,
+        success: 0,
+        failed: 0,
+        duration: Date.now() - startTime
+      };
+    }
+
+    // Thống kê tổng quan
+    const totalResults = {
+      total: assignments.length,
+      processed: 0,
+      totalEmailsSent: 0,
+      totalEmailsFailed: 0,
+      assignmentResults: []
+    };
+
+    // Xử lý từng assignment
+    for (const assignment of assignments) {
+      try {
+        console.log(`\n🔄 Đang xử lý assignment: '${assignment.title}'`);
+        
+        const result = await sendAssignmentReminderForAssignment(assignment, now);
+        
+        if (result) {
+          totalResults.totalEmailsSent += result.success;
+          totalResults.totalEmailsFailed += result.failed;
+          totalResults.assignmentResults.push({
+            assignmentId: assignment._id,
+            assignmentTitle: assignment.title,
+            ...result
+          });
+        }
+        
+        totalResults.processed++;
+        
+        // Thêm delay nhỏ giữa các assignments để tránh spam
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+      } catch (error) {
+        console.error(`❌ Lỗi xử lý assignment '${assignment.title}':`, error.message);
+        totalResults.assignmentResults.push({
+          assignmentId: assignment._id,
+          assignmentTitle: assignment.title,
+          success: 0,
+          failed: 0,
+          error: error.message
+        });
+      }
+    }
+
+    const duration = Date.now() - startTime;
+    
+    // Log kết quả tổng kết
+    console.log(`\n🏁 Hoàn thành gửi assignment reminders:
+      📊 Tổng assignments: ${totalResults.total}
+      ✅ Đã xử lý: ${totalResults.processed}
+      📧 Email thành công: ${totalResults.totalEmailsSent}
+      ❌ Email thất bại: ${totalResults.totalEmailsFailed}
+      ⏱️  Thời gian: ${duration}ms`);
+
+    return {
+      ...totalResults,
+      duration
+    };
+
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`💥 Lỗi trong sendAssignmentReminders:`, error);
+    
+    return {
+      total: 0,
+      processed: 0,
+      totalEmailsSent: 0,
+      totalEmailsFailed: 0,
+      duration,
+      error: error.message
+    };
+  }
+};
+
+/**
+ * Kiểm tra và gửi reminder cho một assignment cụ thể (API endpoint)
+ * @param {string} assignmentId - ID của assignment
+ */
+const sendReminderForSpecificAssignment = async (assignmentId) => {
+  try {
+    const assignment = await Assignment.findById(assignmentId)
+      .populate('classroom', 'name students')
+      .populate('submissions.student', 'fullName email');
+
+    if (!assignment) {
+      throw new Error('Assignment không tồn tại');
+    }
+
+    if (!assignment.isActive || assignment.deleted) {
+      throw new Error('Assignment không active hoặc đã bị xóa');
+    }
+
+    const result = await sendAssignmentReminderForAssignment(assignment);
+    return result;
+
+  } catch (error) {
+    console.error(`❌ Lỗi gửi reminder cho assignment ${assignmentId}:`, error.message);
+    throw error;
+  }
+};
+
+/**
+ * Lên lịch chạy reminder tự động (có thể dùng với cron job)
+ */
+const scheduleAssignmentReminders = () => {
+  // Sử dụng với node-cron hoặc agenda
+  // Ví dụ: chạy mỗi ngày lúc 9:00 AM
+  console.log('📅 Đã lên lịch chạy assignment reminders hàng ngày');
+  
+  // Nếu sử dụng node-cron:
+      cron.schedule('0 7 * * *', async () => {
+        console.log('⏰ Chạy scheduled assignment reminders');
+        await sendAssignmentReminders();
+      });
+};
 class AutoGradeScheduler {
   constructor() {
     this.isRunning = false;
@@ -403,7 +696,7 @@ class AutoGradeScheduler {
       }
 
       // TODO: Send notifications to students (optional)
-      // await this.notifyAutoGradedStudents(missingStudents, assignment, gradeValue);
+      await this.notifyAutoGradedStudents(missingStudents, assignment, gradeValue);
       return {
         success: true,
         autoGradedCount: missingStudents.length,
@@ -419,8 +712,22 @@ class AutoGradeScheduler {
 
   // Optional: Send notifications
   async notifyAutoGradedStudents(students, assignment, gradeValue) {
-    // TODO: Implement email notifications
-    // EmailService.sendAutoGradeNotification(students, assignment, gradeValue);
+    // Gửi email thông báo auto-grade cho từng sinh viên
+    const EmailService = require('../services/email.service'); // Giả định đã có EmailService
+    for (const student of students) {
+      if (!student.email) continue;
+      const subject = `Thông báo: Bài tập '${assignment.title}' đã được chấm tự động`;
+      const content = `Chào ${student.fullName || 'bạn'},\n\nBài tập '${assignment.title}' của bạn đã quá hạn nộp và đã được hệ thống chấm tự động theo chính sách lớp học.\n\nĐiểm tự động: ${gradeValue}\n\nNếu có thắc mắc, vui lòng liên hệ giáo viên phụ trách.\n\nTrân trọng.`;
+      try {
+        await EmailService.sendMail({
+          to: student.email,
+          subject,
+          text: content
+        });
+      } catch (err) {
+        console.error(`❌ Lỗi gửi email auto-grade cho sinh viên ${student.email}:`, err);
+      }
+    }
   }
 
   // Stop scheduler
@@ -440,5 +747,6 @@ module.exports = {
   startAssignmentScheduler,
   startQuizScheduler,
   startCleanupScheduler,
-  autoGradeScheduler
+  autoGradeScheduler,
+  scheduleAssignmentReminders
 }; 

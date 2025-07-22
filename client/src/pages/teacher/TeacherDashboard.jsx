@@ -11,15 +11,13 @@ import {
   Avatar,
   Tag,
   Space,
-  Calendar,
   Badge,
-  Table,
-  Select,
-  DatePicker,
   Tabs,
   Modal,
   message,
-  Dropdown
+  Dropdown,
+  Spin,
+  Alert
 } from 'antd';
 import { 
   BookOutlined,
@@ -41,22 +39,36 @@ import {
   TrophyOutlined,
   PlayCircleOutlined
 } from '@ant-design/icons';
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  ResponsiveContainer, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend,
+  LineChart,
+  Line,
+  Area,
+  AreaChart
+} from 'recharts';
 import { useNavigate } from 'react-router-dom';
-import { VideoPlayerDemo } from '../../components/teacher/stream';
-import './style/teacher.css';
 import { getTeacherDashboard } from '../../services/api/teacher.api';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
-const { Option } = Select;
-const { RangePicker } = DatePicker;
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const [reportModalVisible, setReportModalVisible] = useState(false);
-  const [videoPlayerDemoVisible, setVideoPlayerDemoVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Dữ liệu thực tế từ API
+  // API data states
   const [stats, setStats] = useState(null);
   const [gradeDistribution, setGradeDistribution] = useState([]);
   const [classPerformance, setClassPerformance] = useState([]);
@@ -65,24 +77,49 @@ const TeacherDashboard = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
 
   useEffect(() => {
-    getTeacherDashboard()
-      .then(res => {
-        setStats(res.stats);
-        setGradeDistribution(res.gradeDistribution);
-        setClassPerformance(res.classPerformance || []);
-        setWeeklyProgress(res.weeklyProgress || []);
-        setRecentActivities(res.recentActivities || []);
-        setUpcomingEvents(res.upcomingEvents || []);
-      })
-      .catch(err => {
-        setStats(null);
-        setGradeDistribution([]);
-        setClassPerformance([]);
-        setWeeklyProgress([]);
-        setRecentActivities([]);
-        setUpcomingEvents([]);
-      });
+    fetchDashboardData();
   }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await getTeacherDashboard();
+      
+      // Set stats
+      setStats(response.stats);
+      
+      // Process grade distribution for charts (add value field for PieChart)
+      const processedGradeDistribution = response.gradeDistribution?.map(item => ({
+        ...item,
+        value: item.percentage || 0
+      })) || [];
+      setGradeDistribution(processedGradeDistribution);
+      
+      // Set other data
+      setClassPerformance(response.classPerformance || []);
+      setWeeklyProgress(response.weeklyProgress || []);
+      setRecentActivities(response.recentActivities || []);
+      setUpcomingEvents(response.upcomingEvents || []);
+      
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.');
+      message.error('Lỗi khi tải dữ liệu dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Color scheme for charts
+  const GRADE_COLORS = {
+    "9.0-10": "#52c41a",    // Green - Excellent
+    "8.0-8.9": "#1890ff",  // Blue - Good
+    "7.0-7.9": "#faad14",  // Orange - Fair
+    "6.0-6.9": "#fa8c16",  // Orange-red - Below average
+    "< 6.0": "#ff4d4f"     // Red - Poor
+  };
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -94,26 +131,6 @@ const TeacherDashboard = () => {
         return <BookOutlined className="text-purple-500" />;
       default:
         return <ClockCircleOutlined className="text-gray-500" />;
-    }
-  };
-
-  // Scroll to analytics section
-  const scrollToAnalytics = () => {
-    const analyticsElement = document.getElementById('analytics-dashboard');
-    if (analyticsElement) {
-      analyticsElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
-      });
-      
-      // Add highlight effect
-      analyticsElement.style.boxShadow = '0 0 20px rgba(24, 144, 255, 0.3)';
-      analyticsElement.style.transition = 'box-shadow 0.3s ease';
-      
-      // Remove highlight after 2 seconds
-      setTimeout(() => {
-        analyticsElement.style.boxShadow = 'none';
-      }, 2000);
     }
   };
 
@@ -145,8 +162,7 @@ const TeacherDashboard = () => {
     {
       key: 'analytics',
       label: 'Xem thống kê nhanh',
-      icon: <BarChartOutlined />,
-      onClick: scrollToAnalytics
+      icon: <BarChartOutlined />
     },
     {
       type: 'divider'
@@ -183,8 +199,9 @@ const TeacherDashboard = () => {
   const QuickActions = () => (
     <Card 
       title="Hành động nhanh" 
-      className="h-full"
+      className="h-full shadow-lg"
       extra={<BookOutlined className="text-blue-500" />}
+      style={{ borderRadius: '12px' }}
     >
       <div className="space-y-3">
         <Button 
@@ -192,7 +209,8 @@ const TeacherDashboard = () => {
           block 
           icon={<PlusOutlined />}
           onClick={() => navigate('/teacher/classroom')}
-          className="h-12 text-left flex items-center"
+          className="h-12 text-left flex items-center rounded-lg"
+          style={{ borderRadius: '8px' }}
         >
           Tạo lớp học mới
         </Button>
@@ -200,7 +218,8 @@ const TeacherDashboard = () => {
           block 
           icon={<EyeOutlined />}
           onClick={() => navigate('/teacher/classroom')}
-          className="h-12 text-left flex items-center"
+          className="h-12 text-left flex items-center rounded-lg"
+          style={{ borderRadius: '8px' }}
         >
           Xem tất cả lớp học
         </Button>
@@ -212,7 +231,8 @@ const TeacherDashboard = () => {
           <Button 
             block 
             icon={<BarChartOutlined />}
-            className="h-12 text-left flex items-center justify-between"
+            className="h-12 text-left flex items-center justify-between rounded-lg"
+            style={{ borderRadius: '8px' }}
           >
             <span>Báo cáo & Thống kê</span>
             <MoreOutlined />
@@ -222,7 +242,8 @@ const TeacherDashboard = () => {
           block 
           icon={<CalendarOutlined />}
           onClick={() => navigate('/teacher/todo')}
-          className="h-12 text-left flex items-center"
+          className="h-12 text-left flex items-center rounded-lg"
+          style={{ borderRadius: '8px' }}
         >
           Việc cần làm
         </Button>
@@ -233,77 +254,77 @@ const TeacherDashboard = () => {
   const StatsOverview = () => (
     <Row gutter={[16, 16]}>
       <Col xs={12} sm={6} md={4}>
-        <Card className="text-center h-full">
+        <Card className="text-center h-full shadow-lg" style={{ borderRadius: '12px' }}>
           <Statistic
             title="Tổng số lớp học"
             value={stats?.totalClasses ?? 0}
             prefix={<BookOutlined className="text-blue-500" />}
-            valueStyle={{ color: '#1890ff' }}
+            valueStyle={{ color: '#1890ff', fontSize: '24px', fontWeight: 'bold' }}
           />
         </Card>
       </Col>
       <Col xs={12} sm={6} md={4}>
-        <Card className="text-center h-full">
+        <Card className="text-center h-full shadow-lg" style={{ borderRadius: '12px' }}>
           <Statistic
             title="Tổng số học sinh"
             value={stats?.totalStudents ?? 0}
             prefix={<UserOutlined className="text-green-500" />}
-            valueStyle={{ color: '#52c41a' }}
+            valueStyle={{ color: '#52c41a', fontSize: '24px', fontWeight: 'bold' }}
           />
         </Card>
       </Col>
       <Col xs={12} sm={6} md={4}>
-        <Card className="text-center h-full">
+        <Card className="text-center h-full shadow-lg" style={{ borderRadius: '12px' }}>
           <Statistic
             title="Điểm trung bình"
             value={stats?.averageGrade ?? 0}
             precision={1}
             prefix={<RiseOutlined className="text-purple-500" />}
-            valueStyle={{ color: '#722ed1' }}
+            valueStyle={{ color: '#722ed1', fontSize: '24px', fontWeight: 'bold' }}
             suffix="/10"
           />
         </Card>
       </Col>
       <Col xs={12} sm={6} md={4}>
-        <Card className="text-center h-full">
+        <Card className="text-center h-full shadow-lg" style={{ borderRadius: '12px' }}>
           <Statistic
             title="Tỷ lệ nộp bài"
             value={stats?.submissionRate ?? 0}
             prefix={<CheckCircleOutlined className="text-green-500" />}
-            valueStyle={{ color: '#52c41a' }}
+            valueStyle={{ color: '#52c41a', fontSize: '24px', fontWeight: 'bold' }}
             suffix="%"
           />
         </Card>
       </Col>
       <Col xs={12} sm={6} md={4}>
-        <Card className="text-center h-full">
+        <Card className="text-center h-full shadow-lg" style={{ borderRadius: '12px' }}>
           <Statistic
             title="Nộp muộn"
             value={stats?.lateSubmissions ?? 0}
             prefix={<ClockCircleOutlined className="text-orange-500" />}
-            valueStyle={{ color: '#fa8c16' }}
+            valueStyle={{ color: '#fa8c16', fontSize: '24px', fontWeight: 'bold' }}
           />
         </Card>
       </Col>
       <Col xs={12} sm={6} md={4}>
-        <Card className="text-center h-full">
+        <Card className="text-center h-full shadow-lg" style={{ borderRadius: '12px' }}>
           <Statistic
             title="Tổng bài tập"
             value={stats?.totalAssignments ?? 0}
             prefix={<FileExcelOutlined className="text-blue-600" />}
-            valueStyle={{ color: '#1565c0' }}
+            valueStyle={{ color: '#1565c0', fontSize: '24px', fontWeight: 'bold' }}
           />
         </Card>
       </Col>
     </Row>
   );
 
-
   const UpcomingEvents = () => (
     <Card 
       title="Sự kiện sắp tới" 
-      className="h-full"
+      className="h-full shadow-lg"
       extra={<CalendarOutlined className="text-blue-500" />}
+      style={{ borderRadius: '12px' }}
     >
       <div className="space-y-4">
         {upcomingEvents.length === 0 ? (
@@ -312,15 +333,15 @@ const TeacherDashboard = () => {
             <Text type="secondary">Không có sự kiện nào sắp tới</Text>
           </div>
         ) : (
-          upcomingEvents.map((event) => (
-            <div key={event.title + event.date + event.time} className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+          upcomingEvents.map((event, index) => (
+            <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-l-4 border-blue-400 hover:shadow-md transition-all duration-300">
               <div className="flex justify-between items-start">
                 <div>
-                  <Text strong className="block text-sm">
+                  <Text strong className="block text-sm text-gray-800">
                     {event.title}
                   </Text>
-                  <Text type="secondary" className="text-xs">
-                    {event.date} • {event.time}
+                  <Text type="secondary" className="text-xs mt-1">
+                    📅 {event.date} • ⏰ {event.time}
                   </Text>
                 </div>
                 <Tag color="blue" className="text-xs">
@@ -334,136 +355,239 @@ const TeacherDashboard = () => {
     </Card>
   );
 
-  const AnalyticsDashboard = () => (
+  // Enhanced Grade Distribution with Pie Chart
+  const GradeDistributionChart = () => (
     <Card 
-      title={<span>📊 Phân bố điểm</span>}
-      className="h-full"
+      title={<span><PieChartOutlined className="mr-2" />Phân bố điểm số</span>}
+      className="h-full shadow-lg"
+      style={{ borderRadius: '12px' }}
     >
-      <div className="space-y-3">
-        {gradeDistribution.length === 0 ? (
-          <div>Chưa có dữ liệu phân bố điểm.</div>
-        ) : (
-          gradeDistribution.map((item, index) => (
-            <div key={index} className="flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <Text className="w-16">{item.range}</Text>
-                <Progress 
-                  percent={item.percentage} 
-                  size="small"
-                  strokeColor={
-                    item.range.includes('9') ? '#52c41a' :
-                    item.range.includes('8') ? '#1890ff' :
-                    item.range.includes('7') ? '#faad14' :
-                    item.range.includes('6') ? '#fa8c16' : '#ff4d4f'
-                  }
-                  style={{ width: 200 }}
-                />
-              </div>
-              <div className="text-right">
-                <Text strong>{item.count} HS</Text>
-                <br />
-                <Text type="secondary" className="text-sm">{item.percentage}%</Text>
-              </div>
+      {gradeDistribution.length === 0 ? (
+        <div className="text-center py-8">
+          <PieChartOutlined className="text-4xl text-gray-300 mb-2" />
+          <Text type="secondary">Chưa có dữ liệu phân bố điểm</Text>
+        </div>
+      ) : (
+        <Row gutter={24}>
+          <Col span={14}>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={gradeDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({range, percentage}) => `${range}: ${percentage}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {gradeDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={GRADE_COLORS[entry.range]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value}%`, 'Tỷ lệ']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Col>
+          <Col span={10}>
+            <div className="space-y-3 mt-4">
+              {gradeDistribution.map((item, index) => (
+                <div key={index} className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded"
+                      style={{ backgroundColor: GRADE_COLORS[item.range] }}
+                    />
+                    <Text className="font-medium">{item.range}</Text>
+                  </div>
+                  <div className="text-right">
+                    <Text strong className="text-lg">{item.count}</Text>
+                    <Text type="secondary" className="text-sm block">
+                      {item.percentage}%
+                    </Text>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))
-        )}
-      </div>
+          </Col>
+        </Row>
+      )}
     </Card>
   );
 
-  const ClassPerformance = () => (
-    <Card title="Tổng quan lớp học" className="h-full">
-      <div className="space-y-4">
-        {classPerformance.length === 0 ? (
-          <div>Chưa có dữ liệu hiệu suất lớp học.</div>
-        ) : (
-          classPerformance.map((classItem, index) => (
-            <div key={index} className="p-3 border border-gray-200 rounded-lg">
-              <div className="flex justify-between items-start mb-2">
-                <Text strong className="text-base">{classItem.className}</Text>
-                <Tag color="blue">{classItem.students} HS</Tag>
+
+  const ClassPerformanceChart = () => (
+    <Card 
+      title={<span><TrophyOutlined className="mr-2" />Hiệu suất lớp học</span>}
+      className="h-full shadow-lg"
+      style={{ borderRadius: '12px' }}
+    >
+      {classPerformance.length === 0 ? (
+        <div className="text-center py-8">
+          <TrophyOutlined className="text-4xl text-gray-300 mb-2" />
+          <Text type="secondary">Chưa có dữ liệu hiệu suất lớp học</Text>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {classPerformance.map((classItem, index) => (
+            <div key={index} className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-all duration-300">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <Text strong className="text-lg">{classItem.className}</Text>
+                  <div className="flex gap-4 mt-1">
+                    <Tag color="blue" icon={<UserOutlined />}>{classItem.students.length} HS</Tag>
+                    <Tag color="green" icon={<BookOutlined />}>{classItem.assignments} BT</Tag>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Text className={classItem.avgGrade >= 8.0 ? 'text-green-600 text-xl font-bold' : 'text-orange-600 text-xl font-bold'}>
+                    {classItem.avgGrade}/10
+                  </Text>
+                  <Text type="secondary" className="text-sm block">Điểm TB</Text>
+                </div>
               </div>
-              <div className="flex justify-between mb-2">
-                <Text type="secondary" className="text-sm">Điểm trung bình</Text>
-                <Text className={classItem.avgGrade >= 8.0 ? 'text-green-600' : 'text-orange-600'}>
-                  {classItem.avgGrade.toFixed(1)}/10
-                </Text>
+              
+              <div className="mb-2">
+                <div className="flex justify-between items-center mb-1">
+                  <Text type="secondary" className="text-sm">Tỷ lệ nộp bài</Text>
+                  <Text strong>{classItem.submissionRate}%</Text>
+                </div>
+                <Progress 
+                  percent={classItem.submissionRate} 
+                  strokeColor={classItem.submissionRate >= 90 ? '#52c41a' : classItem.submissionRate >= 70 ? '#faad14' : '#ff4d4f'}
+                  trailColor="#f0f0f0"
+                />
               </div>
-              <Progress 
-                percent={classItem.submissionRate} 
-                strokeColor={classItem.submissionRate >= 90 ? '#52c41a' : '#fa8c16'}
-              />
-              <Text type="secondary" className="text-xs">
-                Tỷ lệ nộp bài: {classItem.submissionRate}%
-              </Text>
+              
+              {classItem.lateSubmissions > 0 && (
+                <div className="flex justify-between items-center">
+                  <Text type="secondary" className="text-sm">Nộp muộn</Text>
+                  <Tag color="orange" icon={<ClockCircleOutlined />}>
+                    {classItem.lateSubmissions} bài
+                  </Tag>
+                </div>
+              )}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 
-  const WeeklyProgress = () => (
-    <Card title="Tiến độ tuần" className="h-full">
-      <div className="space-y-4">
-        {weeklyProgress.length === 0 ? (
-          <div>Chưa có dữ liệu tiến độ tuần.</div>
-        ) : (
-          weeklyProgress.map((week, index) => (
-            <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-              <div>
-                <Text strong>{week.week}</Text>
-                <br />
-                <Text type="secondary" className="text-sm">
-                  {week.submissions} bài nộp
-                </Text>
-              </div>
-              <div className="text-right">
-                <Text strong className={week.grade >= 8.0 ? 'text-green-600' : 'text-orange-600'}>
-                  {week.grade.toFixed(1)}/10
-                </Text>
-                <br />
-                <Progress 
-                  percent={(week.grade / 10) * 100} 
-                  size="small" 
-                  showInfo={false}
-                  strokeColor={week.grade >= 8.0 ? '#52c41a' : '#fa8c16'}
-                />
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+  const WeeklyProgressChart = () => (
+    <Card 
+      title={<span><LineChartOutlined className="mr-2" />Tiến độ tuần</span>}
+      className="h-full shadow-lg"
+      style={{ borderRadius: '12px' }}
+    >
+      {weeklyProgress.length === 0 ? (
+        <div className="text-center py-8">
+          <LineChartOutlined className="text-4xl text-gray-300 mb-2" />
+          <Text type="secondary">Chưa có dữ liệu tiến độ tuần</Text>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={300}>
+          <AreaChart data={weeklyProgress} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="week" />
+            <YAxis yAxisId="left" orientation="left" />
+            <YAxis yAxisId="right" orientation="right" />
+            <Tooltip />
+            <Legend />
+            <Area
+              yAxisId="right"
+              type="monotone"
+              dataKey="submissions"
+              stackId="1"
+              stroke="#8884d8"
+              fill="#8884d8"
+              fillOpacity={0.3}
+              name="Số bài nộp"
+            />
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="grade"
+              stroke="#82ca9d"
+              strokeWidth={3}
+              name="Điểm trung bình"
+              dot={{ fill: '#82ca9d', strokeWidth: 2, r: 4 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
     </Card>
   );
 
   const RecentActivities = () => (
     <Card 
       title="Hoạt động gần đây" 
-      className="h-full"
+      className="h-full shadow-lg"
       extra={<ClockCircleOutlined className="text-gray-500" />}
+      style={{ borderRadius: '12px' }}
     >
-      <List
-        dataSource={recentActivities}
-        renderItem={(item) => (
-          <List.Item>
-            <List.Item.Meta
-              avatar={<Avatar src={item.student.image} style={{ backgroundColor: '#1890ff' }}>{item.type?.[0]?.toUpperCase() || '?'}</Avatar>}
-              title={<Text className="text-sm">{item.message}</Text>}
-              description={<Text type="secondary" className="text-xs">{item.time}</Text>}
-            />
-          </List.Item>
-        )}
-      />
+      {recentActivities.length === 0 ? (
+        <div className="text-center py-8">
+          <ClockCircleOutlined className="text-4xl text-gray-300 mb-2" />
+          <Text type="secondary">Chưa có hoạt động nào</Text>
+        </div>
+      ) : (
+        <List
+          dataSource={recentActivities}
+          renderItem={(item) => (
+            <List.Item>
+              <List.Item.Meta
+                avatar={
+                  <Avatar 
+                    src={item.student?.image} 
+                    style={{ backgroundColor: '#1890ff' }}
+                  >
+                    {item.student?.fullName?.[0]?.toUpperCase() || getActivityIcon(item.type)}
+                  </Avatar>
+                }
+                title={<Text className="text-sm">{item.message}</Text>}
+                description={<Text type="secondary" className="text-xs">{item.time}</Text>}
+              />
+            </List.Item>
+          )}
+        />
+      )}
     </Card>
   );
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Spin size="large" tip="Đang tải dữ liệu dashboard..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <Alert
+          message="Lỗi tải dữ liệu"
+          description={error}
+          type="error"
+          action={
+            <Button type="primary" onClick={fetchDashboardData}>
+              Thử lại
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div 
       className="teacher-dashboard-content"
       style={{ 
         background: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 50%, #90CAF9 100%)',
-        padding: '24px'
+        padding: '24px',
+        minHeight: '100vh'
       }}
     >
       <div className="max-w-7xl mx-auto">
@@ -482,17 +606,17 @@ const TeacherDashboard = () => {
           <StatsOverview />
         </div>
 
-        {/* Analytics Dashboard */}
-        <div id="analytics-dashboard" className="mb-6">
-          <Tabs defaultActiveKey="performance">
-            <TabPane tab={<span><BarChartOutlined />Hiệu suất lớp học</span>} key="performance">
-              <ClassPerformance />
+        {/* Analytics Dashboard with Tabs */}
+        <div className="mb-6">
+          <Tabs defaultActiveKey="performance" size="large">
+            <TabPane tab={<span><TrophyOutlined />Hiệu suất lớp học</span>} key="performance">
+              <ClassPerformanceChart />
             </TabPane>
             <TabPane tab={<span><LineChartOutlined />Tiến độ tuần</span>} key="weekly">
-              <WeeklyProgress />
+              <WeeklyProgressChart />
             </TabPane>
-            <TabPane tab={<span><PieChartOutlined />Phân bố điểm</span>} key="distribution">
-              <AnalyticsDashboard />
+            <TabPane tab={<span><PieChartOutlined />Phân bố điểm - Pie Chart</span>} key="pie-distribution">
+              <GradeDistributionChart />
             </TabPane>
           </Tabs>
         </div>
@@ -502,7 +626,6 @@ const TeacherDashboard = () => {
           {/* Left Column */}
           <Col xs={24} lg={16}>
             <div className="space-y-6">
-              {/* Các bảng thống kê, hoạt động gần đây, ... */}
               <RecentActivities />
             </div>
           </Col>
@@ -524,6 +647,9 @@ const TeacherDashboard = () => {
         onCancel={() => setReportModalVisible(false)}
         width={800}
         footer={[
+          <Button key="refresh" icon={<RiseOutlined />} onClick={fetchDashboardData}>
+            Làm mới dữ liệu
+          </Button>,
           <Button key="export" icon={<FileExcelOutlined />} onClick={handleExportExcel}>
             Xuất Excel
           </Button>,
@@ -582,22 +708,24 @@ const TeacherDashboard = () => {
           {/* Performance Summary */}
           <Card title="Tóm tắt hiệu suất" size="small">
             <List
-              dataSource={[]} // No mock data for detailed reports
+              dataSource={classPerformance}
               renderItem={(item) => (
                 <List.Item>
                   <div className="w-full flex justify-between items-center">
                     <div>
-                      <Text strong>Lớp học</Text>
+                      <Text strong>{item.className}</Text>
                       <br />
                       <Text type="secondary" className="text-sm">
-                        Học sinh • Bài tập
+                        {item.students} học sinh • {item.assignments} bài tập
                       </Text>
                     </div>
                     <div className="text-right">
-                      <Tag color="blue">Điểm TB</Tag>
+                      <Tag color={item.avgGrade >= 8.0 ? 'green' : 'orange'}>
+                        {item.avgGrade}/10
+                      </Tag>
                       <br />
                       <Text className="text-sm text-gray-500">
-                        Tỷ lệ nộp bài
+                        {item.submissionRate}% nộp bài
                       </Text>
                     </div>
                   </div>
@@ -606,7 +734,7 @@ const TeacherDashboard = () => {
             />
           </Card>
 
-          {/* Grade Distribution Chart */}
+          {/* Grade Distribution Summary */}
           <Card title="Phân bố điểm số" size="small">
             <div className="space-y-2">
               {gradeDistribution.map((item, index) => (
@@ -616,12 +744,7 @@ const TeacherDashboard = () => {
                     <Progress 
                       percent={item.percentage} 
                       size="small"
-                      strokeColor={
-                        item.range.includes('9') ? '#52c41a' :
-                        item.range.includes('8') ? '#1890ff' :
-                        item.range.includes('7') ? '#faad14' :
-                        item.range.includes('6') ? '#fa8c16' : '#ff4d4f'
-                      }
+                      strokeColor={GRADE_COLORS[item.range]}
                     />
                   </div>
                   <Text strong className="w-16 text-right">
@@ -637,25 +760,8 @@ const TeacherDashboard = () => {
           </Text>
         </div>
       </Modal>
-
-      {/* Video Player Demo Modal */}
-      <Modal
-        title="🎬 Enhanced Video Player Demo"
-        open={videoPlayerDemoVisible}
-        onCancel={() => setVideoPlayerDemoVisible(false)}
-        width="95vw"
-        style={{ maxWidth: '1400px' }}
-        footer={null}
-        bodyStyle={{ 
-          padding: 0,
-          height: '80vh',
-          overflow: 'auto'
-        }}
-      >
-        <VideoPlayerDemo />
-      </Modal>
     </div>
   );
 };
 
-export default TeacherDashboard; 
+export default TeacherDashboard;

@@ -5,6 +5,7 @@ const Stream = require('../models/stream.model');
 const cloudinary = require('../config/cloudinary.config');
 const fs = require('fs');
 const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
+const { sendEmail, emailTemplates } = require('../config/email.config');
 // Create assignment
 const createAssignment = async (req, res) => {
   try {
@@ -1472,6 +1473,65 @@ const bulkGradeMissingSubmissions = async (req, res) => {
   }
 };
 
+// Send reminder emails to students who haven't submitted
+const sendReminderEmails = async (req, res) => {
+  try {
+    const { assignmentId } = req.params;
+    const { studentIds } = req.body;
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No student IDs provided' });
+    }
+    const assignment = await Assignment.findById(assignmentId)
+      .populate('classroom', 'name students')
+      .lean();
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+    const classroom = assignment.classroom;
+    // Lấy thông tin học sinh trong lớp
+    const allStudentIds = classroom.students.map(s => s.student.toString());
+    // Lọc các studentIds hợp lệ
+    const validStudentIds = studentIds.filter(id => allStudentIds.includes(id));
+    if (validStudentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid students to send reminder' });
+    }
+    // Lấy thông tin user
+    const users = await User.find({ _id: { $in: validStudentIds } });
+    let successCount = 0, failCount = 0, failedEmails = [];
+    for (const user of users) {
+      if (!user.email) { failCount++; failedEmails.push(user.fullName || user._id); continue; }
+      const dueDate = assignment.dueDate ? new Date(assignment.dueDate).toLocaleString() : '';
+      const daysLeft = assignment.dueDate ? Math.max(0, Math.ceil((new Date(assignment.dueDate) - Date.now()) / (1000*60*60*24))) : '';
+      const html = emailTemplates.assignmentReminder({
+        studentName: user.fullName || user.name || '',
+        assignmentTitle: assignment.title,
+        dueDate,
+        daysLeft,
+        classroomName: classroom.name,
+        assignmentDescription: assignment.description,
+        isUrgent: daysLeft <= 1
+      });
+      try {
+        await sendEmail(user.email, `Nhắc nhở: Sắp đến hạn nộp bài tập '${assignment.title}'`, html);
+        successCount++;
+      } catch (err) {
+        failCount++;
+        failedEmails.push(user.email);
+      }
+    }
+    return res.json({
+      success: true,
+      message: `Đã gửi nhắc nhở cho ${successCount} học sinh, thất bại: ${failCount}`,
+      sent: successCount,
+      failed: failCount,
+      failedEmails
+    });
+  } catch (error) {
+    console.error('Error sending reminder emails:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createAssignment,
   getClassroomAssignments,
@@ -1482,5 +1542,6 @@ module.exports = {
   gradeSubmission,
   getAssignmentSubmissions,
   autoGradeMissingSubmissions,
-  bulkGradeMissingSubmissions
+  bulkGradeMissingSubmissions,
+  sendReminderEmails
 }; 

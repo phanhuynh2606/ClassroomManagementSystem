@@ -13,7 +13,7 @@ const StreamSidebar = ({ classData, handleCopyClassCode, userRole = 'teacher' })
   return (
     <div className="space-y-4">
       {/* Meet Integration */}
-      <Card size="small">
+      {/* <Card size="small">
         <div className="flex items-center gap-3 mb-3">
           <VideoCameraOutlined className="text-blue-500" />
           <Text strong>Meet</Text>
@@ -35,7 +35,7 @@ const StreamSidebar = ({ classData, handleCopyClassCode, userRole = 'teacher' })
             Your teacher will share the meeting link when it's available
           </Text>
         )}
-      </Card>
+      </Card> */}
 
       {/* Class Code */}
       <Card size="small">
@@ -60,7 +60,7 @@ const StreamSidebar = ({ classData, handleCopyClassCode, userRole = 'teacher' })
       </Card>
 
       {/* Upcoming */}
-      <Card size="small">
+      {/* <Card size="small">
         <div className="flex items-center justify-between mb-3">
           <Text strong>Upcoming</Text>
         </div>
@@ -72,7 +72,7 @@ const StreamSidebar = ({ classData, handleCopyClassCode, userRole = 'teacher' })
             View all
           </Button>
         </div>
-      </Card>
+      </Card> */}
     </div>
   );
 };

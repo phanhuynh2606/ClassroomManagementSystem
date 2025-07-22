@@ -45,13 +45,15 @@ import {
   ArrowLeftOutlined,
   ReloadOutlined,
   SettingOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import moment from "moment";
-import { AssignmentGradingModal } from "../grading";
+import { AssignmentAnalytics, AssignmentGradingModal } from "../grading";
 import { assignmentAPI } from "../../../services/api";
 import { useSelector } from "react-redux";
-import { downloadSubmissionAttachment } from "../../../utils/fileUtils";
+import { downloadSubmissionAttachment, exportGradesToExcel } from "../../../utils/fileUtils";
 import { useCallback } from "react";
+
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -444,14 +446,14 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
   };
 
   const handleExportGrades = () => {
-    message.success("Đang xuất file điểm...");
-    // Simulate export
-    setTimeout(() => {
-      message.info("File điểm đã được tải xuống!");
-    }, 2000);
+    exportGradesToExcel(
+      submissions,
+      assignment,
+      `Assignment-Grades-${assignment?.title || ''}.xlsx`
+    );
   };
 
-  const handleSendReminder = () => {
+  const handleSendReminder = async () => {
     const policy = assignment?.missingSubmissionPolicy || {};
     
     // Check if notifications are enabled
@@ -480,10 +482,20 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
           )}
         </div>
       ),
-      onOk: () => {
-        message.success(
-          `Đã gửi email nhắc nhở đến ${missingStudents.length} học sinh`
-        );
+      onOk: async () => {
+        try {
+          const res = await assignmentAPI.sendReminderEmails(
+            assignment._id,
+            missingStudents.map(s => s.student._id)
+          );
+          if (res && res.success) {
+            message.success(`Đã gửi email nhắc nhở đến ${missingStudents.length} học sinh`);
+          } else {
+            message.error(res?.message || 'Gửi email nhắc nhở thất bại!');
+          }
+        } catch (err) {
+          message.error('Gửi email nhắc nhở thất bại!');
+        }
       },
     });
   };
@@ -1421,25 +1433,49 @@ const SubmissionManagement = ({ assignment, onBack, visible, onCancel }) => {
                 <StarOutlined /> Analytics
               </span>
             ),
+            disabled: stats.graded < 3,
             children: (
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Card title="Phân bố điểm số" className="mb-4">
-                    {/* Grade distribution chart would go here */}
-                    <div className="text-center py-8">
-                      <Text type="secondary">Biểu đồ phân bố điểm số</Text>
+              <div className="analytics-tab">
+                {stats.graded >= 3 ? (
+                  <AssignmentAnalytics
+                    assignmentId={assignment._id}
+                    assignment={assignment}
+                    submissions={submissions}
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="mb-4">
+                      <BarChartOutlined 
+                        style={{ fontSize: '64px', color: '#d9d9d9' }} 
+                      />
                     </div>
-                  </Card>
-                </Col>
-                <Col span={12}>
-                  <Card title="Tiến độ nộp bài" className="mb-4">
-                    {/* Submission timeline would go here */}
-                    <div className="text-center py-8">
-                      <Text type="secondary">Biểu đồ tiến độ nộp bài</Text>
+                    <Title level={3} type="secondary">
+                      Analytics Coming Soon
+                    </Title>
+                    <Text type="secondary" className="text-lg">
+                      Analytics will be available once you have at least 3 graded submissions.
+                    </Text>
+                    <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <Text strong>Current Status:</Text>
+                      <div className="mt-2 space-y-1">
+                        <div>📝 Total Submissions: {stats.submitted}</div>
+                        <div>📊 Graded Submissions: {stats.graded}</div>
+                        <div>⏳ Need {Math.max(3 - stats.graded, 0)} more graded submissions</div>
+                      </div>
                     </div>
-                  </Card>
-                </Col>
-              </Row>
+                    <div className="mt-6">
+                      <Button
+                        type="primary"
+                        icon={<TrophyOutlined />}
+                        onClick={() => setActiveTab("submissions")}
+                        size="large"
+                      >
+                        Start Grading Submissions
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ),
           },
         ]}

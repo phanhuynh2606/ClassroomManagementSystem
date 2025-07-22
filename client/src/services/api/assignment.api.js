@@ -241,10 +241,6 @@ const assignmentAPI = {
     });
   },
 
-  // Assignment analytics
-  getAnalytics: (assignmentId) => {
-    return axiosClient.get(`/assignments/${assignmentId}/analytics`);
-  },
 
   // Duplicate assignment
   duplicate: (assignmentId, newData = {}) => {
@@ -259,7 +255,154 @@ const assignmentAPI = {
   // Validate submission before submit
   validateSubmission: (assignmentId, submissionData) => {
     return axiosClient.post(`/assignments/${assignmentId}/validate-submission`, submissionData);
+  },
+   // Assignment analytics - Enhanced version
+   getAnalytics: (assignmentId, params = {}) => {
+    return axiosClient.get(`/assignments/analytics/assignments/${assignmentId}/analytics`, { 
+      params: {
+        timeRange: params.timeRange || 'all',
+        gradeRange: params.gradeRange || 'all',
+        includeHistory: params.includeHistory !== false, // Default true
+        ...params
+      }
+    });
+  },
+
+  // Export analytics data
+  exportAnalytics: (assignmentId, format = 'xlsx') => {
+    return axiosClient.get(`/assignments/${assignmentId}/analytics/export`, {
+      params: { format },
+      responseType: 'blob'
+    });
+  },
+
+  // Real-time analytics (for dashboard updates)
+  getAnalyticsStream: (assignmentId) => {
+    // This could be implemented with WebSocket or Server-Sent Events
+    return axiosClient.get(`/assignments/${assignmentId}/analytics/stream`);
+  },
+
+  // Compare analytics between assignments
+  compareAnalytics: (assignmentIds) => {
+    return axiosClient.post('/assignments/compare-analytics', { assignmentIds });
+  },
+
+  // Get class analytics summary
+  getClassAnalyticsSummary: (classroomId, params = {}) => {
+    return axiosClient.get(`/assignments/classroom/${classroomId}/analytics-summary`, { 
+      params 
+    });
+  },
+
+  // Predictive analytics (if you want to implement ML features)
+  getPredictiveAnalytics: (assignmentId) => {
+    return axiosClient.get(`/assignments/${assignmentId}/predictive-analytics`);
+  },
+
+  // Send reminder emails to students who haven't submitted
+  sendReminderEmails: (assignmentId, studentIds) => {
+    return axiosClient.post(`/assignments/${assignmentId}/send-reminder`, { studentIds });
+  }
+
+};
+const analyticsHelpers = {
+  /**
+   * Calculate grade letter from percentage
+   */
+  getGradeLetter: (percentage) => {
+    if (percentage >= 90) return 'A';
+    if (percentage >= 80) return 'B';
+    if (percentage >= 70) return 'C';
+    if (percentage >= 60) return 'D';
+    return 'F';
+  },
+
+  /**
+   * Get grade color based on percentage
+   */
+  getGradeColor: (percentage) => {
+    if (percentage >= 90) return '#52c41a'; // Green
+    if (percentage >= 80) return '#1890ff'; // Blue  
+    if (percentage >= 70) return '#faad14'; // Gold
+    if (percentage >= 60) return '#fa8c16'; // Orange
+    return '#ff4d4f'; // Red
+  },
+
+  /**
+   * Format analytics data for charts
+   */
+  formatForChart: (data, chartType = 'bar') => {
+    switch (chartType) {
+      case 'pie':
+        return data.map(item => ({
+          name: item.label || item.name,
+          value: item.count || item.value,
+          percentage: item.percentage
+        }));
+      
+      case 'line':
+      case 'area':
+        return data.map(item => ({
+          x: item.date || item.time || item.label,
+          y: item.value || item.count,
+          label: item.label || item.name
+        }));
+      
+      default: // bar
+        return data.map(item => ({
+          name: item.label || item.name,
+          value: item.count || item.value,
+          fill: item.color || '#1890ff'
+        }));
+    }
+  },
+
+  /**
+   * Calculate percentile rank
+   */
+  calculatePercentile: (grades, targetGrade) => {
+    const sorted = [...grades].sort((a, b) => a - b);
+    const rank = sorted.findIndex(grade => grade >= targetGrade);
+    return rank === -1 ? 100 : (rank / sorted.length) * 100;
+  },
+
+  /**
+   * Generate insights from analytics data
+   */
+  generateInsights: (analyticsData) => {
+    const insights = [];
+    const { overview, gradeDistribution } = analyticsData;
+
+    // Class performance insights
+    if (overview.passingRate >= 90) {
+      insights.push({
+        type: 'success',
+        title: 'Excellent Class Performance',
+        message: `${Math.round(overview.passingRate)}% của lớp đạt điểm đậu`,
+        icon: '🎉'
+      });
+    } else if (overview.passingRate < 60) {
+      insights.push({
+        type: 'warning', 
+        title: 'Performance Needs Attention',
+        message: `Chỉ ${Math.round(overview.passingRate)}% đạt điểm đậu`,
+        icon: '⚠️'
+      });
+    }
+
+    // Grade distribution insights
+    const aGrades = gradeDistribution.find(g => g.label.includes('A'));
+    if (aGrades && aGrades.percentage > 30) {
+      insights.push({
+        type: 'info',
+        title: 'High Achievers',
+        message: `${aGrades.percentage.toFixed(1)}% học sinh đạt loại A`,
+        icon: '⭐'
+      });
+    }
+
+    return insights;
   }
 };
-
+export { analyticsHelpers };
 export default assignmentAPI; 
