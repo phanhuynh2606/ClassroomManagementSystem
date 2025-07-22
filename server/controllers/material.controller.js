@@ -17,7 +17,6 @@ const getMaterials = async (req, res) => {
         message: "The specified classroom does not exist",
       });
     }
-    console.log("Classroom details:", classroom);
     if (
       currentUser.role === "student" &&
       !classroom.students.some(

@@ -3,6 +3,7 @@ const { protect, authorize } = require('../middleware/auth.middleware');
 const { backgroundImageUpload } = require('../middleware/upload.middleware');
 const ctrls = require('../controllers/classroom.controller');
 const ctrlsTeacher = require('../controllers/teacher.classroom.controller');
+const classStatisticsCtrl = require('../controllers/class.statistics.controller');
 const router = express.Router();
 
 // Admin routes
@@ -42,5 +43,8 @@ router.delete('/student/:classroomId/leave', protect, authorize('student'), ctrl
 router.get('/:classroomId/students', protect, authorize('teacher', 'admin'), ctrls.getClassroomStudents);
 router.get('/:classroomId/detail', protect, authorize('student', 'teacher', 'admin'), ctrls.getClassroomDetail);
 router.get('/:classroomId/materials', protect, authorize('student', 'teacher', 'admin'), ctrls.getClassroomMaterials);
+
+// Statistics: Bảng điểm & Thống kê lớp
+router.get('/:classroomId/grades-statistics', protect, authorize('teacher', 'admin'), classStatisticsCtrl.getGradesStatistics);
 
 module.exports = router;

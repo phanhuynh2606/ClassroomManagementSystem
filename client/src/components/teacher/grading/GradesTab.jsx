@@ -1,4 +1,6 @@
-import React, { useState, memo } from 'react';
+import React, { useState, useEffect, memo } from 'react';
+import { useParams } from 'react-router-dom';
+import classroomAPI from '../../../services/api/classroom.api';
 import { 
   Card, 
   Table, 
@@ -17,7 +19,9 @@ import {
   Statistic,
   Row,
   Col,
-  Avatar
+  Avatar,
+  Spin,
+  Alert
 } from 'antd';
 import {
   DownloadOutlined,
@@ -40,13 +44,38 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
-const GradesTab = () => {
+const GradesTab = ({ classroomId }) => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState('');
   const [filterAssignment, setFilterAssignment] = useState('all');
+  const [filterAssignmentType, setFilterAssignmentType] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [studentsGrades, setStudentsGrades] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [statistics, setStatistics] = useState({});
+  const [error, setError] = useState(null);
+console.log("ClassroomId", classroomId);
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await classroomAPI.getGradesStatistics(classroomId);
+        console.log("res", res);
+        setStudentsGrades(res.students || []);
+        setAssignments(res.assignments || []);
+        setStatistics(res.statistics || {});
+      } catch (err) {
+        setError('Không thể tải dữ liệu bảng điểm');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (classroomId) fetchData();
+  }, [classroomId]);
 
   // Export functions
   const handleExportExcel = () => {
@@ -78,60 +107,12 @@ const GradesTab = () => {
     window.print();
   };
 
-  // Mock data
-  const assignments = [
-    { id: '1', title: 'Assignment 1', maxPoints: 100, type: 'assignment' },
-    { id: '2', title: 'Quiz 1', maxPoints: 50, type: 'quiz' },
-    { id: '3', title: 'Midterm Exam', maxPoints: 150, type: 'exam' },
-    { id: '4', title: 'Assignment 2', maxPoints: 100, type: 'assignment' }
-  ];
-
-  const studentsGrades = [
-    {
-      id: '1',
-      name: 'Alice Johnson',
-      email: 'alice@student.edu',
-      avatar: null,
-      grades: {
-        '1': { score: 85, maxPoints: 100, submittedAt: '2024-01-20T10:00:00Z' },
-        '2': { score: 45, maxPoints: 50, submittedAt: '2024-01-18T14:30:00Z' },
-        '3': { score: null, maxPoints: 150, submittedAt: null },
-        '4': { score: 92, maxPoints: 100, submittedAt: '2024-01-25T16:20:00Z' }
-      }
-    },
-    {
-      id: '2',
-      name: 'Bob Smith',
-      email: 'bob@student.edu',
-      avatar: null,
-      grades: {
-        '1': { score: 78, maxPoints: 100, submittedAt: '2024-01-19T15:45:00Z' },
-        '2': { score: 42, maxPoints: 50, submittedAt: '2024-01-18T16:00:00Z' },
-        '3': { score: 128, maxPoints: 150, submittedAt: '2024-01-22T11:20:00Z' },
-        '4': { score: null, maxPoints: 100, submittedAt: null }
-      }
-    },
-    {
-      id: '3',
-      name: 'Carol Davis',
-      email: 'carol@student.edu',
-      avatar: null,
-      grades: {
-        '1': { score: 95, maxPoints: 100, submittedAt: '2024-01-19T09:30:00Z' },
-        '2': { score: 48, maxPoints: 50, submittedAt: '2024-01-18T13:15:00Z' },
-        '3': { score: 142, maxPoints: 150, submittedAt: '2024-01-22T10:45:00Z' },
-        '4': { score: 88, maxPoints: 100, submittedAt: '2024-01-25T14:10:00Z' }
-      }
-    }
-  ];
-
+  // Tính điểm trung bình học sinh
   const calculateStudentAverage = (grades) => {
     const validGrades = Object.values(grades).filter(g => g.score !== null);
     if (validGrades.length === 0) return 0;
-    
     const totalScore = validGrades.reduce((sum, g) => sum + g.score, 0);
     const totalMax = validGrades.reduce((sum, g) => sum + g.maxPoints, 0);
-    
     return Math.round((totalScore / totalMax) * 100);
   };
 
@@ -166,6 +147,11 @@ const GradesTab = () => {
     }
   };
 
+  // Filter assignments by type
+  const filteredAssignments = assignments.filter(a =>
+    filterAssignmentType === 'all' ? true : a.type === filterAssignmentType
+  );
+
   // Create dynamic columns
   const columns = [
     {
@@ -177,8 +163,8 @@ const GradesTab = () => {
       render: (text, record) => (
         <div className="flex items-center gap-3">
           <Avatar 
-            src={record.image} 
-            icon={!record.image && <UserOutlined />}
+            src={record.avatar} 
+            icon={!record.avatar && <UserOutlined />}
             size={32}
           />
           <div>
@@ -188,13 +174,16 @@ const GradesTab = () => {
         </div>
       ),
     },
-    ...assignments.map(assignment => ({
+    ...filteredAssignments.map(assignment => ({
       title: (
         <div className="text-center">
           <div className="font-medium">{assignment.title}</div>
           <Text type="secondary" className="text-xs">
             /{assignment.maxPoints} pts
           </Text>
+          <Tag color={assignment.type === 'assignment' ? 'blue' : 'purple'} style={{ marginTop: 4 }}>
+            {assignment.type === 'assignment' ? 'Assignment' : 'Quiz'}
+          </Tag>
         </div>
       ),
       dataIndex: ['grades', assignment.id],
@@ -206,7 +195,7 @@ const GradesTab = () => {
           return (
             <div className="text-center">
               <Text type="secondary">-</Text>
-              <br />
+              {/* <br />
               <Button 
                 type="link" 
                 size="small"
@@ -214,11 +203,10 @@ const GradesTab = () => {
                 onClick={() => handleEditGrade(student, assignment)}
               >
                 Grade
-              </Button>
+              </Button> */}
             </div>
           );
         }
-        
         return (
           <div className="text-center">
             <div className="mb-1">
@@ -265,60 +253,25 @@ const GradesTab = () => {
     }
   ];
 
+  // Lọc học sinh
   const filteredStudents = studentsGrades.filter(student =>
     student.name.toLowerCase().includes(searchText.toLowerCase()) ||
     student.email.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  // Calculate class statistics
-  const classAverage = Math.round(
-    filteredStudents.reduce((sum, student) => 
-      sum + calculateStudentAverage(student.grades), 0
-    ) / filteredStudents.length
-  );
+  // Thống kê
+  const classAverage = statistics.classAverage || 0;
+  const highestScore = statistics.highestScore || 0;
+  const lowestScore = statistics.lowestScore || 0;
+  const overallSubmissionRate = statistics.submissionRate || 0;
+  const gradeDistribution = statistics.gradeDistribution || { excellent: 0, good: 0, average: 0, poor: 0 };
 
-  const highestScore = Math.max(
-    ...filteredStudents.map(student => calculateStudentAverage(student.grades))
-  );
-
-  const lowestScore = Math.min(
-    ...filteredStudents.map(student => calculateStudentAverage(student.grades))
-  );
-
-  // Calculate additional statistics
-  const submissionStats = assignments.map(assignment => {
-    const submitted = filteredStudents.filter(student => 
-      student.grades[assignment.id]?.score !== null
-    ).length;
-    return {
-      assignment: assignment.title,
-      submitted,
-      total: filteredStudents.length,
-      percentage: Math.round((submitted / filteredStudents.length) * 100)
-    };
-  });
-
-  const gradeDistribution = {
-    excellent: filteredStudents.filter(s => calculateStudentAverage(s.grades) >= 90).length,
-    good: filteredStudents.filter(s => {
-      const avg = calculateStudentAverage(s.grades);
-      return avg >= 80 && avg < 90;
-    }).length,
-    average: filteredStudents.filter(s => {
-      const avg = calculateStudentAverage(s.grades);
-      return avg >= 70 && avg < 80;
-    }).length,
-    poor: filteredStudents.filter(s => calculateStudentAverage(s.grades) < 70).length
-  };
-
-  const totalGradedAssignments = assignments.reduce((sum, assignment) => {
-    return sum + filteredStudents.filter(student => 
-      student.grades[assignment.id]?.score !== null
-    ).length;
-  }, 0);
-
-  const totalPossibleSubmissions = assignments.length * filteredStudents.length;
-  const overallSubmissionRate = Math.round((totalGradedAssignments / totalPossibleSubmissions) * 100);
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen"><Spin size="large" tip="Đang tải dữ liệu bảng điểm..." /></div>;
+  }
+  if (error) {
+    return <Alert message="Lỗi tải dữ liệu" description={error} type="error" showIcon />;
+  }
 
   return (
     <div className="space-y-6">
@@ -471,22 +424,9 @@ const GradesTab = () => {
         <Col span={12}>
           <Card title="📊 Tiến độ nộp bài theo assignment" size="small">
             <div className="space-y-3">
-              {submissionStats.map((stat, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <Text className="truncate" style={{ maxWidth: 150 }}>{stat.assignment}</Text>
-                  <div className="flex items-center gap-2">
-                    <Progress 
-                      percent={stat.percentage}
-                      size="small"
-                      strokeColor={stat.percentage >= 90 ? '#52c41a' : stat.percentage >= 70 ? '#faad14' : '#ff4d4f'}
-                      style={{ width: 100 }}
-                    />
-                    <Text strong className="text-xs">
-                      {stat.submitted}/{stat.total}
-                    </Text>
-                  </div>
-                </div>
-              ))}
+              {/* This section will need to be updated to use actual data */}
+              {/* For now, it will show a placeholder or empty */}
+              <Text type="secondary">Tiến độ nộp bài theo assignment sẽ được cập nhật sau khi tải dữ liệu.</Text>
             </div>
           </Card>
         </Col>
@@ -505,17 +445,29 @@ const GradesTab = () => {
                 allowClear
               />
               <Select
+                value={filterAssignmentType}
+                onChange={setFilterAssignmentType}
+                style={{ width: 160 }}
+                placeholder="Lọc theo loại bài"
+              >
+                <Option value="all">Tất cả loại</Option>
+                <Option value="assignment">Assignment</Option>
+                <Option value="quiz">Quiz</Option>
+              </Select>
+              <Select
                 value={filterAssignment}
                 onChange={setFilterAssignment}
                 style={{ width: 180 }}
                 placeholder="Lọc theo bài tập"
               >
                 <Option value="all">Tất cả bài tập</Option>
-                {assignments.map(assignment => (
-                  <Option key={assignment.id} value={assignment.id}>
-                    {assignment.title}
-                  </Option>
-                ))}
+                {assignments
+                  .filter(a => filterAssignmentType === 'all' ? true : a.type === filterAssignmentType)
+                  .map(assignment => (
+                    <Option key={assignment.id} value={assignment.id}>
+                      {assignment.title}
+                    </Option>
+                  ))}
               </Select>
             </Space>
             <Space>

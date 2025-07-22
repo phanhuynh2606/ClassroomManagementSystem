@@ -62,7 +62,10 @@ const classroomAPI = {
   // Get classroom appearance settings
   getAppearance: (id) => {
     return axiosClient.get(`/classrooms/teacher/${id}/appearance`);
-  }
+  },
+
+  // Get class grades & statistics
+  getGradesStatistics: (classroomId) => axiosClient.get(`/classrooms/${classroomId}/grades-statistics`),
 };
 
 export default classroomAPI;
