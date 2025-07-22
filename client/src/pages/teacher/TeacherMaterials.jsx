@@ -17,6 +17,7 @@ import {
   Row,
   Col,
   Statistic,
+  Switch,
 } from "antd";
 import {
   UploadOutlined,
@@ -36,6 +37,7 @@ import {
   EyeOutlined,
   SearchOutlined,
   FilePptOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
 import { materialAPI } from "../../services/api";
 import classroomAPI from "../../services/api/classroom.api";
@@ -56,10 +58,18 @@ const TeacherMaterials = () => {
   const [materials, setMaterials] = useState([]);
   const [classes, setClasses] = useState([]);
   const [currMaterial, setCurrMaterial] = useState(null);
+
+  // New states for upload functionality
+  const [fileList, setFileList] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [tags, setTags] = useState([]);
+  const [inputTag, setInputTag] = useState("");
+
   useEffect(() => {
     fetchMaterialsData();
     fetchClassrooms();
   }, []);
+
   const fetchMaterialsData = async () => {
     try {
       const response = await materialAPI.getMaterialByTeacher();
@@ -68,9 +78,9 @@ const TeacherMaterials = () => {
     } catch (error) {
       console.error("Error fetching materials:", error);
       message.error("Failed to fetch materials");
-    } finally {
     }
   };
+
   const fetchClassrooms = async () => {
     try {
       const response = await classroomAPI.getAllByTeacher();
@@ -88,10 +98,159 @@ const TeacherMaterials = () => {
       message.error("Failed to fetch classrooms");
       console.error("Error fetching classrooms:", error);
       setClasses([]);
-    } finally {
-      console.log("Classrooms fetched successfully", classes);
     }
   };
+
+  // Helper functions from file 1
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const getFileExtension = (mimeType) => {
+    const mimeToExt = {
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+      "application/msword": "doc",
+      "application/pdf": "pdf",
+      "application/vnd.ms-excel": "xls",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+      "application/vnd.ms-powerpoint": "ppt",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+      "text/plain": "txt",
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/gif": "gif",
+    };
+    return mimeToExt[mimeType] || "bin";
+  };
+
+  const extractFilename = (response, material) => {
+    const contentDisposition = response.headers["content-disposition"];
+    if (contentDisposition) {
+      const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/);
+      if (utf8Match) {
+        return decodeURIComponent(utf8Match[1]);
+      }
+      const regularMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (regularMatch && regularMatch[1]) {
+        return regularMatch[1].replace(/['"]/g, "");
+      }
+    }
+
+    if (material.fileUrl) {
+      const urlParts = material.fileUrl.split("/");
+      const cloudinaryFilename = urlParts[urlParts.length - 1];
+      if (cloudinaryFilename && cloudinaryFilename.includes(".")) {
+        return cloudinaryFilename;
+      }
+    }
+
+    if (material.originalFileName) {
+      return material.originalFileName;
+    }
+    const extension = getFileExtension(material.fileType);
+    return `${material.title || "download"}.${extension}`;
+  };
+
+  // Download functionality from file 1
+  const handleDownloadMaterial = async (material) => {
+    try {
+      const loadingMessage = message.loading("Downloading", 0);
+
+      const response = await materialAPI.downloadMaterial(material._id);
+      loadingMessage();
+
+      if (!response.data || response.data.size === 0) {
+        throw new Error("No data received from server");
+      }
+
+      let filename = extractFilename(response, material);
+      console.log("Final filename:", filename);
+
+      const blob = new Blob([response.data], {
+        type: response.headers["content-type"] || material.fileType,
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.style.display = "none";
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 1000);
+
+      message.success(`Download successful: ${filename}`);
+      fetchMaterialsData();
+    } catch (error) {
+      console.error("Download error:", error);
+      message.error(`Download failed: ${error.message}`);
+    }
+  };
+
+  // Updated upload functionality
+  const handleUpload = async (values) => {
+    if (fileList.length === 0) {
+      message.error("Please upload a file");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", values.title);
+      formData.append("description", values.description || "");
+      formData.append("isPublic", values.isPublic || false);
+      formData.append("tags", JSON.stringify(tags));
+
+      if (values.sharedWith && values.sharedWith.length > 0) {
+        formData.append("sharedWith", JSON.stringify(values.sharedWith));
+      }
+      console.log("Shared with:", JSON.stringify(values.sharedWith));
+      if (fileList.length > 0) {
+        const file = fileList[0].originFileObj || fileList[0].file || fileList[0];
+        formData.append("file", file);
+      }
+      const response = await materialAPI.createMaterialInLibrary(formData);
+
+      message.success("Material uploaded successfully");
+      setUploadModalVisible(false);
+      resetUploadForm();
+      fetchMaterialsData();
+    } catch (error) {
+      console.error("Error uploading material:", error);
+      message.error("Failed to upload material");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const resetUploadForm = () => {
+    form.resetFields();
+    setFileList([]);
+    setTags([]);
+    setInputTag("");
+  };
+
+  const handleTagAdd = () => {
+    if (inputTag && !tags.includes(inputTag)) {
+      setTags([...tags, inputTag]);
+      setInputTag("");
+    }
+  };
+
+  const handleTagRemove = (tagToRemove) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
+
   const getFileIcon = (type) => {
     switch (type) {
       case "folder":
@@ -106,6 +265,8 @@ const TeacherMaterials = () => {
         return <FilePptOutlined className="text-purple-500 text-2xl" />;
       case "image":
         return <FileImageOutlined className="text-orange-500 text-2xl" />;
+      case "video":
+        return <VideoCameraOutlined className="text-purple-600 text-2xl" />;
       default:
         return <FileTextOutlined className="text-gray-500 text-2xl" />;
     }
@@ -123,20 +284,10 @@ const TeacherMaterials = () => {
         return "orange";
       case "presentation":
         return "red";
+      case "video":
+        return "purple";
       default:
         return "yellow";
-    }
-  };
-
-  const handleUpload = async (values) => {
-    try {
-      // Simulate upload
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      message.success("Files uploaded successfully");
-      setUploadModalVisible(false);
-      form.resetFields();
-    } catch (error) {
-      message.error("Upload failed");
     }
   };
 
@@ -161,21 +312,22 @@ const TeacherMaterials = () => {
       message.error("Failed to create folder");
     }
   };
+
   const handleShare = async (values) => {
     try {
-      const respone = await materialAPI.shareMaterial(currMaterial._id, values.class);  
-      if (!respone.success){
-        message.error(respone.message);
-      }
-      else{
-        message.success(respone.message);
+      console.log("currMaterial:", currMaterial);
+      console.log("Sharing with class:", values.class);
+      const response = await materialAPI.shareMaterial(currMaterial._id, values.class);
+      if (!response.success) {
+        message.error(response.message);
+      } else {
+        message.success(response.message);
       }
       setClassModal(false);
       form.resetFields();
     } catch (error) {
       console.error("Share error:", error);
       message.error(`Không thể chia sẻ "${currMaterial.title}"`);
-    } finally {
     }
   };
 
@@ -193,7 +345,7 @@ const TeacherMaterials = () => {
       key: "download",
       label: "Download",
       icon: <DownloadOutlined />,
-      onClick: () => message.info(`Downloading ${material.title}`),
+      onClick: () => handleDownloadMaterial(material),
     },
     {
       key: "edit",
@@ -212,13 +364,7 @@ const TeacherMaterials = () => {
       onClick: () => message.warning(`Delete ${material.title}`),
     },
   ];
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
+
   const filteredMaterials = materials.filter((material) => {
     const matchesSearch = material.title
       .toLowerCase()
@@ -233,6 +379,20 @@ const TeacherMaterials = () => {
 
   const totalFiles = materials.filter((m) => m.type !== "folder").length;
   const totalFolders = materials.filter((m) => m.type === "folder").length;
+
+  // Upload props
+  const uploadProps = {
+    name: "file",
+    multiple: false,
+    fileList: fileList,
+    beforeUpload: (file) => {
+      setFileList([file]);
+      return false; // Prevent auto upload
+    },
+    onRemove: () => {
+      setFileList([]);
+    },
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -251,6 +411,7 @@ const TeacherMaterials = () => {
           </Button>
         </Space>
       </div>
+
       {/* Statistics */}
       <Row gutter={16}>
         <Col span={6}>
@@ -273,7 +434,7 @@ const TeacherMaterials = () => {
                     0
                   ) /
                     (1024 * 1024)) *
-                    100
+                  100
                 ) / 100
               }
               suffix="MB"
@@ -281,6 +442,7 @@ const TeacherMaterials = () => {
           </Card>
         </Col>
       </Row>
+
       {/* Filters */}
       <Card>
         <div className="flex justify-between items-center mb-4">
@@ -338,6 +500,11 @@ const TeacherMaterials = () => {
                       <Tag color={getTypeColor(material.type)}>
                         {material.type}
                       </Tag>
+                      {material.isPublic !== undefined && (
+                        <Tag color={material.isPublic ? "green" : "orange"}>
+                          {material.isPublic ? "Public" : "Private"}
+                        </Tag>
+                      )}
                     </div>
                   }
                   description={
@@ -352,7 +519,21 @@ const TeacherMaterials = () => {
                         <Text type="secondary">
                           {new Date(material.createdAt).toLocaleDateString()}
                         </Text>
+                        {material.downloadCount !== undefined && (
+                          <Text type="secondary">
+                            Downloads: {material.downloadCount}
+                          </Text>
+                        )}
                       </div>
+                      {material.tags && material.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {material.tags.map((tag) => (
+                            <Tag key={tag} size="small" color="blue">
+                              {tag}
+                            </Tag>
+                          ))}
+                        </div>
+                      )}
                     </Space>
                   }
                 />
@@ -361,55 +542,75 @@ const TeacherMaterials = () => {
           />
         )}
       </Card>
-      {/* Upload Modal */}
+
+      {/* Updated Upload Modal */}
       <Modal
         title="Tải lên tài liệu"
         open={uploadModalVisible}
         onOk={() => form.submit()}
         onCancel={() => {
           setUploadModalVisible(false);
-          form.resetFields();
+          resetUploadForm();
         }}
         okText="Tải lên"
-        width={600}
+        cancelText="Hủy"
+        confirmLoading={uploading}
+        width={700}
       >
-        <Form form={form} layout="vertical" onFinish={handleUpload}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleUpload}
+          initialValues={{ isPublic: false }}
+        >
           <Form.Item
-            name="files"
-            label="Chọn file"
-            rules={[{ required: true, message: "Vui lòng chọn file" }]}
+            name="title"
+            label="Tiêu đề"
+            rules={[{ required: true, message: "Vui lòng nhập tiêu đề tài liệu" }]}
           >
-            <Upload.Dragger
-              multiple
-              beforeUpload={() => false}
-              showUploadList={{ showRemoveIcon: true }}
-            >
+            <Input placeholder="Nhập tiêu đề tài liệu" />
+          </Form.Item>
+
+          <Form.Item name="description" label="Mô tả">
+            <TextArea rows={3} placeholder="Mô tả ngắn về tài liệu" />
+          </Form.Item>
+
+          <Form.Item label="Upload File" required>
+            <Upload.Dragger {...uploadProps}>
               <p className="ant-upload-drag-icon">
-                <UploadOutlined />
+                <InboxOutlined />
               </p>
-              <p className="ant-upload-text">Kéo thả file hoặc click để chọn</p>
+              <p className="ant-upload-text">
+                Kéo thả file hoặc click để chọn
+              </p>
               <p className="ant-upload-hint">
                 Hỗ trợ: PDF, Word, Excel, PowerPoint, Video, Images
               </p>
             </Upload.Dragger>
           </Form.Item>
 
-          <Form.Item
-            name="category"
-            label="Danh mục"
-            rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
-          >
-            <Select placeholder="Chọn danh mục">
-              <Option value="Lecture">Bài giảng</Option>
-              <Option value="Assignment">Bài tập</Option>
-              <Option value="Demo">Demo</Option>
-              <Option value="Template">Template</Option>
-              <Option value="Administration">Quản lý</Option>
-            </Select>
+          <Form.Item label="Tags">
+            <div className="mb-2">
+              <Input
+                placeholder="Thêm tag"
+                value={inputTag}
+                onChange={(e) => setInputTag(e.target.value)}
+                onPressEnter={handleTagAdd}
+                style={{ width: "calc(100% - 80px)", marginRight: 8 }}
+              />
+              <Button onClick={handleTagAdd}>Thêm</Button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <Tag key={tag} closable onClose={() => handleTagRemove(tag)}>
+                  {tag}
+                </Tag>
+              ))}
+            </div>
           </Form.Item>
 
-          <Form.Item name="description" label="Mô tả">
-            <TextArea rows={3} placeholder="Mô tả ngắn về tài liệu" />
+          <Form.Item name="isPublic" label="Hiển thị" valuePropName="checked">
+            <Switch checkedChildren="Công khai" unCheckedChildren="Riêng tư" />
           </Form.Item>
 
           <Form.Item name="sharedWith" label="Chia sẻ với lớp">
@@ -418,16 +619,16 @@ const TeacherMaterials = () => {
               placeholder="Chọn lớp để chia sẻ"
               allowClear
             >
-              <Option value="Web Development">Web Development</Option>
-              <Option value="Programming Fundamentals">
-                Programming Fundamentals
-              </Option>
-              <Option value="Advanced React">Advanced React</Option>
-              <Option value="Database Design">Database Design</Option>
+              {classes.map((c) => (
+                <Option key={c._id} value={c._id}>
+                  {c.name}
+                </Option>
+              ))}
             </Select>
           </Form.Item>
         </Form>
       </Modal>
+
       <Modal
         title="Tạo thư mục mới"
         open={folderModalVisible}
@@ -465,7 +666,8 @@ const TeacherMaterials = () => {
           </Form.Item>
         </Form>
       </Modal>
-      {/* shareclass modal */}
+
+      {/* Share class modal */}
       <Modal
         title="Chia sẻ tài liệu với lớp học khác"
         open={classModal}
@@ -483,13 +685,11 @@ const TeacherMaterials = () => {
             rules={[{ required: true, message: "Vui lòng chọn lớp học" }]}
           >
             <Select placeholder="Chọn lớp học">
-              {classes.map((c) => {
-                return (
-                  <Option key={c._id} value={c._id}>
-                    {c.name}
-                  </Option>
-                );
-              })}
+              {classes.map((c) => (
+                <Option key={c._id} value={c._id}>
+                  {c.name}
+                </Option>
+              ))}
             </Select>
           </Form.Item>
         </Form>

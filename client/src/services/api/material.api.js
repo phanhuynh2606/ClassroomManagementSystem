@@ -1,4 +1,4 @@
- 
+
 import axiosClient from '../axiosClient';
 const materialAPI = {
   createMaterial: (classroomId, formData) =>
@@ -8,9 +8,18 @@ const materialAPI = {
       }
     }),
 
+  createMaterialInLibrary: (formData) =>
+    axiosClient.post(`/materials/teacher/library`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    }),
+
+
+
   downloadMaterial: (materialId) =>
     axiosClient.get(`/materials/download/${materialId}`, {
-      responseType: 'blob'  
+      responseType: 'blob'
     }),
 
   deleteMaterial: (classroomId, materialId) =>
@@ -22,8 +31,8 @@ const materialAPI = {
   getMaterialByTeacher: () =>
     axiosClient.get('/materials'),
 
-  shareMaterial: (materialId, classroomId) => 
-    axiosClient.put(`/materials/${materialId}`, {classroomId}), 
+  shareMaterial: (materialId, classroomId) =>
+    axiosClient.put(`/materials/${materialId}`, { classroomId }),
 
   updateMaterial: (classroomId, materialId, data) =>
     axiosClient.put(`/materials/teacher/${classroomId}/${materialId}`, data)

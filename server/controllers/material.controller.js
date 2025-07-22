@@ -1,6 +1,7 @@
 const Material = require("../models/material.model");
 const Classroom = require("../models/classroom.model");
 const axios = require("axios");
+const { default: mongoose } = require("mongoose");
 
 const getMaterials = async (req, res) => {
   try {
@@ -81,8 +82,8 @@ const shareMaterialToClass = async (req, res) => {
   try {
     const { classroomId } = req.body;
     const { materialId } = req.params;
- 
-    const classroom = await Classroom.findById(classroomId); 
+
+    const classroom = await Classroom.findById(classroomId);
     if (!classroom) {
       return res.status(404).json({
         success: false,
@@ -90,7 +91,7 @@ const shareMaterialToClass = async (req, res) => {
         message: "The specified classroom does not exist",
       });
     }
- 
+
     const material = await Material.findById(materialId);
     if (!material) {
       return res.status(404).json({
@@ -98,7 +99,7 @@ const shareMaterialToClass = async (req, res) => {
         message: "Material not found",
       });
     }
- 
+
     if (material.classroom.includes(classroomId)) {
       return res.status(200).json({
         success: false,
@@ -106,7 +107,7 @@ const shareMaterialToClass = async (req, res) => {
         material,
       });
     }
- 
+
     const updatedMaterial = await Material.findByIdAndUpdate(
       materialId,
       { $push: { classroom: classroomId } },
@@ -166,6 +167,124 @@ const getMaterialByTeacher = async (req, res) => {
     });
   }
 };
+const uploadMaterialToLibrary = async (req, res) => {
+  try {
+    const { title, description, isPublic, tags, sharedWith } = req.body;
+    const uploadedFile = req.file;
+    const currentUser = req.user;
+    const parsedSharedWith = sharedWith ? JSON.parse(sharedWith) : []; 
+    if (!uploadedFile) {
+      return res.status(400).json({
+        success: false,
+        error: "No file uploaded",
+        message: "Please select a file to upload",
+      });
+    }
+
+    if (!title || title.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        error: "Title is required",
+        message: "Please provide a title for the material",
+      });
+    }
+
+    // Parse tags from string to array if needed
+    let parsedTags = [];
+    if (tags) {
+      try {
+        parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
+        parsedTags = Array.isArray(parsedTags)
+          ? parsedTags
+            .filter((tag) => tag && tag.trim() !== "")
+            .map((tag) => tag.trim().toLowerCase())
+          : [];
+      } catch (error) {
+        console.warn("Failed to parse tags:", error);
+        parsedTags = [];
+      }
+    }
+
+    // Validate and filter ObjectIds for classroom
+    let validClassroomIds = [];
+    if (Array.isArray(parsedSharedWith)) {
+      validClassroomIds = parsedSharedWith.filter(id => {
+        // Check if it's a valid ObjectId
+        if (typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)) {
+          // Additional check: ensure it's exactly 24 hex characters
+          if (id.length === 24 && /^[0-9a-fA-F]{24}$/.test(id)) {
+            return true;
+          }
+        } 
+        return false;
+      });
+    }
+ 
+    // Determine material type from file if not provided
+    const materialType = getMaterialType(uploadedFile.mimetype);
+
+    // Extract public ID from Cloudinary URL for future reference
+    const publicId = extractPublicId(uploadedFile.path);
+
+    const materialData = {
+      title: title.trim(),
+      description: description ? description.trim() : "",
+      type: materialType,
+      fileUrl: uploadedFile.path,
+      fileSize: uploadedFile.size,
+      fileType: uploadedFile.mimetype,
+      classroom: validClassroomIds, // Use validated classroom IDs
+      uploadedBy: currentUser._id,
+      isPublic: isPublic === "true" || isPublic === true,
+      tags: parsedTags,
+      cloudinaryPublicId: publicId,
+      originalFileName: uploadedFile.originalname,
+    }; 
+
+    const material = new Material(materialData);
+    await material.save();
+
+    // Populate uploadedBy field with user details for response
+    await material.populate("uploadedBy", "fullName email role");
+
+    // Only populate classroom if there are valid classroom IDs
+    if (validClassroomIds.length > 0) {
+      await material.populate("classroom", "name subject");
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Material uploaded successfully",
+      data: {
+        material: {
+          _id: material._id,
+          title: material.title,
+          description: material.description,
+          type: material.type,
+          fileUrl: material.fileUrl,
+          fileSize: material.fileSize,
+          fileType: material.fileType,
+          isPublic: material.isPublic,
+          tags: material.tags,
+          downloadCount: material.downloadCount,
+          viewCount: material.viewCount,
+          uploadedBy: material.uploadedBy,
+          classroom: material.classroom,
+          createdAt: material.createdAt,
+          version: material.version,
+        },
+      },
+    });
+
+  } catch (error) {
+    console.error("Error uploading material:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: "Failed to upload material. Please try again later.",
+    });
+  }
+};
 const uploadMaterial = async (req, res) => {
   try {
     const { classroomId } = req.params;
@@ -215,8 +334,8 @@ const uploadMaterial = async (req, res) => {
         // Ensure it's an array and clean up tags
         parsedTags = Array.isArray(parsedTags)
           ? parsedTags
-              .filter((tag) => tag && tag.trim() !== "")
-              .map((tag) => tag.trim().toLowerCase())
+            .filter((tag) => tag && tag.trim() !== "")
+            .map((tag) => tag.trim().toLowerCase())
           : [];
       } catch (error) {
         console.warn("Failed to parse tags:", error);
@@ -281,6 +400,7 @@ const uploadMaterial = async (req, res) => {
     });
   }
 };
+
 
 const deleteMaterial = async (req, res) => {
   try {
@@ -478,4 +598,5 @@ module.exports = {
   downloadMaterial,
   getMaterialByTeacher,
   shareMaterialToClass,
+  uploadMaterialToLibrary
 };
