@@ -678,7 +678,7 @@ const ClassroomDetail = () => {
     [studentsData, studentsLoading, searchText, classData, handleCopyClassCode]
   );
 
-  const GradesTabComponent = useMemo(() => <GradesTab classroomId={classId} />, [classId]);
+  const GradesTabComponent = useMemo(() => <GradesTab classroomId={classId} className={classData?.name}/>, [classId,classData]);
 
   const QuizManagementComponent = useMemo(
     () => <QuizManagement classId={classId} />,

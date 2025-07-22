@@ -39,12 +39,17 @@ import {
   PieChartOutlined,
   PrinterOutlined
 } from '@ant-design/icons';
-
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+// Thêm import cho jsPDF và autotable
+import {jsPDF} from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import "../common/dejavu-sans-normal"
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
-const GradesTab = ({ classroomId }) => {
+const GradesTab = ({ classroomId, className }) => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
@@ -57,7 +62,7 @@ const GradesTab = ({ classroomId }) => {
   const [assignments, setAssignments] = useState([]);
   const [statistics, setStatistics] = useState({});
   const [error, setError] = useState(null);
-console.log("ClassroomId", classroomId);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -79,27 +84,76 @@ console.log("ClassroomId", classroomId);
 
   // Export functions
   const handleExportExcel = () => {
-    // Simulate Excel export
-    message.success('Đang xuất file Excel...');
-    setTimeout(() => {
-      message.info('File Excel đã được tạo và tải xuống!');
-    }, 2000);
+    // Chuẩn bị dữ liệu
+    const data = studentsGrades.map(student => {
+      const row = {
+        'Họ tên': student.name,
+        'Email': student.email,
+      };
+      assignments.forEach(assignment => {
+        const grade = student.grades[assignment.id];
+        row[assignment.title] = grade && grade.score !== null ? `${grade.score}/${assignment.maxPoints}` : '';
+      });
+      row['Trung bình (%)'] = calculateStudentAverage(student.grades);
+      return row;
+    });
+    // Tạo worksheet và workbook
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, `BangDiem_${className}`);
+    // Xuất file
+    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    saveAs(new Blob([excelBuffer], { type: 'application/octet-stream' }), `BangDiem_${className}.xlsx`);
   };
 
   const handleExportPDF = () => {
-    // Simulate PDF export  
-    message.success('Đang xuất báo cáo PDF...');
-    setTimeout(() => {
-      message.info('Báo cáo PDF đã được tạo và tải xuống!');
-    }, 2000);
+    const doc = new jsPDF({ orientation: 'landscape' });
+    doc.setFont('DejaVuSans');
+    // Tiêu đề
+    doc.setFontSize(16);
+    doc.text(`Grades Report - ${className || ''}`, 14, 14);
+    // Chuẩn bị header
+    const header = ['Họ tên', 'Email', ...assignments.map(a => a.title), 'Trung bình (%)'];
+    // Chuẩn bị data
+    const data = studentsGrades.map(student => {
+      const row = [student.name, student.email];
+      assignments.forEach(assignment => {
+        const grade = student.grades[assignment.id];
+        row.push(grade && grade.score !== null ? `${grade.score}/${assignment.maxPoints}` : '');
+      });
+      row.push(calculateStudentAverage(student.grades));
+      return row;
+    });
+    // Xuất bảng
+    autoTable(doc, {
+      head: [header],
+      body: data,
+      startY: 22,
+      styles: { font: 'DejaVuSans', fontSize: 10 },
+      headStyles: { fillColor: [41, 128, 185] },
+      margin: { left: 14, right: 14 },
+      tableWidth: 'auto',
+    });
+    doc.save(`BangDiem_${className || 'Lop'}.pdf`);
   };
 
   const handleExportCSV = () => {
-    // Simulate CSV export
-    message.success('Đang xuất file CSV...');
-    setTimeout(() => {
-      message.info('File CSV đã được tạo và tải xuống!');
-    }, 2000);
+    const data = studentsGrades.map(student => {
+      const row = {
+        'Họ tên': student.name,
+        'Email': student.email,
+      };
+      assignments.forEach(assignment => {
+        const grade = student.grades[assignment.id];
+        row[assignment.title] = grade && grade.score !== null ? grade.score : '';
+      });
+      row['Trung bình (%)'] = calculateStudentAverage(student.grades);
+      return row;
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const csv = XLSX.utils.sheet_to_csv(ws, { FS: ',', RS: '\r\n' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    saveAs(blob, `BangDiem_${className}.csv`);
   };
 
   const handlePrintReport = () => {
@@ -219,14 +273,14 @@ console.log("ClassroomId", classroomId);
               status={getGradeColor(grade.score, grade.maxPoints)}
               showInfo={false}
             />
-            <Button 
+            {/* <Button 
               type="link" 
               size="small"
               icon={<EditOutlined />}
               onClick={() => handleEditGrade(student, assignment)}
             >
               Sửa điểm
-            </Button>
+            </Button> */}
           </div>
         );
       }
@@ -297,18 +351,6 @@ console.log("ClassroomId", classroomId);
             onClick={handleExportCSV}
           >
             Xuất CSV
-          </Button>
-          <Button 
-            icon={<PrinterOutlined />}
-            onClick={handlePrintReport}
-          >
-            In
-          </Button>
-          <Button 
-            icon={<UploadOutlined />}
-            type="dashed"
-          >
-            Nhập
           </Button>
         </Space.Compact>
       </div>
