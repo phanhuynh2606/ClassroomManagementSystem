@@ -89,21 +89,21 @@ const TeacherLayout = () => {
     {
       key: 'materials',
       icon: <BookOutlined />,
-      label: 'Assignments',
-      onClick: () => navigate('/teacher/assignments'),
+      label: 'Tài Liệu',
+      onClick: () => navigate('/teacher/materials'),
     },
-    {
-      key: 'quizzes',
-      icon: <FileTextOutlined />,
-      label: 'Quizzes',
-      onClick: () => navigate('/teacher/quizzes'),
-    },
-    {
-      key: 'grades',
-      icon: <LineChartOutlined />,
-      label: 'Grading',
-      onClick: () => navigate('/teacher/grades'),
-    },
+    // {
+    //   key: 'quizzes',
+    //   icon: <FileTextOutlined />,
+    //   label: 'Quizzes',
+    //   onClick: () => navigate('/teacher/quizzes'),
+    // },
+    // {
+    //   key: 'grades',
+    //   icon: <LineChartOutlined />,
+    //   label: 'Grading',
+    //   onClick: () => navigate('/teacher/grades'),
+    // },
     {
       type: 'divider',
     },
@@ -112,24 +112,24 @@ const TeacherLayout = () => {
       label: 'Management',
       type: 'group',
     },
-    {
-      key: 'students',
-      icon: <UserOutlined />,
-      label: 'Students',
-      onClick: () => navigate('/teacher/students'),
-    },
-    {
-      key: 'schedule',
-      icon: <CalendarOutlined />,
-      label: 'Schedule',
-      onClick: () => navigate('/teacher/schedule'),
-    },
-    {
-      key: 'reports',
-      icon: <BarChartOutlined />,
-      label: 'Reports',
-      onClick: () => navigate('/teacher/reports'),
-    },
+    // {
+    //   key: 'students',
+    //   icon: <UserOutlined />,
+    //   label: 'Students',
+    //   onClick: () => navigate('/teacher/students'),
+    // },
+    // {
+    //   key: 'schedule',
+    //   icon: <CalendarOutlined />,
+    //   label: 'Schedule',
+    //   onClick: () => navigate('/teacher/schedule'),
+    // },
+    // {
+    //   key: 'reports',
+    //   icon: <BarChartOutlined />,
+    //   label: 'Reports',
+    //   onClick: () => navigate('/teacher/reports'),
+    // },
     {
       key: 'requests',
       icon: <CheckSquareOutlined />,

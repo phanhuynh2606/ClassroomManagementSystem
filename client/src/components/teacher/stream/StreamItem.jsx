@@ -375,8 +375,9 @@ const StreamItem = ({
       <style>{streamItemStyles}</style>
       <div className="flex gap-4">
         <Avatar 
-          icon={item.author?.image ? undefined : <UserOutlined />}
+          icon={item.author?.image ? <UserOutlined/> : <UserOutlined />}
           src={item?.author?.image}
+          alt={item.author?.fullName || "Anonymous"}
           size={40}
         />
         

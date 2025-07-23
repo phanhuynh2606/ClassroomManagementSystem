@@ -250,7 +250,6 @@ const TeacherProfile = () => {
         ),
     },
   ];
-
   return (
     <div style={{ 
       minHeight: "100vh",
@@ -287,9 +286,9 @@ const TeacherProfile = () => {
             >
               <div style={{ textAlign: "center", marginBottom: 12 }}>
                 <div style={{ position: "relative", display: "inline-block" }}>
-                  <Avatar
+                  {/* <Avatar
                     size={140}
-                    src={previewUrl || userData?.image}
+                    src={userData?.image || previewUrl  }
                     icon={<UserOutlined />}
                     style={{
                       marginBottom: 10,
@@ -297,7 +296,26 @@ const TeacherProfile = () => {
                       boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
                       opacity: previewUrl ? 0.8 : 1,
                     }}
-                  />
+                  /> */}
+                  {userData?.image ? (
+                    <img src={previewUrl || userData?.image} alt="avatar" style={{
+                      width: "140px",
+                      height: "140px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                    }} />
+                  ) : (
+                    <Avatar
+                      size={140}
+                      icon={<UserOutlined />}
+                      style={{
+                        marginBottom: 10,
+                        border: "6px solid #fff",
+                        boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+                        opacity: previewUrl ? 0.8 : 1,
+                      }}
+                    />
+                  )}
                   {previewUrl && (
                     <div style={{
                       position: "absolute",
