@@ -27,8 +27,19 @@ const ChatWindow = () => {
   const [isMobile, setIsMobile] = useState(false);
   const messagesEndRef = useRef(null);
   const previousChatIdRef = useRef(null);
+  const selectedChatRef = useRef(selectedChat);
+  const chatsRef = useRef(chats);
   const { user, token } = useSelector(state => state.auth);
   const { decreaseUnreadChatsCount, refreshUnreadChatsCount } = useUnreadCount();
+
+  // Update refs when state changes
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
+
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
 
   // Helper function to sort chats by latest message
   const sortChatsByLatestMessage = (chatsArray) => {
@@ -123,186 +134,116 @@ const ChatWindow = () => {
           sender: message.sender?.fullName,
           senderRole: message.sender?.role,
           content: message.content?.substring(0, 50) + '...',
-          selectedChatId: selectedChat?._id,
-          isForCurrentChat: selectedChat && selectedChat._id === message.chat,
-          chatType: selectedChat?.type,
-          userRole: user.role
+          selectedChatId: selectedChatRef.current?._id,
+          userRole: user.role,
+          isForCurrentChat: selectedChatRef.current && selectedChatRef.current._id === message.chat
         });
 
-        try {
-          // Check if this message is for the currently selected chat
-          const isCurrentChat = selectedChat && selectedChat._id === message.chat;
-          
-          // Always update messages if this message is for the current chat
-          // This ensures real-time updates for admin-teacher, teacher-student, etc.
-          if (isCurrentChat) {
-            console.log('✅ Adding new message to current chat');
-            
-            // Update messages state with new message
-            setMessages(prev => {
-              // Skip if message already exists
-              if (prev.some(m => m._id === message._id)) {
-                console.log('⚠️ Message already exists, skipping');
-                return prev;
-              }
+        const currentSelectedChat = selectedChatRef.current;
+        const currentChats = chatsRef.current;
+        const isCurrentChat = currentSelectedChat && currentSelectedChat._id === message.chat;
+        const isFromMe = message.sender._id === user._id;
 
-              // Add new message and sort by createdAt
-              const updated = [...prev, message].sort((a, b) => 
-                new Date(a.createdAt) - new Date(b.createdAt)
-              );
-              
-              console.log(`📝 Updated messages array: ${updated.length} messages`);
-              return updated;
-            });
+        console.log('📊 Message analysis:', {
+          isCurrentChat,
+          isFromMe,
+          currentSelectedChatId: currentSelectedChat?._id,
+          messageChatId: message.chat,
+          willUpdateMessages: isCurrentChat,
+          willUpdateChatList: true,
+          willShowNotification: !isCurrentChat && !isFromMe
+        });
 
-            // Auto mark as read for messages from others
-            if (message.sender._id !== user._id) {
-              console.log('👁️ Auto-marking message as read');
-              try {
-                await markMessageAsRead(message._id);
-              } catch (error) {
-                console.error('Error marking message as read:', error);
-              }
+        // 1. Update messages if this is for the current chat
+        if (isCurrentChat) {
+          console.log('✅ Adding message to current chat messages');
+          setMessages(prev => {
+            // Skip if message already exists
+            if (prev.some(m => m._id === message._id)) {
+              console.log('⚠️ Message already exists, skipping');
+              return prev;
             }
+            // Add new message and sort by createdAt
+            const updated = [...prev, message].sort((a, b) => 
+              new Date(a.createdAt) - new Date(b.createdAt)
+            );
+            console.log(`📝 Messages updated: ${prev.length} -> ${updated.length}`);
+            return updated;
+          });
 
-            // Scroll to bottom after adding new message
-            setTimeout(() => {
-              scrollToBottom();
-              console.log('⬇️ Scrolled to bottom after new message');
-            }, 100);
-          } else {
-            console.log('📬 Message for different chat, updating chat list only');
-          }
+          // Scroll to bottom
+          setTimeout(() => {
+            scrollToBottom();
+            console.log('⬇️ Scrolled to bottom');
+          }, 100);
 
-          // Always update chat list to show latest message
-          updateChatLastMessage(message);
-
-          // If message is not from current user, update notifications
-          if (message.sender._id !== user._id) {
-            // Show notification if chat is not currently selected
-            if (!selectedChat || selectedChat._id !== message.chat) {
-              if (Notification.permission === 'granted') {
-                const senderName = message.sender.fullName || message.sender.email || 'User';
-                const notificationTitle = `New message from ${senderName}`;
-                const notificationBody = message.type === 'text' 
-                  ? (message.content.length > 50 ? `${message.content.substring(0, 50)}...` : message.content)
-                  : `Sent a ${message.type}`;
-
-                new Notification(notificationTitle, {
-                  body: notificationBody,
-                  icon: '/logo.png',
-                  tag: `chat-${message.chat}`,
-                  requireInteraction: false
-                });
-              }
-
-              // Update unread count
-              setChats(prev => prev.map(chat => 
-                chat._id === message.chat
-                  ? { ...chat, unreadCount: (chat.unreadCount || 0) + 1 }
-                  : chat
-              ));
-            }
-          }
-
-          // Refresh chat list to ensure correct ordering
-          if (!selectedChat || selectedChat._id !== message.chat) {
-            const chatResponse = await chatAPI.getUserChats();
-            const sortedChats = sortChatsByLatestMessage(chatResponse.data.chats);
-            setChats(sortedChats);
-          }
-
-        } catch (error) {
-          console.error('Error processing new message:', error);
-        }
-        
-        // Always update chat list for proper ordering and unread counts
-        updateChatLastMessage(message);
-
-        if (message.sender._id !== user._id) {
-          console.log('📬 Processing incoming message from other user');
-          // If user is currently in this chat, mark the message as read automatically
-          if (selectedChat && selectedChat._id === message.chat) {
-            console.log('👁️ Auto-marking message as read (user is in chat)');
+          // Auto mark as read if from others
+          if (!isFromMe) {
             setTimeout(async () => {
               try {
                 await chatAPI.markMessageAsRead(message._id);
+                console.log('👁️ Message marked as read');
               } catch (error) {
-                console.error('Error auto-marking message as read:', error);
+                console.error('Error marking message as read:', error);
               }
-            }, 500); // Small delay to ensure message is saved
+            }, 300);
           }
-
-          if (Notification.permission === 'granted' && (!selectedChat || selectedChat._id !== message.chat)) {
-            console.log('🔔 Showing browser notification');
-            const senderName = message.sender.fullName || message.sender.email || 'User';
-            const notificationTitle = `New message from ${senderName}`;
-            
-            let notificationBody = '';
-            if (message.type === 'text') {
-              notificationBody = message.content.length > 50 ? 
-                `${message.content.substring(0, 50)}...` : 
-                message.content;
-            } else if (message.type === 'file') {
-              notificationBody = 'Sent a file';
-            } else if (message.type === 'image') {
-              notificationBody = 'Sent an image';
-            } else {
-              notificationBody = 'Sent a message';
-            }
-
-            const notification = new Notification(notificationTitle, {
-              body: notificationBody,
-              icon: '/logo.png',
-              tag: `chat-${message.chat}`,
-              requireInteraction: false
-            });
-
-            notification.onclick = () => {
-              window.focus();
-              notification.close();
-              if (!selectedChat || selectedChat._id !== message.chat) {
-                const chatToSelect = chats.find(c => c._id === message.chat);
-                if (chatToSelect) {
-                  setSelectedChat(chatToSelect);
-                }
-              }
-            };
-
-            setTimeout(() => {
-              notification.close();
-            }, 5000);
-          }
-
-          setChats(prev => {
-            const updated = prev.map(chat => 
-              chat._id === message.chat 
-                ? { 
-                    ...chat, 
-                    unreadCount: (!selectedChat || selectedChat._id !== message.chat) 
-                      ? (chat.unreadCount || 0) + 1 
-                      : chat.unreadCount 
-                  }
-                : chat
-            );
-            
-            // Only sort if the updated chat needs to move to the top
-            if (needsSorting(updated, message.chat)) {
-              console.log('🔄 Sorting chats after new message');
-              return sortChatsByLatestMessage(updated);
-            }
-            return updated;
-          });
         } else {
-          console.log('📤 Processing own message');
-          // If it's my own message, check if sorting is needed
-          setChats(prev => {
-            if (needsSorting(prev, selectedChat?._id)) {
-              console.log('🔄 Sorting chats after own message');
-              return sortChatsByLatestMessage(prev);
+          console.log('📬 Message for different chat, not updating current messages');
+        }
+
+        // 2. Always update chat list with latest message
+        console.log('📋 Updating chat list...');
+        setChats(prev => {
+          const updated = prev.map(chat => {
+            if (chat._id === message.chat) {
+              return {
+                ...chat,
+                lastMessage: message,
+                lastMessageAt: message.createdAt,
+                // Only increase unread count if not current chat and not from me
+                unreadCount: (!isCurrentChat && !isFromMe) 
+                  ? (chat.unreadCount || 0) + 1 
+                  : chat.unreadCount
+              };
             }
-            return prev;
+            return chat;
           });
+
+          // Sort if needed
+          const shouldSort = needsSorting(updated, message.chat);
+          console.log(`📋 Chat list updated, needs sorting: ${shouldSort}`);
+          return shouldSort ? sortChatsByLatestMessage(updated) : updated;
+        });
+
+        // 3. Show notification if not current chat and not from me
+        if (!isCurrentChat && !isFromMe && Notification.permission === 'granted') {
+          console.log('🔔 Showing notification');
+          const senderName = message.sender.fullName || message.sender.email || 'User';
+          const notificationTitle = `New message from ${senderName}`;
+          const notificationBody = message.type === 'text' 
+            ? (message.content.length > 50 ? `${message.content.substring(0, 50)}...` : message.content)
+            : `Sent a ${message.type}`;
+
+          const notification = new Notification(notificationTitle, {
+            body: notificationBody,
+            icon: '/logo.png',
+            tag: `chat-${message.chat}`,
+            requireInteraction: false
+          });
+
+          notification.onclick = () => {
+            window.focus();
+            notification.close();
+            const chatToSelect = currentChats.find(c => c._id === message.chat);
+            if (chatToSelect) {
+              setSelectedChat(chatToSelect);
+            }
+          };
+
+          setTimeout(() => notification.close(), 5000);
+        } else {
+          console.log('🔕 No notification needed');
         }
       });
 
@@ -335,10 +276,7 @@ const ChatWindow = () => {
         ));
       });
 
-      // Test event for debugging
-      newSocket.on('test-message', (data) => {
-        console.log('🧪 Received test message:', data);
-      });
+
 
       setSocket(newSocket);
 
@@ -371,12 +309,10 @@ const ChatWindow = () => {
           console.log(`👋 Leaving chat room: ${previousChatIdRef.current}`);
           socket.emit('leave-chat', previousChatIdRef.current);
           
-          // Also leave classroom room if previous chat was a classroom chat
+          // Server automatically handles leaving classroom room for classroom chats
           const previousChat = chats.find(c => c._id === previousChatIdRef.current);
           if (previousChat?.type === 'classroom' && previousChat.classroom?._id) {
-            const previousClassroomRoom = `classroom_${previousChat.classroom._id}`;
-            console.log(`👋 Also leaving previous classroom room: ${previousClassroomRoom}`);
-            socket.emit('leave-chat', previousClassroomRoom);
+            console.log(`👋 Previous classroom chat detected: ${previousChat.classroom.name} (server will auto-leave classroom room)`);
           }
         }
 
@@ -385,18 +321,15 @@ const ChatWindow = () => {
           console.log(`🚪 Joining chat room: ${selectedChat._id}, type: ${selectedChat.type}, userRole: ${user.role}`);
           console.log(`📋 Chat participants:`, selectedChat.participants?.map(p => ({ id: p._id, name: p.fullName, role: p.role })));
           
-          // Join the main chat room - this is crucial for all chat communication
+          // Join the main chat room - server will automatically join classroom room if it's a classroom chat
           socket.emit('join-chat', selectedChat._id);
           previousChatIdRef.current = selectedChat._id;
           
-          console.log(`✅ Successfully joined main chat room: ${selectedChat._id}`);
-
-          // For classroom chats, join additional classroom room for group messages
+          console.log(`✅ Successfully joined chat room: ${selectedChat._id}`);
+          
+          // Log classroom info for debugging (server handles classroom room joining automatically)
           if (selectedChat.type === 'classroom' && selectedChat.classroom?._id) {
-            const classroomRoom = `classroom_${selectedChat.classroom._id}`;
-            console.log(`🏫 Joining classroom room: ${classroomRoom} for classroom: ${selectedChat.classroom.name}`);
-            socket.emit('join-chat', classroomRoom);
-            console.log(`✅ Successfully joined classroom room: ${classroomRoom}`);
+            console.log(`🏫 Classroom chat detected: ${selectedChat.classroom.name} (server will auto-join classroom room)`);
           }
 
           // Fetch initial messages
@@ -415,14 +348,12 @@ const ChatWindow = () => {
     // Cleanup: leave chat rooms when unmounting or changing chats
     return () => {
       if (previousChatIdRef.current) {
-        console.log(`👋 Cleanup: leaving main chat room ${previousChatIdRef.current}`);
+        console.log(`👋 Cleanup: leaving chat room ${previousChatIdRef.current}`);
         socket.emit('leave-chat', previousChatIdRef.current);
         
-        // Leave classroom room if applicable
+        // Server automatically handles leaving classroom room for classroom chats
         if (selectedChat?.type === 'classroom' && selectedChat.classroom?._id) {
-          const classroomRoom = `classroom_${selectedChat.classroom._id}`;
-          console.log(`👋 Cleanup: leaving classroom room ${classroomRoom}`);
-          socket.emit('leave-chat', classroomRoom);
+          console.log(`👋 Cleanup: classroom chat detected (server will auto-leave classroom room)`);
         }
       }
     };
@@ -642,44 +573,7 @@ const ChatWindow = () => {
     }
   };
 
-  const updateChatLastMessage = (message) => {
-    setChats(prev => {
-      // Find existing chat
-      const existingChat = prev.find(chat => chat._id === message.chat);
-      if (!existingChat) return prev;
 
-      // Update chat with new message
-      const updated = prev.map(chat => 
-        chat._id === message.chat 
-          ? { 
-              ...chat, 
-              lastMessage: {
-                ...message,
-                sender: message.sender
-              }, 
-              lastMessageAt: message.createdAt,
-              // Update unread count for messages from others
-              unreadCount: message.sender._id !== user._id && 
-                          (!selectedChat || selectedChat._id !== message.chat)
-                          ? (chat.unreadCount || 0) + 1 
-                          : chat.unreadCount 
-            }
-          : chat
-      );
-      
-      // Sort chats if needed
-      return needsSorting(updated, message.chat) 
-        ? sortChatsByLatestMessage(updated) 
-        : updated;
-    });
-
-    // Refresh unread count after a short delay
-    if (message.sender._id !== user._id) {
-      setTimeout(() => {
-        refreshUnreadChatsCount();
-      }, 200);
-    }
-  };
 
   const updateMessageReaction = (reactions, userId, emoji) => {
     const existingReaction = reactions.find(r => r.user === userId);
@@ -790,20 +684,6 @@ const ChatWindow = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Button 
                     type="text" 
-                    size="small"
-                    onClick={() => {
-                      if (socket) {
-                        console.log('🧪 Sending test message...');
-                        socket.emit('test-message', { message: 'Test from client', timestamp: Date.now() });
-                      } else {
-                        console.log('❌ No socket connection');
-                      }
-                    }}
-                  >
-                    Test
-                  </Button>
-                  <Button 
-                    type="text" 
                     onClick={() => setShowChatList(!showChatList)}
                     style={{ 
                       display: !isMobile ? 'inline-block' : 'none'
@@ -811,7 +691,6 @@ const ChatWindow = () => {
                   >
                     {showChatList ? '📋' : '💬'}
                   </Button>
-                  <Button type="text" icon={<MoreOutlined />} />
                 </div>
               </div>
 
