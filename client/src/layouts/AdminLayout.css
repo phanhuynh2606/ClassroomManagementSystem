@@ -113,4 +113,66 @@
   background: rgba(255, 255, 255, 0.2) !important;
   outline: 2px solid rgba(24, 144, 255, 0.5);
   outline-offset: 2px;
+
+/* Unread Count Badge Animations */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Badge styling improvements */
+.chat-badge {
+  animation: fadeIn 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+
+.chat-badge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(255, 77, 79, 0.4) !important;
+}
+
+.chat-badge-collapsed {
+  animation: fadeIn 0.3s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+
+.chat-badge-collapsed:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(255, 77, 79, 0.4) !important;
+}
+
+/* Responsive design for badges */
+@media (max-width: 768px) {
+  .chat-badge {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+    min-width: 18px !important;
+  }
+  
+  .chat-badge-collapsed {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 9px !important;
+  }
+}}

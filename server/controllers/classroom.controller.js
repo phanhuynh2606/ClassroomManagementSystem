@@ -3,6 +3,7 @@ const User = require("../models/user.model");
 const Notification = require("../models/notification.model");
 const Request = require("../models/request.model");
 const Material = require("../models/material.model");
+const Chat = require("../models/chat.model");
 
 // Helper function to generate unique classroom code
 const generateClassroomCode = async () => {
@@ -26,13 +27,32 @@ const sendNotification = async (title, content, type, sender, recipients, classr
       content,
       type,
       sender,
-      recipients: recipients.map(recipient => ({ user: recipient })),
-      classroom,
-      action: 'announcement'
+      recipients,
+      classroom
     });
     await notification.save();
   } catch (error) {
     console.error('Error sending notification:', error);
+  }
+};
+
+// Helper function to create classroom chat
+const createClassroomChat = async (classroom, teacherId) => {
+  try {
+    const chat = new Chat({
+      name: `${classroom.name} - Chat`,
+      type: 'classroom',
+      classroom: classroom._id,
+      createdBy: teacherId,
+      members: [
+        { user: teacherId, role: 'teacher' }
+      ]
+    });
+    await chat.save();
+    return chat;
+  } catch (error) {
+    console.error('Error creating classroom chat:', error);
+    return null;
   }
 };
 
@@ -313,6 +333,9 @@ const createClassroom = async (req, res) => {
       isActive: req.user.role === 'admin', // Admin created classrooms are active immediately
       status: req.user.role === 'admin' ? 'active' : 'pending_creation' // Set initial status based on model
     });
+
+    // Create chat for the classroom
+    await createClassroomChat(newClassroom, req.user._id);
 
     // If teacher created, create approval request
     if (req.user.role === 'teacher') {
@@ -606,7 +629,7 @@ const approveClassroom = async (req, res) => {
   try {
     const { classroomId } = req.params;
     const { reason } = req.body;
-
+    
     // Validate admin role (additional safety check)
     if (req.user.role !== 'admin') {
       return res.status(403).json({
@@ -615,20 +638,7 @@ const approveClassroom = async (req, res) => {
       });
     }
 
-    // Find pending creation request
-    const request = await Request.findOne({
-      classroom: classroomId,
-      type: 'classroom_creation',
-      status: 'pending'
-    }).populate('requestedBy', 'fullName email');
-
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: 'No pending approval request found for this classroom',
-      });
-    }
-
+    // First check if classroom exists and its current state
     const classroom = await Classroom.findById(classroomId);
     if (!classroom) {
       return res.status(404).json({
@@ -642,6 +652,21 @@ const approveClassroom = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Classroom is already active',
+      });
+    }
+    
+    // Find pending creation request
+    const request = await Request.findOne({
+      classroom: classroomId,
+      type: 'classroom_creation',
+      status: 'pending'
+    }).populate('requestedBy', 'fullName email');
+
+    if (!request) {
+      
+      return res.status(404).json({
+        success: false,
+        message: 'No pending approval request found for this classroom. This classroom may not require approval.',
       });
     }
 
@@ -658,14 +683,19 @@ const approveClassroom = async (req, res) => {
     await classroom.save();
 
     // Notify teacher
-    await sendNotification(
-      'Classroom Approved',
-      `Your classroom "${classroom.name}" (${classroom.code}) has been approved and is now active${reason ? `. Note: ${reason}` : ''}`,
-      'system',
-      req.user._id,
-      [request.requestedBy._id],
-      classroom._id
-    );
+    try {
+      await sendNotification(
+        'Classroom Approved',
+        `Your classroom "${classroom.name}" (${classroom.code}) has been approved and is now active${reason ? `. Note: ${reason}` : ''}`,
+        'system',
+        req.user._id,
+        [request.requestedBy._id],
+        classroom._id
+      );
+    } catch (notificationError) {
+      console.error('Error sending notification:', notificationError);
+      // Don't fail the approval if notification fails
+    }
 
     res.status(200).json({
       success: true,
@@ -718,6 +748,15 @@ const rejectClassroom = async (req, res) => {
         message: 'Rejection reason is required',
       });
     }
+    
+    // Check if classroom exists first
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        message: 'Classroom not found',
+      });
+    }
 
     // Find pending creation request
     const request = await Request.findOne({
@@ -729,15 +768,7 @@ const rejectClassroom = async (req, res) => {
     if (!request) {
       return res.status(404).json({
         success: false,
-        message: 'No pending approval request found for this classroom',
-      });
-    }
-
-    const classroom = await Classroom.findById(classroomId);
-    if (!classroom) {
-      return res.status(404).json({
-        success: false,
-        message: 'Classroom not found',
+        message: 'No pending creation request found for this classroom. This classroom may not require approval.',
       });
     }
 
@@ -887,7 +918,7 @@ const rejectDeletionRequest = async (req, res) => {
 };
 
 // Test endpoint - simple approve edit request
-const testApproveEditRequest = async (req, res) => {
+const approveEditRequest = async (req, res) => {
   try {
     const { classroomId } = req.params;
     const { reason } = req.body;
@@ -926,8 +957,11 @@ const testApproveEditRequest = async (req, res) => {
     // Apply changes if requestData exists
     if (request.requestData) {
       const { requestData } = request;
-      Object.keys(requestData).forEach(key => {
-        if (key !== 'originalData' && key !== 'settings') {
+      // Only allow safe fields to be updated, exclude system fields
+      const allowedFields = ['name', 'description', 'maxStudents', 'category', 'level'];
+      
+      allowedFields.forEach(key => {
+        if (requestData[key] !== undefined) {
           classroom[key] = requestData[key];
         }
       });
@@ -1089,6 +1123,12 @@ const joinClassroom = async (req, res) => {
     );
 
     if (existingStudent) {
+      if (existingStudent.status === 'banned') {
+        return res.status(403).json({
+          success: false,
+          message: 'You have been banned from this classroom',
+        });
+      }
       return res.status(400).json({
         success: false,
         message: 'You are already enrolled in this classroom',
@@ -1111,6 +1151,17 @@ const joinClassroom = async (req, res) => {
     });
 
     await classroom.save();
+
+    // Add student to classroom chat
+    const classroomChat = await Chat.findOne({
+      type: 'classroom',
+      classroom: classroom._id,
+      deleted: false
+    });
+
+    if (classroomChat) {
+      await classroomChat.addMember(req.user._id, 'student');
+    }
 
     // Notify teacher
     await sendNotification(
@@ -1168,6 +1219,17 @@ const leaveClassroom = async (req, res) => {
 
     classroom.students.splice(studentIndex, 1);
     await classroom.save();
+
+    // Remove student from classroom chat
+    const classroomChat = await Chat.findOne({
+      type: 'classroom',
+      classroom: classroom._id,
+      deleted: false
+    });
+
+    if (classroomChat) {
+      await classroomChat.removeMember(req.user._id);
+    }
 
     // Notify teacher
     await sendNotification(
@@ -1361,7 +1423,7 @@ const getClassroomDetail = async (req, res) => {
     responseData.recentActivities = [
       {
         id: 1,
-        type: 'announcement',
+        type: 'system',
         title: 'Welcome to the class!',
         content: 'Please check the course materials regularly.',
         createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
@@ -1507,22 +1569,242 @@ const getClassroomMaterials = async (req, res) => {
   }
 };
 
-module.exports = {
-  getTeacherClassrooms,
-  getAllClassrooms,
-  deleteClassroom,
-  createClassroom,
+// Ban student from classroom
+const banStudent = async (req, res) => {
+  try {
+    const { classroomId, studentId } = req.params;
+    const { reason } = req.body;
+
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        message: 'Classroom not found',
+      });
+    }
+
+    // Check authorization - only teacher of the classroom or admin can ban students
+    const isTeacher = req.user.role === 'teacher' && classroom.teacher.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isTeacher && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to ban students from this classroom',
+      });
+    }
+
+    // Check if student is in the classroom
+    const studentIndex = classroom.students.findIndex(
+      s => s.student.toString() === studentId && s.status !== 'banned'
+    );
+
+    if (studentIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found in this classroom or already banned',
+      });
+    }
+
+    // Get student info for notification
+    const studentInfo = await User.findById(studentId).select('fullName email');
+    if (!studentInfo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found',
+      });
+    }
+
+    // Update student status to banned
+    classroom.students[studentIndex].status = 'banned';
+    classroom.students[studentIndex].bannedAt = new Date();
+    classroom.students[studentIndex].bannedBy = req.user._id;
+    classroom.students[studentIndex].banReason = reason || 'No reason provided';
+
+    await classroom.save();
+
+    // Send notification to banned student
+    await sendNotification(
+      'You have been banned from classroom',
+      `You have been banned from classroom "${classroom.name}" (${classroom.code}). Reason: ${reason || 'No reason provided'}`,
+      'warning',
+      req.user._id,
+      [studentId],
+      classroomId
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Student banned successfully',
+      data: {
+        studentId,
+        studentName: studentInfo.fullName,
+        bannedAt: classroom.students[studentIndex].bannedAt,
+        reason: classroom.students[studentIndex].banReason
+      }
+    });
+  } catch (error) {
+    console.error('Error banning student:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while banning student',
+    });
+  }
+};
+
+// Unban student from classroom
+const unbanStudent = async (req, res) => {
+  try {
+    const { classroomId, studentId } = req.params;
+
+    const classroom = await Classroom.findById(classroomId);
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        message: 'Classroom not found',
+      });
+    }
+
+    // Check authorization - only teacher of the classroom or admin can unban students
+    const isTeacher = req.user.role === 'teacher' && classroom.teacher.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isTeacher && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to unban students from this classroom',
+      });
+    }
+
+    // Check if student is banned in the classroom
+    const studentIndex = classroom.students.findIndex(
+      s => s.student.toString() === studentId && s.status === 'banned'
+    );
+
+    if (studentIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found or not banned in this classroom',
+      });
+    }
+
+    // Get student info for notification
+    const studentInfo = await User.findById(studentId).select('fullName email');
+    if (!studentInfo) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found',
+      });
+    }
+
+    // Update student status back to active
+    classroom.students[studentIndex].status = 'active';
+    classroom.students[studentIndex].bannedAt = undefined;
+    classroom.students[studentIndex].bannedBy = undefined;
+    classroom.students[studentIndex].banReason = undefined;
+
+    await classroom.save();
+
+    // Send notification to unbanned student
+    await sendNotification(
+      'You have been unbanned from classroom',
+      `You have been unbanned from classroom "${classroom.name}" (${classroom.code}). You can now participate in classroom activities again.`,
+      'success',
+      req.user._id,
+      [studentId],
+      classroomId
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Student unbanned successfully',
+      data: {
+        studentId,
+        studentName: studentInfo.fullName,
+        unbannedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Error unbanning student:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while unbanning student',
+    });
+  }
+};
+
+// Get banned students list
+const getBannedStudents = async (req, res) => {
+  try {
+    const { classroomId } = req.params;
+
+    const classroom = await Classroom.findById(classroomId)
+      .populate('students.student', 'fullName email')
+      .populate('students.bannedBy', 'fullName');
+
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        message: 'Classroom not found',
+      });
+    }
+
+    // Check authorization - only teacher of the classroom or admin can view banned students
+    const isTeacher = req.user.role === 'teacher' && classroom.teacher.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isTeacher && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to view banned students from this classroom',
+      });
+    }
+
+    // Filter banned students
+    const bannedStudents = classroom.students
+      .filter(s => s.status === 'banned')
+      .map(s => ({
+        studentId: s.student._id,
+        studentName: s.student.fullName,
+        studentEmail: s.student.email,
+        bannedAt: s.bannedAt,
+        bannedBy: s.bannedBy ? s.bannedBy.fullName : 'Unknown',
+        banReason: s.banReason || 'No reason provided'
+      }));
+
+    res.status(200).json({
+      success: true,
+      data: bannedStudents,
+      total: bannedStudents.length
+    });
+  } catch (error) {
+    console.error('Error getting banned students:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching banned students',
+    });
+  }
+};
+
+module.exports = { 
+  getTeacherClassrooms, 
+  getAllClassrooms, 
+  deleteClassroom, 
+  createClassroom, 
   updateClassroom,
   approveClassroom,
   rejectClassroom,
   approveDeletionRequest,
   rejectDeletionRequest,
-  testApproveEditRequest,
+  approveEditRequest,
   rejectEditRequest,
   joinClassroom,
   leaveClassroom,
   getStudentClassrooms,
   getClassroomStudents,
   getClassroomDetail,
-  getClassroomMaterials
+  getClassroomMaterials,
+  banStudent,
+  unbanStudent,
+  getBannedStudents
 };

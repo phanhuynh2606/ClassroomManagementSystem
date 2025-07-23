@@ -20,15 +20,15 @@ Model Notification quản lý các thông báo trong hệ thống, bao gồm th�
 ### Phân loại
 - `type` (String)
   - Loại thông báo
-  - Enum: ['system', 'classroom', 'assignment', 'quiz']
+  - Enum: ['system', 'class_general', 'class_specific', 'personal', 'deadline', 'reminder']
   - Bắt buộc
   - Được đánh index
   - Xác định loại
 
 - `priority` (String)
   - Mức độ ưu tiên
-  - Enum: ['low', 'medium', 'high', 'urgent']
-  - Mặc định: 'medium'
+  - Enum: ['low', 'normal', 'high', 'urgent']
+  - Mặc định: 'normal'
   - Xác định độ quan trọng
 
 ### Người gửi và người nhận
@@ -40,12 +40,9 @@ Model Notification quản lý các thông báo trong hệ thống, bao gồm th�
 
 - `recipients` (Array)
   - Danh sách người nhận
-  - Mỗi người nhận chứa:
-    - `user`: Reference đến User
-    - `read`: Đã đọc hay chưa
-    - `readAt`: Thời gian đọc
-    - `deleted`: Đã xóa hay chưa
-    - `deletedAt`: Thời gian xóa
+  - Array of ObjectId references to User
+  - Bắt buộc
+  - Được đánh index
 
 ### Liên kết
 - `classroom` (ObjectId)
@@ -54,47 +51,19 @@ Model Notification quản lý các thông báo trong hệ thống, bao gồm th�
   - Được đánh index
   - Dùng cho thông báo lớp
 
-- `relatedTo` (ObjectId)
-  - Đối tượng liên quan
-  - Reference động
-  - Dùng cho thông báo bài tập/kiểm tra
-
-- `onModel` (String)
-  - Loại đối tượng liên quan
-  - Enum: ['Assignment', 'Quiz', 'Material']
-  - Xác định model liên kết
-
-### Hành động
-- `action` (String)
-  - Hành động
-  - Enum: ['create', 'update', 'delete', 'reminder', 'announcement']
-  - Mặc định: 'announcement'
-  - Xác định loại hành động
-
-- `actionUrl` (String)
-  - URL hành động
-  - Dùng để điều hướng
-
-### Trạng thái
-- `isActive` (Boolean)
-  - Trạng thái hoạt động
-  - Mặc định: true
+- `targetRole` (String)
+  - Vai trò đích
+  - Enum: ['admin', 'teacher', 'student', 'all']
   - Được đánh index
-  - Kiểm soát hiển thị
+  - Xác định đối tượng nhận
 
-- `isArchived` (Boolean)
-  - Trạng thái lưu trữ
-  - Mặc định: false
-  - Thông báo đã cũ
-
-### Thời gian
-- `scheduledFor` (Date)
-  - Thời gian lên lịch
-  - Dùng cho thông báo có lịch
-
-- `expiresAt` (Date)
-  - Thời gian hết hạn
-  - Dùng cho thông báo tạm thời
+- `metadata` (Object)
+  - Thông tin metadata
+  - Chứa các thông tin bổ sung như:
+    - `assignmentId`: Reference đến Assignment
+    - `quizId`: Reference đến Quiz
+    - `materialId`: Reference đến Material
+    - `relatedUrl`: URL liên quan
 
 ## Các mối quan hệ
 - Được gửi bởi một người dùng (User)
@@ -110,15 +79,16 @@ Model Notification quản lý các thông báo trong hệ thống, bao gồm th�
 3. Người gửi phải được xác định
 4. Phải có ít nhất một người nhận
 5. Thông báo lớp học phải liên kết với lớp
-6. Thông báo bài tập/kiểm tra phải liên kết với đối tượng
-7. Thông báo có lịch phải có thời gian hợp lệ
-8. Thông báo tạm thời phải có thời gian hết hạn
-9. Thông báo bị xóa mềm không hiển thị
-10. Thông báo đã lưu trữ không thể sửa đổi
+6. Thông báo có target role phải hợp lệ
+7. Priority level phải hợp lệ
 
 ## Các index
-- `{ type: 1, isActive: 1 }`: Tìm kiếm thông báo theo loại
+- `{ type: 1, priority: 1 }`: Tìm kiếm thông báo theo loại và ưu tiên
 - `{ sender: 1, createdAt: -1 }`: Tìm kiếm thông báo theo người gửi
+- `{ recipients: 1 }`: Tìm kiếm thông báo theo người nhận
+- `{ classroom: 1, type: 1 }`: Tìm kiếm thông báo theo lớp học
+- `{ targetRole: 1 }`: Tìm kiếm thông báo theo vai trò
+- `{ priority: 1, createdAt: -1 }`: Tìm kiếm thông báo theo ưu tiên và thời gian
 
 ## Timestamps
 - `createdAt`: Thời gian tạo

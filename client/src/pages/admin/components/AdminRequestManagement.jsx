@@ -420,7 +420,7 @@ const AdminRequestManagement = () => {
       </div>
 
       {/* Statistics */}
-      <Row gutter={16} style={{ marginBottom: '24px' }}>
+      <Row gutter={16} style={{ marginBottom: '24px'}}>
         <Col span={6}>
           <Card>
             <Statistic
@@ -517,7 +517,7 @@ const AdminRequestManagement = () => {
       </Card>
 
       <Card>
-        <div style={{ marginBottom: '16px' }}>
+        <div style={{ marginBottom: '16px', justifyContent: 'space-between', alignItems: 'center' }}>
           <Tabs
             activeKey={activeTab}
             onChange={setActiveTab}

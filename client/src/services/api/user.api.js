@@ -4,6 +4,11 @@ import axiosClient from '../axiosClient';
 
 const userAPI = {
 
+  // Get all users (admin only)
+  getAllUsers: () => {
+    return axiosClient.get('/admin/users');
+  },
+
   // Get user by ID
   getUserById: (id) => {
     return axiosClient.get(`/users/${id}`);

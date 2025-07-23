@@ -13,6 +13,8 @@ const teacherTodoRoutes = require('./teacher.todo.route.js');
 const quizRoutes = require('./quizzes.route.js');
 const teacherDashboardRoutes = require('./teacher.dashboard.route.js');
 const assignmentAnalyticsRoutes = require('./assginment.analyze.route.js');
+const chatRoutes = require('./chat.route.js');
+const notificationRoutes = require('./notification.route.js');
 const initRoutes = (app) => {
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
@@ -29,6 +31,10 @@ const initRoutes = (app) => {
   app.use('/api/teacher-todo', teacherTodoRoutes);
   app.use('/api/teacher-dashboard', teacherDashboardRoutes);
   app.use('/api/quizzes', quizRoutes);
+  app.use('/api/classrooms',classroomRoutes);
+  app.use('/api/requests', requestRoutes);
+  app.use('/api/chats', chatRoutes);
+  app.use('/api/notifications', notificationRoutes);
 };
 
 module.exports = initRoutes;

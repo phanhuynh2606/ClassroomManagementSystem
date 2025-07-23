@@ -5,6 +5,7 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './store';
 import AppRouter from './routes';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 function App() {
   return (
@@ -19,7 +20,9 @@ function App() {
         >
           <AntApp>
             <BrowserRouter>
-              <AppRouter />
+              <NotificationProvider>
+                <AppRouter />
+              </NotificationProvider>
             </BrowserRouter>
           </AntApp>
         </ConfigProvider>

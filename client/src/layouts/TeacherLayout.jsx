@@ -12,11 +12,15 @@ import {
   BookOutlined,
   SettingOutlined,
   TrophyOutlined,
-  UserOutlined
+  UserOutlined,
+  BarChartOutlined,
+  MessageOutlined
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
+import useUnreadCount from '../hooks/useUnreadCount';
+import NotificationBell from '../components/notifications/NotificationBell';
 
 const { Header, Sider, Content } = Layout;
 
@@ -26,6 +30,7 @@ const TeacherLayout = () => {
   const location = useLocation();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { unreadChatsCount } = useUnreadCount();
 
   const {
     token: { colorBgContainer, borderRadiusLG },
@@ -46,6 +51,7 @@ const TeacherLayout = () => {
     if (path.startsWith('/teacher/requests')) return 'requests';
     if (path.startsWith('/teacher/notifications')) return 'notifications';
     if (path.startsWith('/teacher/settings')) return 'settings';
+    if (path.startsWith('/teacher/chat')) return 'chat';
     if (path.startsWith('/teacher/profile')) return 'profile';
     if (path.startsWith('/teacher/grading-demo')) return 'grading-demo';
     return 'dashboard';
@@ -55,21 +61,21 @@ const TeacherLayout = () => {
     {
       key: 'dashboard',
       icon: <DashboardOutlined />,
-      label: 'Tổng quan',
+      label: 'Dashboard',
       onClick: () => navigate('/teacher/dashboard'),
     },
     {
       type: 'divider',
     },
     {
-      key: 'core',
-      label: 'Giảng dạy',
+      key: 'teaching',
+      label: 'Teaching',
       type: 'group',
     },
     {
       key: 'classrooms',
       icon: <TeamOutlined />,
-      label: 'Lớp học',
+      label: 'Classroom Management',
       onClick: () => navigate('/teacher/classroom'),
     },
     {
@@ -81,40 +87,128 @@ const TeacherLayout = () => {
     {
       key: 'materials',
       icon: <BookOutlined />,
-      label: 'Thư viện tài liệu',
-      onClick: () => navigate('/teacher/materials'),
+      label: 'Assignments',
+      onClick: () => navigate('/teacher/assignments'),
+    },
+    {
+      key: 'quizzes',
+      icon: <FileTextOutlined />,
+      label: 'Quizzes',
+      onClick: () => navigate('/teacher/quizzes'),
+    },
+    {
+      key: 'grades',
+      icon: <LineChartOutlined />,
+      label: 'Grading',
+      onClick: () => navigate('/teacher/grades'),
     },
     {
       type: 'divider',
     },
     {
       key: 'management',
-      label: 'Quản lý',
+      label: 'Management',
       type: 'group',
     },
     {
+      key: 'students',
+      icon: <UserOutlined />,
+      label: 'Students',
+      onClick: () => navigate('/teacher/students'),
+    },
+    {
+      key: 'schedule',
+      icon: <CalendarOutlined />,
+      label: 'Schedule',
+      onClick: () => navigate('/teacher/schedule'),
+    },
+    {
+      key: 'reports',
+      icon: <BarChartOutlined />,
+      label: 'Reports',
+      onClick: () => navigate('/teacher/reports'),
+    },
+    {
       key: 'requests',
-      icon: <FileTextOutlined />,
-      label: 'Yêu cầu Admin',
+      icon: <CheckSquareOutlined />,
+      label: 'Request Management',
       onClick: () => navigate('/teacher/requests'),
     },
     {
       key: 'notifications',
       icon: <BellOutlined />,
-      label: 'Thông báo',
+      label: 'Notifications',
       onClick: () => navigate('/teacher/notifications'),
     },
     {
       type: 'divider',
     },
+    {
+      key: 'chat',
+      icon: <MessageOutlined />,
+      label: collapsed ? (
+        <div style={{ position: 'relative' }}>
+          <span>Chat</span>
+          {unreadChatsCount > 0 && (
+            <span className="chat-badge-collapsed chat-badge-pulse" style={{ 
+              position: 'absolute',
+              top: '-8px',
+              right: '-8px',
+              backgroundColor: '#ff4d4f',
+              color: 'white',
+              borderRadius: '50%',
+              width: '18px',
+              height: '18px',
+              fontSize: '10px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid #001529',
+              minWidth: '18px',
+              boxShadow: '0 2px 4px rgba(255, 77, 79, 0.3)'
+            }}>
+              {unreadChatsCount > 99 ? '99+' : unreadChatsCount}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          width: '100%'
+        }}>
+          <span>Chat</span>
+          {unreadChatsCount > 0 && (
+            <span className="chat-badge chat-badge-pulse" style={{ 
+              backgroundColor: '#ff4d4f', 
+              color: 'white', 
+              borderRadius: '50px', 
+              padding: '4px 8px', 
+              fontSize: '11px',
+              fontWeight: '600',
+              minWidth: '20px',
+              height: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              boxShadow: '0 2px 4px rgba(255, 77, 79, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              {unreadChatsCount > 99 ? '99+' : unreadChatsCount}
+            </span>
+          )}
+        </div>
+      ),
+      onClick: () => navigate('/teacher/chat'),
+    },
     // {
-    //   key: 'settings',
-    //   icon: <SettingOutlined />,
-    //   label: 'Cài đặt',
-    //   onClick: () => navigate('/teacher/settings'),
-    // },
-    // {
-    //   type: 'divider',
+    //   key: 'notifications',
+    //   icon: <BellOutlined />,
+    //   label: 'Notifications',
+    //   onClick: () => navigate('/teacher/notifications'),
     // },
   ];
 
@@ -124,7 +218,7 @@ const TeacherLayout = () => {
         trigger={null} 
         collapsible 
         collapsed={collapsed}
-        width={250}
+        width={'250px'}
         collapsedWidth={80}
         style={{
           background: '#001529'
@@ -173,12 +267,7 @@ const TeacherLayout = () => {
             }}
           />
           <div style={{ marginRight: 16, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Avatar 
-              size={40}
-              icon={<UserOutlined />}
-              style={{ backgroundColor: '#1565C0' }}
-              src={user?.image}
-            />
+            <NotificationBell />
             <span 
               style={{ 
                 cursor: 'pointer',
@@ -187,7 +276,7 @@ const TeacherLayout = () => {
               }} 
               onClick={() => navigate('/teacher/profile')}
             >
-             {user?.fullName || 'Giáo viên'}
+              👨‍🏫 {user?.fullName || 'Teacher'}
             </span>
             <Button
               type="text"
@@ -197,16 +286,19 @@ const TeacherLayout = () => {
                 color: '#1565C0'
               }}
             >
-              Đăng xuất
+              Logout
             </Button>
           </div>
         </Header>
         <Content
           style={{
-            padding: 0,
+            padding: location.pathname.includes('/chat') ? 0 : 24,
             background: colorBgContainer,
             borderRadius: borderRadiusLG,
-            overflow: 'hidden'
+            overflow: 'hidden',
+            height: location.pathname.includes('/chat') ? 'calc(100vh - 90px)' : 'auto',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
           <Outlet />

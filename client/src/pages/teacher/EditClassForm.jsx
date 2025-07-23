@@ -84,15 +84,17 @@ const EditClassForm = () => {
       };
 
       const response = await classroomAPI.updateByTeacher(classId, formData);
-      console.log("response", response);
-      if (response.success) {
-        message.success('Class updated successfully! Changes will need admin approval.');
+      
+      // Check for success in multiple ways to handle different response structures
+      const isSuccess = response && (response.success === true || response.success === 'true');
+      
+      if (isSuccess) {
+        message.success(response.message || 'Class updated successfully! Changes will need admin approval.');
         navigate(`/teacher/classroom/${classId}`);
       } else {
         message.error(response.message || 'Failed to update class');
       }
     } catch (error) {
-      console.error('Error updating class:', error);
       message.error(error.response?.data?.message || 'An error occurred while updating the class');
     } finally {
       setLoading(false);
@@ -210,21 +212,15 @@ const EditClassForm = () => {
               </Form.Item>
 
               <div className="border-t pt-4">
-                <div className="mb-4">
-                  <h3 className="text-lg font-medium mb-2">Student Permissions</h3>
-                  <p className="text-gray-600 text-sm">
-                    Control what students can do in this classroom
-                  </p>
-                </div>
-                
-                <Form.Item
+                <h3 className="text-lg font-medium mb-4">Class Settings</h3>
+                {/* <Form.Item
                   label="Allow Students to Invite Others"
                   name={['settings', 'allowStudentInvite']}
                   valuePropName="checked"
                   extra="Students can invite other students to join the classroom"
                 >
                   <Switch />
-                </Form.Item>
+                </Form.Item> */}
 
                 <Form.Item
                   label="Allow Students to Create Posts"

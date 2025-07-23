@@ -446,7 +446,7 @@ const TeacherRequestManagement = () => {
       <Card>
         <div style={{ marginBottom: '16px' }}>
           <Row justify="space-between" align="middle" style={{ marginBottom: '16px' }}>
-            <Col>
+            <Col style={{ width: '500px' }}>
               <Tabs
                 activeKey={activeTab}
                 onChange={setActiveTab}
@@ -457,21 +457,21 @@ const TeacherRequestManagement = () => {
               <Space>
                 <Select
                   style={{ width: '200px' }}
-                  placeholder="Lọc theo loại yêu cầu"
+                  placeholder="Filter by request type"
                   allowClear
                   value={typeFilter}
                   onChange={setTypeFilter}
                 >
-                  <Option value="classroom_creation">Tạo lớp học</Option>
-                  <Option value="classroom_deletion">Xóa lớp học</Option>
-                  <Option value="classroom_edit">Chỉnh sửa lớp học</Option>
+                  <Option value="classroom_creation">Create Classroom</Option>
+                  <Option value="classroom_deletion">Delete Classroom</Option>
+                  <Option value="classroom_edit">Edit Classroom</Option>
                 </Select>
                 <Button
                   icon={<ReloadOutlined />}
                   onClick={() => fetchRequests()}
                   loading={loading}
                 >
-                  Làm mới
+                  Refresh
                 </Button>
               </Space>
             </Col>

@@ -36,8 +36,19 @@ const classroomSchema = new mongoose.Schema(
       },
       status: {
         type: String,
-        enum: ['active', 'inactive', 'pending'],
+        enum: ['active', 'inactive', 'pending', 'banned'],
         default: 'active'
+      },
+      bannedAt: {
+        type: Date
+      },
+      bannedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      banReason: {
+        type: String,
+        trim: true
       }
     }],
     maxStudents: {

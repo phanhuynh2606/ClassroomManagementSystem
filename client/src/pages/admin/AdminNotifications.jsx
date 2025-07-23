@@ -32,11 +32,10 @@ import {
   InfoCircleOutlined,
   StopOutlined,
   MailOutlined,
-  SearchOutlined,
-  BookOutlined
+  SearchOutlined
 } from '@ant-design/icons';
 import notificationAPI from '../../services/api/notification.api';
-import classroomAPI from '../../services/api/classroom.api';
+import userAPI from '../../services/api/user.api';
 import { useSocket } from '../../hooks/useSocket';
 import dayjs from 'dayjs';
 
@@ -45,14 +44,14 @@ const { TextArea } = Input;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
-const TeacherNotifications = () => {
+const AdminNotifications = () => {
   const { socket, isConnected } = useSocket();
   const [notifications, setNotifications] = useState([]);
   const [filteredNotifications, setFilteredNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
     totalReceived: 0,
-    classNotifications: 0,
+    systemNotifications: 0,
     todayReceived: 0,
     personalNotifications: 0
   });
@@ -70,23 +69,22 @@ const TeacherNotifications = () => {
     search: ''
   });
 
-  // Teacher-specific data
-  const [classrooms, setClassrooms] = useState([]);
-  const [loadingClassrooms, setLoadingClassrooms] = useState(false);
-  const [selectedClassroomStudents, setSelectedClassroomStudents] = useState([]);
-  const [loadingStudents, setLoadingStudents] = useState(false);
+  // Recipients data for personal notifications
+  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
 
   useEffect(() => {
     fetchNotifications();
     fetchStats();
-    fetchClassrooms();
   }, []);
 
   // Socket event listeners for real-time notifications
   useEffect(() => {
     if (socket) {
       const handleNewNotification = (data) => {
-        console.log('Teacher received new notification:', data);
+        console.log('Admin received new notification:', data);
         const { notification } = data;
         
         // Add new notification to the beginning of the list
@@ -113,6 +111,34 @@ const TeacherNotifications = () => {
       };
     }
   }, [socket]);
+
+  // Filter users based on search term
+  useEffect(() => {
+    if (!Array.isArray(users)) {
+      setFilteredUsers([]);
+      return;
+    }
+
+    if (!userSearchTerm.trim()) {
+      setFilteredUsers(users);
+      return;
+    }
+
+    const searchTerm = userSearchTerm.toLowerCase().trim();
+    const filtered = users.filter(user => {
+      if (!user) return false;
+      
+      const fullName = (user.fullName || '').toLowerCase();
+      const email = (user.email || '').toLowerCase();
+      const role = (user.role || '').toLowerCase();
+      
+      return fullName.includes(searchTerm) || 
+             email.includes(searchTerm) || 
+             role.includes(searchTerm);
+    });
+
+    setFilteredUsers(filtered);
+  }, [users, userSearchTerm]);
 
       // Filter notifications based on search and other filters
   useEffect(() => {
@@ -170,7 +196,7 @@ const TeacherNotifications = () => {
         limit: 100
       };
 
-      // Get notifications received by teacher
+      // Get notifications received by admin
       const response = await notificationAPI.getMyNotifications(params);
       
       if (response && response.success && response.data) {
@@ -193,7 +219,7 @@ const TeacherNotifications = () => {
 
   const fetchStats = async () => {
     try {
-      // Get received notifications for teacher
+      // Get received notifications for admin
       const response = await notificationAPI.getMyNotifications({
         page: 1,
         limit: 1000
@@ -207,8 +233,8 @@ const TeacherNotifications = () => {
           n && n.createdAt && dayjs(n.createdAt).isSame(today, 'day')
         ).length;
 
-        const classNotifications = notifications.filter(n => 
-          n && (n.type === 'class_general' || n.type === 'class_specific')
+        const systemNotifications = notifications.filter(n => 
+          n && n.type === 'system'
         ).length;
 
         const personalNotifications = notifications.filter(n => 
@@ -217,7 +243,7 @@ const TeacherNotifications = () => {
 
         setStats({
           totalReceived: notifications.length,
-          classNotifications,
+          systemNotifications,
           todayReceived,
           personalNotifications
         });
@@ -227,65 +253,57 @@ const TeacherNotifications = () => {
     }
   };
 
-  const fetchClassrooms = async () => {
-    setLoadingClassrooms(true);
-    try {
-      const response = await classroomAPI.getTeacherClassrooms();
-      if (response && response.success) {
-        setClassrooms(response.data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching classrooms:', error);
-    } finally {
-      setLoadingClassrooms(false);
-    }
-  };
-
-  const fetchClassroomStudents = async (classroomId) => {
-    if (!classroomId) return;
+  const fetchUsers = async () => {
+    if (users.length > 0) return; // Already loaded
     
-    setLoadingStudents(true);
+    setLoadingUsers(true);
     try {
-      const response = await notificationAPI.getClassroomStudents(classroomId);
+      const response = await userAPI.getAllUsers();
       if (response && response.success) {
-        setSelectedClassroomStudents(response.data.students || []);
+        const userData = response.data || [];
+        setUsers(userData);
+        setFilteredUsers(userData);
       }
     } catch (error) {
-      console.error('Error fetching classroom students:', error);
-      setSelectedClassroomStudents([]);
+      console.error('Error fetching users:', error);
     } finally {
-      setLoadingStudents(false);
+      setLoadingUsers(false);
     }
   };
 
-  const handleCreateNotification = async (values) => {
+    const handleCreateNotification = async (values) => {
     try {
+      console.log('Form values:', values); // Debug log
       const response = await notificationAPI.createNotification(values);
       if (response && response.success) {
         message.success('Notification sent successfully');
         setCreateModalVisible(false);
         form.resetFields();
-        setSelectedClassroomStudents([]);
+        setUserSearchTerm('');
+        setFilteredUsers(users);
         fetchNotifications();
         fetchStats();
+      } else {
+        console.error('API response error:', response);
+        message.error('Error sending notification: Invalid response');
       }
     } catch (error) {
       console.error('Error creating notification:', error);
-      message.error('Error sending notification');
+      message.error('Error sending notification: ' + (error.message || 'Unknown error'));
     }
   };
 
   const handleTypeChange = (type) => {
     form.setFieldsValue({ type });
-    // Reset classroom and students when changing type
-    form.setFieldsValue({ classroomId: undefined, recipientIds: undefined });
-    setSelectedClassroomStudents([]);
-  };
-
-  const handleClassroomChange = (classroomId) => {
-    form.setFieldsValue({ classroomId });
-    form.setFieldsValue({ recipientIds: undefined }); // Reset recipients
-    fetchClassroomStudents(classroomId);
+    if (type === 'personal') {
+      fetchUsers();
+      // Clear recipients when switching to personal to avoid validation issues
+      form.setFieldsValue({ recipientIds: [] });
+    } else {
+      // Clear user search when switching away from personal
+      setUserSearchTerm('');
+      form.setFieldsValue({ recipientIds: undefined, targetRole: undefined });
+    }
   };
 
   const getPriorityIcon = (priority) => {
@@ -342,7 +360,7 @@ const TeacherNotifications = () => {
               </Tag>
               <Tag color={getTypeColor(record.type)} size="small">
                 {record.type || 'unknown'}
-              </Tag>
+            </Tag>
             </Space>
           </div>
         </div>
@@ -388,7 +406,7 @@ const TeacherNotifications = () => {
             <div>
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 {dayjs(date).format('HH:mm')}
-              </Text>
+        </Text>
             </div>
           </div>
         );
@@ -418,11 +436,11 @@ const TeacherNotifications = () => {
   const displayNotifications = Array.isArray(notifications) ? notifications : [];
 
   return (
-    <div className="teacher-notifications-container">
+    <div className="admin-notifications-container">
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={2}>
-            
+           
           </Title>
           <Button
             style={{marginTop: 16}}
@@ -434,57 +452,57 @@ const TeacherNotifications = () => {
             Create Notification
           </Button>
         </div>
-      </div>
+        </div>
 
-      {/* Statistics Cards */}
+        {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={6}>
-          <Card>
-            <Statistic
+          <Col xs={24} sm={6}>
+            <Card>
+              <Statistic
               title="Total Received"
               value={stats.totalReceived}
               prefix={<MailOutlined style={{ color: '#1890ff' }} />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card>
-            <Statistic
-              title="Class Notifications"
-              value={stats.classNotifications}
-              prefix={<BookOutlined style={{ color: '#722ed1' }} />}
-              valueStyle={{ color: '#722ed1' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card>
-            <Statistic
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Card>
+              <Statistic
+                title="System Notifications"
+                value={stats.systemNotifications}
+              prefix={<TeamOutlined style={{ color: '#722ed1' }} />}
+                valueStyle={{ color: '#722ed1' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Card>
+              <Statistic
               title="Personal Messages"
               value={stats.personalNotifications}
               prefix={<UserOutlined style={{ color: '#52c41a' }} />}
               valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card>
-            <Statistic
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Card>
+              <Statistic
               title="Today"
               value={stats.todayReceived}
               prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
               valueStyle={{ color: '#faad14' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+              />
+            </Card>
+          </Col>
+        </Row>
 
       {/* Notifications List */}
       <Card 
         title={
           <Space>
-            My Notifications
+                  My Notifications
             {(filters.search || filters.priority || filters.dateRange) && (
               <Badge 
                 count={
@@ -567,15 +585,15 @@ const TeacherNotifications = () => {
         </Card>
 
         {/* Notifications Table */}
-        <Table
+                <Table
           columns={columns}
           dataSource={displayFilteredNotifications}
           loading={loading}
-          rowKey="_id"
-          pagination={{
+                  rowKey="_id"
+                  pagination={{
             total: displayFilteredNotifications.length,
             pageSize: 20,
-            showSizeChanger: true,
+                    showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} notifications`,
           }}
@@ -589,12 +607,13 @@ const TeacherNotifications = () => {
 
       {/* Create Notification Modal */}
       <Modal
-        title={<><SendOutlined /> Send Notification to Class</>}
+        title={<><SendOutlined /> Send System Notification</>}
         visible={createModalVisible}
         onCancel={() => {
           setCreateModalVisible(false);
           form.resetFields();
-          setSelectedClassroomStudents([]);
+          setUserSearchTerm('');
+          setFilteredUsers(users); // Reset filtered users
         }}
         footer={null}
         width={700}
@@ -624,12 +643,12 @@ const TeacherNotifications = () => {
             <Col xs={24} sm={12}>
               <Form.Item
                 name="type"
-                label="Send To"
+                label="Type"
                 rules={[{ required: true, message: 'Please select notification type' }]}
               >
                 <Select placeholder="Select type" onChange={handleTypeChange}>
-                  <Option value="class_general">Entire Class</Option>
-                  <Option value="class_specific">Individual Students</Option>
+                  <Option value="system">System Notification</Option>
+                  <Option value="personal">Personal Notification</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -656,48 +675,70 @@ const TeacherNotifications = () => {
             {({ getFieldValue }) => {
               const notificationType = getFieldValue('type');
               
-              if (notificationType === 'class_general' || notificationType === 'class_specific') {
+              if (notificationType === 'system') {
                 return (
-                  <>
+                  <Form.Item
+                    name="targetRole"
+                    label="Target Audience"
+                    rules={[{ required: true, message: 'Please select target audience' }]}
+                  >
+                    <Select placeholder="Select target audience">
+                      <Option value="all">All Users</Option>
+                      <Option value="student">Students Only</Option>
+                      <Option value="teacher">Teachers Only</Option>
+                      <Option value="admin">Admins Only</Option>
+                    </Select>
+                  </Form.Item>
+                );
+              }
+              
+              if (notificationType === 'personal') {
+                return (
+                  <div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label>Search Users:</label>
+                      <Input
+                        placeholder="Search users..."
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        style={{ marginTop: 4 }}
+                        prefix={<SearchOutlined />}
+                        allowClear
+                      />
+                    </div>
                     <Form.Item
-                      name="classroomId"
-                      label="Select Class"
-                      rules={[{ required: true, message: 'Please select a class' }]}
+                      name="recipientIds"
+                      label="Recipients"
+                      rules={[{ required: true, message: 'Please select recipients' }]}
                     >
-                      <Select 
-                        placeholder="Select classroom"
-                        loading={loadingClassrooms}
-                        onChange={handleClassroomChange}
+                      <Select
+                        mode="multiple"
+                        placeholder="Select recipients"
+                        loading={loadingUsers}
+                        showSearch={false}
+                        notFoundContent={loadingUsers ? 'Loading...' : (
+                          userSearchTerm && filteredUsers.length === 0 ? 
+                          'No users match your search' : 
+                          'No users found'
+                        )}
+                        style={{ width: '100%' }}
                       >
-                        {Array.isArray(classrooms) ? classrooms.map(classroom => (
-                          <Option key={classroom._id} value={classroom._id}>
-                            {classroom.name} ({classroom.code})
-                          </Option>
-                        )) : []}
+                        {Array.isArray(filteredUsers) && filteredUsers.length > 0 ? filteredUsers.map(user => {
+                          if (!user || !user._id) return null;
+                          
+                          const displayName = user.fullName || 'Unknown User';
+                          const displayEmail = user.email || 'No email';
+                          const displayRole = user.role || 'No role';
+                          
+                          return (
+                            <Option key={user._id} value={user._id}>
+                              {displayName} ({displayEmail}) - {displayRole}
+                            </Option>
+                          );
+                        }).filter(Boolean) : []}
                       </Select>
                     </Form.Item>
-                    
-                    {notificationType === 'class_specific' && (
-                      <Form.Item
-                        name="recipientIds"
-                        label="Select Students"
-                        rules={[{ required: true, message: 'Please select students' }]}
-                      >
-                        <Select
-                          mode="multiple"
-                          placeholder="Select students"
-                          loading={loadingStudents}
-                          notFoundContent={loadingStudents ? 'Loading students...' : 'No students found'}
-                        >
-                          {Array.isArray(selectedClassroomStudents) ? selectedClassroomStudents.map(student => (
-                            <Option key={student._id} value={student._id}>
-                              {student.fullName} ({student.email})
-                            </Option>
-                          )) : []}
-                        </Select>
-                      </Form.Item>
-                    )}
-                  </>
+                  </div>
                 );
               }
               
@@ -710,12 +751,13 @@ const TeacherNotifications = () => {
               <Button onClick={() => {
                 setCreateModalVisible(false);
                 form.resetFields();
-                setSelectedClassroomStudents([]);
+                setUserSearchTerm('');
+                setFilteredUsers(users);
               }}>
                 Cancel
               </Button>
               <Button type="primary" htmlType="submit">
-                Send to Class
+                Send System Message
               </Button>
             </Space>
           </div>
@@ -786,4 +828,4 @@ const TeacherNotifications = () => {
   );
 };
 
-export default TeacherNotifications; 
+export default AdminNotifications; 

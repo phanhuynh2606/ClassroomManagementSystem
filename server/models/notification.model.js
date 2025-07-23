@@ -14,14 +14,22 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['system', 'classroom', 'assignment', 'quiz'],
+      enum: [
+        'system',        // Admin system-wide notifications
+        'class_general', // Teacher to entire class
+        'class_specific',// Teacher to specific students in class
+        'personal',      // Personal notification to specific user
+        'deadline',      // Assignment/quiz deadlines
+        'reminder'       // General reminders
+      ],
       required: true,
       index: true
     },
     priority: {
       type: String,
-      enum: ['low', 'medium', 'high', 'urgent'],
-      default: 'medium'
+      enum: ['low', 'normal', 'high', 'urgent'],
+      default: 'normal',
+      index: true
     },
     sender: {
       type: mongoose.Schema.Types.ObjectId,
@@ -30,52 +38,36 @@ const notificationSchema = new mongoose.Schema(
       index: true
     },
     recipients: [{
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        index: true
-      },
-      read: {
-        type: Boolean,
-        default: false,
-      },
-      readAt: Date,
-      deleted: {
-        type: Boolean,
-        default: false
-      },
-      deletedAt: Date
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
     }],
     classroom: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Classroom',
       index: true
     },
-    relatedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      refPath: 'onModel',
-    },
-    onModel: {
+    targetRole: {
       type: String,
-      enum: ['Assignment', 'Quiz', 'Material'],
-    },
-    action: {
-      type: String,
-      enum: ['create', 'update', 'delete', 'reminder', 'announcement'],
-      default: 'announcement'
-    },
-    actionUrl: String,
-    isActive: {
-      type: Boolean,
-      default: true,
+      enum: ['admin', 'teacher', 'student', 'all'],
       index: true
     },
-    isArchived: {
-      type: Boolean,
-      default: false
-    },
-    scheduledFor: Date,
-    expiresAt: Date
+    metadata: {
+      assignmentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Assignment'
+      },
+      quizId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Quiz'
+      },
+      materialId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Material'
+      },
+      relatedUrl: String
+    }
   },
   {
     timestamps: true,
@@ -83,12 +75,43 @@ const notificationSchema = new mongoose.Schema(
 );
 
 // Indexes
-notificationSchema.index({ type: 1, isActive: 1 });
+notificationSchema.index({ type: 1, priority: 1 });
 notificationSchema.index({ sender: 1, createdAt: -1 });
-notificationSchema.index({ 'recipients.user': 1, 'recipients.read': 1 });
+notificationSchema.index({ recipients: 1 });
 notificationSchema.index({ classroom: 1, type: 1 });
-notificationSchema.index({ scheduledFor: 1 }, { sparse: true });
-notificationSchema.index({ expiresAt: 1 }, { sparse: true });
+notificationSchema.index({ targetRole: 1 });
+notificationSchema.index({ priority: 1, createdAt: -1 });
+
+
+
+// Static method to get notifications for user
+notificationSchema.statics.getForUser = function(userId, options = {}) {
+  const {
+    page = 1,
+    limit = 20,
+    type = null,
+    priority = null
+  } = options;
+
+  const query = {
+    recipients: userId
+  };
+
+  if (type) {
+    query.type = type;
+  }
+
+  if (priority) {
+    query.priority = priority;
+  }
+
+  return this.find(query)
+    .populate('sender', 'fullName email role image')
+    .populate('classroom', 'name code')
+    .sort({ createdAt: -1, priority: -1 })
+    .skip((page - 1) * limit)
+    .limit(limit);
+};
 
 const Notification = mongoose.model('Notification', notificationSchema);
 

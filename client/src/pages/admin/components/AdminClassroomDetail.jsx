@@ -17,7 +17,12 @@ import {
   Badge,
   Empty,
   Table,
-  Input
+  Input,
+  Modal,
+  Form,
+  Select,
+  Switch,
+  InputNumber
 } from 'antd';
 import { 
   UserOutlined,
@@ -35,6 +40,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import classroomAPI from '../../../services/api/classroom.api';
 
 const { Title, Text } = Typography;
+const { TextArea } = Input;
+const { Option } = Select;
 
 const AdminClassroomDetail = () => {
   const { classroomId } = useParams();
@@ -45,11 +52,24 @@ const AdminClassroomDetail = () => {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [students, setStudents] = useState([]);
   const [searchText, setSearchText] = useState('');
+  
+  // Edit dialog states
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editForm] = Form.useForm();
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Ban/Unban dialog states
+  const [banModalVisible, setBanModalVisible] = useState(false);
+  const [banForm] = Form.useForm();
+  const [banLoading, setBanLoading] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [bannedStudents, setBannedStudents] = useState([]);
 
   useEffect(() => {
     if (classroomId) {
       fetchClassroomDetails();
       fetchStudents();
+      fetchBannedStudents();
     }
   }, [classroomId]);
 
@@ -97,6 +117,60 @@ const AdminClassroomDetail = () => {
     } finally {
       setStudentsLoading(false);
     }
+  };
+
+  const fetchBannedStudents = async () => {
+    try {
+      const response = await classroomAPI.getBannedStudents(classroomId);
+      const data = response.data.data || response.data || [];
+      setBannedStudents(data);
+    } catch (error) {
+      console.log('Cannot fetch banned students:', error);
+      setBannedStudents([]);
+    }
+  };
+
+  const handleBanStudent = (student) => {
+    setSelectedStudent(student);
+    setBanModalVisible(true);
+    banForm.resetFields();
+  };
+
+  const handleUnbanStudent = async (student) => {
+    try {
+      const studentId = student.student?._id || student._id;
+      await classroomAPI.unbanStudent(classroomId, studentId);
+      message.success('Student unbanned successfully');
+      await fetchStudents();
+      await fetchBannedStudents();
+    } catch (error) {
+      message.error('Failed to unban student');
+      console.error('Error unbanning student:', error);
+    }
+  };
+
+  const handleBanSubmit = async (values) => {
+    setBanLoading(true);
+    try {
+      const studentId = selectedStudent.student?._id || selectedStudent._id;
+      await classroomAPI.banStudent(classroomId, studentId, values.reason);
+      message.success('Student banned successfully');
+      setBanModalVisible(false);
+      banForm.resetFields();
+      await fetchStudents();
+      await fetchBannedStudents();
+    } catch (error) {
+      message.error('Failed to ban student');
+      console.error('Error banning student:', error);
+    } finally {
+      setBanLoading(false);
+    }
+  };
+
+  const handleBanCancel = () => {
+    setBanModalVisible(false);
+    banForm.resetFields();
+    setSelectedStudent(null);
   };
 
   const handleApprove = async () => {
@@ -193,13 +267,106 @@ const AdminClassroomDetail = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status?.toUpperCase() || 'UNKNOWN'}
-        </Tag>
-      ),
+      render: (status) => {
+        const color = status === 'active' ? 'green' : status === 'banned' ? 'red' : 'orange';
+        return (
+          <Tag color={color}>
+            {status?.toUpperCase() || 'UNKNOWN'}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record) => {
+        const status = record.status;
+        const studentInfo = record.student || record;
+        
+        return (
+          <Space size="small">
+            {status === 'active' && (
+              <Button
+                type="primary"
+                danger
+                onClick={() => handleBanStudent(record)}
+              >
+                Ban
+              </Button>
+            )}
+            {status === 'banned' && (
+              <Button
+                type="primary"
+                onClick={() => handleUnbanStudent(record)}
+                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+              >
+                Unban
+              </Button>
+            )}
+          </Space>
+        );
+      },
     },
   ];
+
+  const handleEdit = () => {
+    if (classroom) {
+      // Set form values with current classroom data
+      const currentValues = {
+        name: classroom.name || '',
+        description: classroom.description || '',
+        maxStudents: classroom.maxStudents || 50,
+        category: classroom.category || 'academic',
+        level: classroom.level || 'beginner',
+        isActive: classroom.isActive || false,
+        allowStudentInvite: classroom.settings?.allowStudentInvite ?? false,
+        allowStudentPost: classroom.settings?.allowStudentPost ?? true,
+        allowStudentComment: classroom.settings?.allowStudentComment ?? true,
+      };
+      
+      console.log('Setting form values:', currentValues);
+      editForm.setFieldsValue(currentValues);
+      setEditModalVisible(true);
+    } else {
+      message.error('Classroom data not available');
+    }
+  };
+
+  const handleEditSubmit = async (values) => {
+    setEditLoading(true);
+    try {
+      const updateData = {
+        name: values.name,
+        description: values.description,
+        maxStudents: values.maxStudents,
+        category: values.category,
+        level: values.level,
+        isActive: values.isActive,
+        settings: {
+          allowStudentInvite: values.allowStudentInvite,
+          allowStudentPost: values.allowStudentPost,
+          allowStudentComment: values.allowStudentComment,
+        }
+      };
+
+      await classroomAPI.updateByAdmin(classroomId, updateData);
+      message.success('Classroom updated successfully');
+      setEditModalVisible(false);
+      editForm.resetFields();
+      // Refresh classroom details
+      await fetchClassroomDetails();
+    } catch (error) {
+      message.error('Failed to update classroom');
+      console.error('Error updating classroom:', error);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditModalVisible(false);
+    editForm.resetFields();
+  };
 
   if (loading) {
     return (
@@ -311,7 +478,7 @@ const AdminClassroomDetail = () => {
             )}
             {/* <Button
               icon={<EditOutlined />}
-              onClick={() => navigate(`/admin/classrooms/edit/${classroomId}`)}
+              onClick={handleEdit}
               block
             >
               Edit Classroom
@@ -392,6 +559,362 @@ const AdminClassroomDetail = () => {
     </div>
   );
 
+  const renderEditModal = () => (
+    <Modal
+      title={`Edit Classroom: ${classroom?.name || 'Unknown'}`}
+      open={editModalVisible}
+      onCancel={handleEditCancel}
+      footer={null}
+      width={600}
+      destroyOnHidden
+      afterOpenChange={(open) => {
+        if (open && classroom) {
+          // Re-populate form when modal opens to ensure data is current
+          const currentValues = {
+            name: classroom.name || '',
+            description: classroom.description || '',
+            maxStudents: classroom.maxStudents || 50,
+            category: classroom.category || 'academic',
+            level: classroom.level || 'beginner',
+            isActive: classroom.isActive || false,
+            allowStudentInvite: classroom.settings?.allowStudentInvite ?? false,
+            allowStudentPost: classroom.settings?.allowStudentPost ?? true,
+            allowStudentComment: classroom.settings?.allowStudentComment ?? true,
+          };
+          editForm.setFieldsValue(currentValues);
+        }
+              }}
+      >
+        {/* Current Classroom Info */}
+        <Card size="small" className="mb-4" style={{ backgroundColor: '#f9f9f9' }}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Text strong>Current Class Code: </Text>
+              <Text code>{classroom?.code}</Text>
+            </Col>
+            <Col span={12}>
+              <Text strong>Created: </Text>
+              <Text>{classroom?.createdAt ? new Date(classroom.createdAt).toLocaleDateString() : 'N/A'}</Text>
+            </Col>
+            <Col span={12}>
+              <Text strong>Teacher: </Text>
+              <Text>{classroom?.teacher?.fullName || 'N/A'}</Text>
+            </Col>
+            <Col span={12}>
+              <Text strong>Current Students: </Text>
+              <Text>{students.length}/{classroom?.maxStudents || 0}</Text>
+            </Col>
+          </Row>
+        </Card>
+
+        <Form
+          form={editForm}
+          layout="vertical"
+          onFinish={handleEditSubmit}
+          preserve={false}
+          initialValues={{
+            name: classroom?.name || '',
+            description: classroom?.description || '',
+            maxStudents: classroom?.maxStudents || 50,
+            category: classroom?.category || 'academic',
+            level: classroom?.level || 'beginner',
+            isActive: classroom?.isActive || false,
+            allowStudentInvite: classroom?.settings?.allowStudentInvite ?? false,
+            allowStudentPost: classroom?.settings?.allowStudentPost ?? true,
+            allowStudentComment: classroom?.settings?.allowStudentComment ?? true,
+          }}
+        >
+          <Row gutter={16}>
+          <Col span={24}>
+            <Form.Item
+              label="Classroom Name"
+              name="name"
+              rules={[
+                { required: true, message: 'Please input classroom name!' },
+                { min: 3, message: 'Classroom name must be at least 3 characters!' }
+              ]}
+            >
+              <Input placeholder="Enter classroom name" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label="Category"
+              name="category"
+              rules={[{ required: true, message: 'Please select a category!' }]}
+            >
+              <Select placeholder="Select category">
+                <Option value="academic">Academic</Option>
+                <Option value="professional">Professional</Option>
+                <Option value="other">Other</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label="Level"
+              name="level"
+              rules={[{ required: true, message: 'Please select a level!' }]}
+            >
+              <Select placeholder="Select level">
+                <Option value="beginner">Beginner</Option>
+                <Option value="intermediate">Intermediate</Option>
+                <Option value="advanced">Advanced</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label="Max Students"
+              name="maxStudents"
+              rules={[
+                { required: true, message: 'Please input max students!' },
+                { type: 'number', min: Math.max(1, students.length), max: 1000, message: `Max students must be between ${Math.max(1, students.length)} and 1000!` },
+                {
+                  validator: (_, value) => {
+                    if (value && value < students.length) {
+                      return Promise.reject(new Error(`Max students cannot be less than current students (${students.length})`));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}
+              tooltip={`Current students: ${students.length}. Max students must be at least ${students.length}.`}
+            >
+              <InputNumber
+                min={Math.max(1, students.length)}
+                max={1000}
+                placeholder="Enter max students"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label="Active Status"
+              name="isActive"
+              valuePropName="checked"
+            >
+              <Switch 
+                checkedChildren="Active" 
+                unCheckedChildren="Inactive"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={24}>
+            <Form.Item
+              label="Description"
+              name="description"
+            >
+              <TextArea
+                rows={4}
+                placeholder="Enter classroom description (optional)"
+                maxLength={500}
+                showCount
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={24}>
+            <Card title="Classroom Settings" size="small" className="mb-4">
+              <Row gutter={16}>
+                {/* <Col span={8}>
+                  <Form.Item
+                    label="Allow Student Invite"
+                    name="allowStudentInvite"
+                    valuePropName="checked"
+                  >
+                    <Switch size="small" />
+                  </Form.Item>
+                </Col> */}
+                <Col span={8}>
+                  <Form.Item
+                    label="Allow Student Post"
+                    name="allowStudentPost"
+                    valuePropName="checked"
+                  >
+                    <Switch size="small" />
+                  </Form.Item>
+                </Col>
+                <Col span={10}>
+                  <Form.Item
+                    label="Allow Student Comment"
+                    name="allowStudentComment"
+                    valuePropName="checked"
+                  >
+                    <Switch size="small" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Card>
+          </Col>
+        </Row>
+
+        <Row justify="end" gutter={8}>
+          <Col>
+            <Button onClick={handleEditCancel}>
+              Cancel
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={editLoading}
+            >
+              Update Classroom
+            </Button>
+          </Col>
+        </Row>
+      </Form>
+    </Modal>
+  );
+
+  const renderBannedStudents = () => {
+    const bannedColumns = [
+      {
+        title: 'Student Name',
+        key: 'studentName',
+        render: (_, record) => (
+          <Space>
+            <Avatar size="small" icon={<UserOutlined />} />
+            <Text>{record.studentName || 'N/A'}</Text>
+          </Space>
+        ),
+      },
+      {
+        title: 'Email',
+        dataIndex: 'studentEmail',
+        key: 'studentEmail',
+      },
+      {
+        title: 'Banned Date',
+        dataIndex: 'bannedAt',
+        key: 'bannedAt',
+        render: (date) => date ? new Date(date).toLocaleDateString() : 'N/A',
+      },
+      {
+        title: 'Banned By',
+        dataIndex: 'bannedBy',
+        key: 'bannedBy',
+      },
+      {
+        title: 'Reason',
+        dataIndex: 'banReason',
+        key: 'banReason',
+        ellipsis: true,
+      },
+      {
+        title: 'Actions',
+        key: 'actions',
+        render: (_, record) => (
+          <Button
+            type="primary"
+            onClick={() => handleUnbanStudent({ student: { _id: record.studentId } })}
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+          >
+            Unban
+          </Button>
+        ),
+      },
+    ];
+
+    return (
+      <div>
+        <div className="mb-4 flex justify-between items-center">
+          <Text type="secondary">
+            Total banned: {bannedStudents.length} students
+          </Text>
+        </div>
+        
+        <Table
+          columns={bannedColumns}
+          dataSource={bannedStudents}
+          rowKey="studentId"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} banned students`,
+          }}
+          locale={{
+            emptyText: 'No banned students'
+          }}
+        />
+      </div>
+    );
+  };
+
+  const renderBanModal = () => (
+    <Modal
+      title={`Ban Student: ${selectedStudent?.student?.fullName || selectedStudent?.fullName || 'Unknown'}`}
+      open={banModalVisible}
+      onCancel={handleBanCancel}
+      footer={null}
+      width={500}
+      destroyOnHidden
+    >
+      <Form
+        form={banForm}
+        layout="vertical"
+        onFinish={handleBanSubmit}
+        preserve={false}
+      >
+        <div className="mb-4">
+          <Text type="secondary">
+            You are about to ban this student from the classroom. This action will prevent them from accessing classroom content and participating in activities.
+          </Text>
+        </div>
+
+        <Form.Item
+          label="Reason for Ban"
+          name="reason"
+          rules={[
+            { required: true, message: 'Please provide a reason for banning this student!' },
+            { min: 10, message: 'Reason must be at least 10 characters!' }
+          ]}
+        >
+          <TextArea
+            rows={4}
+            placeholder="Enter the reason for banning this student..."
+            maxLength={500}
+            showCount
+          />
+        </Form.Item>
+
+        <Row justify="end" gutter={8}>
+          <Col>
+            <Button onClick={handleBanCancel}>
+              Cancel
+            </Button>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              danger
+              htmlType="submit"
+              loading={banLoading}
+            >
+              Ban Student
+            </Button>
+          </Col>
+        </Row>
+      </Form>
+    </Modal>
+  );
+
   const tabItems = [
     {
       key: 'overview',
@@ -413,6 +936,17 @@ const AdminClassroomDetail = () => {
         </Space>
       ),
       children: renderStudents()
+    },
+    {
+      key: 'banned',
+      label: (
+        <Space>
+          <UserOutlined />
+          Banned Students
+          <Badge count={bannedStudents.length} size="small" />
+        </Space>
+      ),
+      children: renderBannedStudents()
     }
   ];
 
@@ -455,6 +989,9 @@ const AdminClassroomDetail = () => {
         items={tabItems}
         size="large"
       />
+
+      {renderEditModal()}
+      {renderBanModal()}
     </div>
   );
 };
