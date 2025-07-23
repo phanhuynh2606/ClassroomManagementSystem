@@ -14,8 +14,8 @@ const adminAPI = {
     return axiosClient.put(`/admin/users/${userId}`, {
       userData: userData
     });
-  }
-
+  },
+  getDashboardStats: () => axiosClient.get('/admin/dashboard-stats'),
 }
 
 export default adminAPI; 

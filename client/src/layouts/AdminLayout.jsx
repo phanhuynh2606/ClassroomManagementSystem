@@ -269,7 +269,7 @@ const AdminLayout = () => {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh',margin: 0, padding: 0 }}>
       <Sider trigger={null} collapsible collapsed={collapsed} width={'250px'}>
         <div className="demo-logo-vertical" >
           <img src={logo} alt="logo" style={{ width: '80%', height: 'auto',marginBottom : "10px" }} />
@@ -288,6 +288,7 @@ const AdminLayout = () => {
         <Header
           style={{
             padding: 0,
+            margin: 0,
             background: colorBgContainer,
             display: 'flex',
             justifyContent: 'space-between',
@@ -329,10 +330,11 @@ const AdminLayout = () => {
         <Content
           style={{
             scrollbarWidth: 'none',
-            margin: '24px 16px',
+            // margin: '24px 16px',
             padding: location.pathname.includes('/chat') ? 0 : 24,
             background: colorBgContainer,
-            borderRadius: borderRadiusLG,
+            // borderRadius: borderRadiusLG,
+            // borderEndEndRadius: "0px",
             minHeight: 280,
             height: location.pathname.includes('/chat') ? 'calc(100vh - 112px)' : 'auto',
             display: 'flex',

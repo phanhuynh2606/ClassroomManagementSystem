@@ -105,10 +105,10 @@ const StudentChat = lazy(() =>
 
 // Loading Components
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div className="flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
     <div className="text-center">
       <Spin size="large" />
-      <div className="mt-4 text-gray-600 text-lg">Loading page...</div>
+      <div className="text-gray-600 text-lg">Loading page...</div>
     </div>
   </div>
 );

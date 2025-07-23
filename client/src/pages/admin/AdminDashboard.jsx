@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Row,
   Col,
@@ -10,6 +10,8 @@ import {
   Typography,
   Space,
   Divider,
+  Spin,
+  message,
 } from "antd";
 import {
   UserOutlined,
@@ -28,144 +30,221 @@ import {
   PieChartOutlined,
 } from "@ant-design/icons";
 import { Pie, Column, Area, Line } from "@ant-design/charts";
+import adminAPI from "../../services/api/admin.api";
 
 const { Title, Text } = Typography;
 
 const AdminDashboard = () => {
-  // Mock data - replace with actual API calls
-  const statistics = {
-    totalUsers: 150,
-    totalClassrooms: 25,
-    totalAssignments: 80,
-    totalQuizzes: 100,
-    totalQuestions: 500,
-    totalStorage: 2048, // MB
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [statistics, setStatistics] = useState({
+    totalUsers: 0,
+    totalClassrooms: 0,
+    totalAssignments: 0,
+    totalQuizzes: 0,
+    totalQuestions: 0,
+    totalStorage: 0,
+    currentMonthStats: { users: 0, classrooms: 0, assignments: 0, quizzes: 0, questions: 0, storage: 0 },
+    previousMonthStats: { users: 0, classrooms: 0, assignments: 0, quizzes: 0, questions: 0, storage: 0 }
+  });
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [userRoleData, setUserRoleData] = useState([]);
+  const [genderData, setGenderData] = useState([]);
+  const [ageDistributionData, setAgeDistributionData] = useState([]);
+  const [userGrowthData, setUserGrowthData] = useState([]);
+  const [verificationData, setVerificationData] = useState([]);
+  const [submissionStatusData, setSubmissionStatusData] = useState([]);
+  const [assignmentOverviewData, setAssignmentOverviewData] = useState({});
+  const [loginData, setLoginData] = useState([]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+    const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminAPI.getDashboardStats();
+      console.log('Dashboard API Response:', response);
+      
+      if (response && response.data) {
+        // Sử dụng data từ API response
+        const apiData = response.data;
+        setStatistics(apiData);
+        setRecentActivities(apiData.recentActivities || []);
+        setUserRoleData(apiData.userRoleData || []);
+        setGenderData(apiData.genderData || []);
+        setAgeDistributionData(apiData.ageDistributionData || []);
+        setUserGrowthData(apiData.userGrowthData || []);
+        setVerificationData(apiData.verifiedData || []);
+        setSubmissionStatusData(apiData.submissionStatusData || []);
+        setAssignmentOverviewData(apiData.assignmentOverview || {});
+        setLoginData(apiData.loginData || []);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải dữ liệu dashboard:', error);
+      setError('Không thể tải dữ liệu dashboard');
+      // Fallback data nếu API fails
+      setStatistics({
+        totalUsers: 0,
+        totalClassrooms: 0, 
+        totalAssignments: 0,
+        totalQuizzes: 0,
+        totalQuestions: 0,
+        totalStorage: 0,
+        currentMonthStats: { users: 0, classrooms: 0, assignments: 0, quizzes: 0, questions: 0, storage: 0 },
+        previousMonthStats: { users: 0, classrooms: 0, assignments: 0, quizzes: 0, questions: 0, storage: 0 }
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const recentActivities = [
-    {
-      key: "1",
-      type: "user",
-      action: "Người dùng mới đăng ký",
-      details: "Nguyễn Văn An đã tham gia với vai trò Học sinh",
-      time: "2 giờ trước",
-      status: "success",
-      icon: "👤",
-      color: "#52c41a",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=An",
-    },
-    {
-      key: "2",
-      type: "classroom",
-      action: "Lớp học mới được tạo",
-      details: "WDP301 - Phát triển Web được tạo bởi GV. Trần Minh",
-      time: "3 giờ trước",
-      status: "success",
-      icon: "🏫",
-      color: "#1890ff",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Minh",
-    },
-    {
-      key: "3",
-      type: "quiz",
-      action: "Bài kiểm tra mới được tạo",
-      details: "Kiểm tra giữa kỳ - WDP301 (30 câu hỏi, 60 phút)",
-      time: "5 giờ trước",
-      status: "warning",
-      icon: "📝",
-      color: "#faad14",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Quiz",
-    },
-    {
-      key: "4",
-      type: "question",
-      action: "Câu hỏi mới được thêm",
-      details: "15 câu hỏi trắc nghiệm được thêm vào Ngân hàng câu hỏi",
-      time: "8 giờ trước",
-      status: "success",
-      icon: "❓",
-      color: "#722ed1",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Question",
-    },
-    {
-      key: "5",
-      type: "assignment",
-      action: "Bài tập mới được giao",
-      details: "Bài tập thực hành React Hooks - Hạn nộp: 25/12/2024",
-      time: "12 giờ trước",
-      status: "info",
-      icon: "📚",
-      color: "#13c2c2",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Assignment",
-    },
-    {
-      key: "6",
-      type: "submission",
-      action: "Bài nộp mới",
-      details: "Lê Thị Hoa đã nộp bài tập JavaScript Advanced",
-      time: "1 ngày trước",
-      status: "success",
-      icon: "✅",
-      color: "#52c41a",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hoa",
-    },
-  ];
+  // Calculate trends from API data
+  const calculateTrend = (current, previous) => {
+    if (!previous || previous === 0) return { trend: "N/A", trendUp: true };
+    const percentage = ((current - previous) / previous) * 100;
+    return {
+      trend: percentage > 0 ? `+${percentage.toFixed(1)}%` : `${percentage.toFixed(1)}%`,
+      trendUp: percentage >= 0
+    };
+  };
 
-  // Mock user activity data for charts
-  const loginData = [
-    { day: "T2", logins: 120 },
-    { day: "T3", logins: 98 },
-    { day: "T4", logins: 150 },
-    { day: "T5", logins: 80 },
-    { day: "T6", logins: 170 },
-    { day: "T7", logins: 60 },
-    { day: "CN", logins: 30 },
-  ];
+  // Get trend data from API or use default values
+  const userTrend = calculateTrend(
+    statistics.currentMonthStats?.users || 0, 
+    statistics.previousMonthStats?.users || 0
+  );
+  const classroomTrend = calculateTrend(
+    statistics.currentMonthStats?.classrooms || 0, 
+    statistics.previousMonthStats?.classrooms || 0
+  );
+  const assignmentTrend = calculateTrend(
+    statistics.currentMonthStats?.assignments || 0, 
+    statistics.previousMonthStats?.assignments || 0
+  );
+  const quizTrend = calculateTrend(
+    statistics.currentMonthStats?.quizzes || 0, 
+    statistics.previousMonthStats?.quizzes || 0
+  );
+  const questionTrend = calculateTrend(
+    statistics.currentMonthStats?.questions || 0, 
+    statistics.previousMonthStats?.questions || 0
+  );
+  const storageTrend = calculateTrend(
+    statistics.currentMonthStats?.storage || 0, 
+    statistics.previousMonthStats?.storage || 0
+  );
 
+  // Format storage size
+  const formatStorageSize = (sizeInMB) => {
+    if (sizeInMB < 1) {
+      return `${Math.round(sizeInMB * 1024)} KB`;
+    } else if (sizeInMB < 1024) {
+      return `${sizeInMB.toFixed(2)} MB`;
+    } else {
+      return `${(sizeInMB / 1024).toFixed(2)} GB`;
+    }
+  };
 
-  const submissionRate = 0.85;
-  const storageUsage = 0.65;
+  // Process recent activities from API data
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'user': return '👤';
+      case 'classroom': return '🏫';
+      case 'quiz': return '📝';
+      case 'question': return '❓';
+      case 'assignment': return '📚';
+      case 'submission': return '✅';
+      default: return '📋';
+    }
+  };
 
-  const userRoleData = [
-    { type: "Admin", value: 5 },
-    { type: "Giáo viên", value: 25 },
-    { type: "Học sinh", value: 120 },
-  ];
+  const getActivityColor = (type) => {
+    switch (type) {
+      case 'user': return '#52c41a';
+      case 'classroom': return '#1890ff';
+      case 'quiz': return '#faad14';
+      case 'question': return '#722ed1';
+      case 'assignment': return '#13c2c2';
+      case 'submission': return '#52c41a';
+      default: return '#666';
+    }
+  };
 
-  // New demographic data
-  const ageDistributionData = [
-    { ageGroup: "18-22", count: 45, percentage: 30 },
-    { ageGroup: "23-27", count: 38, percentage: 25.3 },
-    { ageGroup: "28-32", count: 32, percentage: 21.3 },
-    { ageGroup: "33-37", count: 20, percentage: 13.3 },
-    { ageGroup: "38+", count: 15, percentage: 10 },
-  ];
+  const formatTimeAgo = (date) => {
+    const now = new Date();
+    const diff = now - new Date(date);
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-  const genderData = [
-    { type: "Nam", value: 85, percentage: 56.7 },
-    { type: "Nữ", value: 62, percentage: 41.3 },
-    { type: "Khác", value: 3, percentage: 2 },
-  ];
+    if (minutes < 60) return `${minutes} phút trước`;
+    if (hours < 24) return `${hours} giờ trước`;
+    return `${days} ngày trước`;
+  };
 
-  // New Mock Data
-  const userGrowthData = [
-    { month: "Thg 1", count: 60 },
-    { month: "Thg 2", count: 85 },
-    { month: "Thg 3", count: 75 },
-    { month: "Thg 4", count: 110 },
-    { month: "Thg 5", count: 130 },
-    { month: "Thg 6", count: 150 },
-  ];
+  // Process activities with state data
+  const processedActivities = recentActivities?.map((activity, index) => ({
+    key: index.toString(),
+    type: activity.type,
+    action: activity.action,
+    details: activity.details,
+    time: formatTimeAgo(activity.time),
+    status: "success",
+    icon: getActivityIcon(activity.type),
+    color: getActivityColor(activity.type),
+    avatar: activity.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${index}`,
+  })) || [];
 
-  const submissionStatusData = [
-    { type: "Đúng hạn", value: 270 },
-    { type: "Trễ hạn", value: 45 },
-    { type: "Chưa nộp", value: 20 },
-  ];
+  // Calculate submission rate from real data (only count actual submissions, not auto-graded)
+  const calculateSubmissionRate = () => {
+    // Ưu tiên sử dụng assignmentOverviewData nếu có
+    if (assignmentOverviewData && assignmentOverviewData.totalPossibleSubmissions > 0) {
+      // totalActualSubmissions đã được sửa trong backend để chỉ tính bài thực sự nộp
+      return assignmentOverviewData.totalActualSubmissions / assignmentOverviewData.totalPossibleSubmissions;
+    }
+    
+    // Fallback: tính từ submissionStatusData, loại trừ "Không nộp (Tự chấm)"
+    const data = submissionStatusData.length > 0 ? submissionStatusData : [
+      { type: "Đúng hạn", value: 270 },
+      { type: "Trễ hạn", value: 45 },
+      { type: "Chưa nộp", value: 20 },
+    ];
+    
+    const totalSubmissions = data.reduce((acc, curr) => acc + curr.value, 0);
+    // Chỉ tính những bài thực sự được nộp (không bao gồm tự chấm)
+    const actuallySubmitted = data.filter(item => 
+      item.type === "Đúng hạn" || item.type === "Trễ hạn" || 
+      (item.type === "Đã chấm điểm" && !item.type.includes("Tự chấm"))
+    ).reduce((acc, curr) => acc + curr.value, 0);
+    
+    return totalSubmissions > 0 ? (actuallySubmitted / totalSubmissions) : 0.85;
+  };
+
+  // Calculate storage usage from real data  
+  const calculateStorageUsage = () => {
+    // Giả sử limit storage là 1GB = 1024MB
+    const storageLimit = 1024; // 1GB in MB
+    const currentStorage = statistics.totalStorage || 0;
+    return currentStorage > 0 ? Math.min(currentStorage / storageLimit, 1) : 0.65;
+  };
+
+  const submissionRate = calculateSubmissionRate();
+  const storageUsage = calculateStorageUsage();
 
   // Column chart config for login activity
   const loginColumnConfig = {
-    data: loginData,
+    data: loginData.length > 0 ? loginData : [
+      { day: "T2", logins: 120 },
+      { day: "T3", logins: 98 },
+      { day: "T4", logins: 150 },
+      { day: "T5", logins: 80 },
+      { day: "T6", logins: 170 },
+      { day: "T7", logins: 60 },
+      { day: "CN", logins: 30 },
+    ],
     xField: "day",
     yField: "logins",
     height: 250,
@@ -225,64 +304,71 @@ const AdminDashboard = () => {
 
   const statCards = [
     {
-      title: "Tổng số người dùng",
+      title: "Tổng người dùng",
       value: statistics.totalUsers,
       icon: <UserOutlined />,
       color: "#1890ff",
       bg: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      trend: "+12%",
-      trendUp: true,
+      trend: userTrend.trend,
+      trendUp: userTrend.trendUp,
     },
     {
-      title: "Tổng số lớp học",
+      title: "Tổng lớp học",
       value: statistics.totalClassrooms,
       icon: <TeamOutlined />,
       color: "#52c41a",
       bg: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-      trend: "+5%",
-      trendUp: true,
+      trend: classroomTrend.trend,
+      trendUp: classroomTrend.trendUp,
     },
     {
-      title: "Tổng số bài tập",
+      title: "Tổng bài tập",
       value: statistics.totalAssignments,
       icon: <FileTextOutlined />,
       color: "#722ed1",
       bg: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-      trend: "+8%",
-      trendUp: true,
+      trend: assignmentTrend.trend,
+      trendUp: assignmentTrend.trendUp,
     },
     {
-      title: "Tổng số bài kiểm tra",
+      title: "Tổng bài kiểm tra",
       value: statistics.totalQuizzes,
       icon: <QuestionCircleOutlined />,
       color: "#fa8c16",
       bg: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-      trend: "+15%",
-      trendUp: true,
+      trend: quizTrend.trend,
+      trendUp: quizTrend.trendUp,
     },
     {
-      title: "Tổng số câu hỏi",
+      title: "Tổng câu hỏi",
       value: statistics.totalQuestions,
       icon: <DatabaseOutlined />,
       color: "#eb2f96",
       bg: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)",
-      trend: "+20%",
-      trendUp: true,
+      trend: questionTrend.trend,
+      trendUp: questionTrend.trendUp,
     },
     {
       title: "Dung lượng đã sử dụng",
-      value: `${statistics.totalStorage} MB`,
+      value: formatStorageSize(statistics.totalStorage),
       icon: <DatabaseOutlined />,
       color: "#13c2c2",
       bg: "linear-gradient(135deg, #3fe3dc 0%, #eea3bc 70%)",
-      trend: "+3%",
-      trendUp: false,
+      trend: storageTrend.trend,
+      trendUp: storageTrend.trendUp,
     },
   ];
 
   // Fixed Area Chart Config
   const userGrowthConfig = {
-    data: userGrowthData,
+    data: userGrowthData.length > 0 ? userGrowthData : [
+      { month: "Thg 1", count: 60 },
+      { month: "Thg 2", count: 85 },
+      { month: "Thg 3", count: 75 },
+      { month: "Thg 4", count: 110 },
+      { month: "Thg 5", count: 130 },
+      { month: "Thg 6", count: 150 },
+    ],
     xField: "month",
     yField: "count",
     height: 300,
@@ -356,13 +442,26 @@ const AdminDashboard = () => {
   };
 
   const submissionStatusConfig = {
-    data: submissionStatusData,
+    data: submissionStatusData.length > 0 ? submissionStatusData : [
+      { type: "Đúng hạn", value: 270 },
+      { type: "Trễ hạn", value: 45 },
+      { type: "Chưa nộp", value: 20 },
+    ],
     angleField: "value",
     colorField: "type",
     height: 300,
     radius: 0.9,
     innerRadius: 0.6,
-    color: ["#52c41a", "#faad14", "#f5222d"],
+    color: (datum) => {
+      switch (datum.type) {
+        case "Đúng hạn": return "#52c41a";
+        case "Trễ hạn": return "#faad14";
+        case "Chưa nộp": return "#f5222d";
+        case "Đã chấm điểm": return "#1890ff";
+        case "Tự chấm": return "#722ed1";
+        default: return "#d9d9d9";
+      }
+    },
     label: {
       offset: "-50%",
       content: (data) => `${data.value}`,
@@ -373,10 +472,24 @@ const AdminDashboard = () => {
         fontWeight: "bold",
       },
     },
-    legend: { position: "bottom" },
+    legend: { 
+      position: "bottom",
+      itemSpacing: 12,
+      marker: {
+        symbol: 'circle',
+        size: 8,
+      },
+    },
     interactions: [{ type: "element-selected" }],
     statistic: {
-      title: false,
+      title: {
+        style: {
+          fontSize: 16,
+          color: "#666",
+          fontWeight: 'normal',
+        },
+        content: "Tổng submissions",
+      },
       content: {
         style: {
           whiteSpace: "pre-wrap",
@@ -384,12 +497,31 @@ const AdminDashboard = () => {
           textOverflow: "ellipsis",
           fontSize: 24,
           fontWeight: "bold",
+          color: "#1890ff",
         },
-        content: `${submissionStatusData.reduce(
+        content: `${(submissionStatusData.length > 0 ? submissionStatusData : [
+          { type: "Đúng hạn", value: 270 },
+          { type: "Trễ hạn", value: 45 },
+          { type: "Chưa nộp", value: 20 },
+        ]).reduce(
           (acc, curr) => acc + curr.value,
           0
-        )}\nTổng cộng`,
+        )}`,
       },
+    },
+    tooltip: {
+      title: (datum) => `📊 ${datum.type}`,
+      items: [
+        (datum) => ({
+          color: datum.type === 'Đúng hạn' ? '#52c41a' : 
+                 datum.type === 'Trễ hạn' ? '#faad14' :
+                 datum.type === 'Chưa nộp' ? '#f5222d' :
+                 datum.type === 'Đã chấm điểm' ? '#1890ff' :
+                 datum.type === 'Tự chấm' ? '#722ed1' : '#d9d9d9',
+          name: '📈 Số lượng',
+          value: `${datum.value} submissions`,
+        }),
+      ],
     },
   };
 
@@ -750,12 +882,28 @@ const AdminDashboard = () => {
     </div>
   );
 
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: 'calc(100vh)',
+        padding: '0px',
+        margin: '0px',
+        background: "linear-gradient(135deg, #acb7eaff 0%, #b683eaff 20%, #d0aed4ff 40%, #e2d9dbff 60%, #a2a9af91 80%, #f5f5f5ff 100%)"
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
         padding: "24px",
         background: "linear-gradient(135deg, #667eea 0%, #764ba2 20%, #f093fb 40%, #f5576c 60%, #4facfe 80%, #00f2fe 100%)",
-        minHeight: "calc(100vh - 112px)",
+        minHeight: "calc(100vh - 64px)",
         position: "relative",
       }}
     >
@@ -781,7 +929,7 @@ const AdminDashboard = () => {
           Admin Dashboard
         </Title>
         <Text type="secondary">
-          Welcome back! Here's what's happening with your system.
+          Chào mừng bạn trở lại! Đây là những gì đang diễn ra với hệ thống của bạn.
         </Text>
       </div>
 
@@ -845,7 +993,7 @@ const AdminDashboard = () => {
                         fontSize: "12px",
                       }}
                     >
-                      {card.trend} from last month
+                      {card.trend} so với tháng trước
                     </Text>
                   </div>
                 </div>
@@ -872,12 +1020,12 @@ const AdminDashboard = () => {
 
       {/* Progress Section */}
       <Row gutter={[16, 16]} style={{ marginTop: 32, marginBottom: 32 }}>
-        <Col span={12}>
+        <Col span={8}>
           <Card
             title={
               <Space>
                 <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                <span>Submission Rate</span>
+                <span>Tỷ lệ nộp bài</span>
               </Space>
             }
             style={{
@@ -891,26 +1039,41 @@ const AdminDashboard = () => {
             <div style={{ textAlign: "center" }}>
               <Progress
                 type="circle"
-                percent={submissionRate * 100}
+                percent={Math.round(submissionRate * 100)}
                 format={(percent) => `${percent}%`}
                 strokeColor={{
                   "0%": "#108ee9",
                   "100%": "#87d068",
                 }}
                 size={120}
+                strokeWidth={8}
               />
               <div style={{ marginTop: 16 }}>
-                <Text type="secondary">Overall assignment submission rate</Text>
+                <Text type="secondary">
+                  {assignmentOverviewData && assignmentOverviewData.totalPossibleSubmissions > 0 
+                    ? (
+                      <div>
+                        <div>📝 {assignmentOverviewData.totalActualSubmissions}/{assignmentOverviewData.totalPossibleSubmissions} bài đã nộp</div>
+                        {assignmentOverviewData.totalAutoGradedSubmissions > 0 && (
+                          <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+                            🤖 {assignmentOverviewData.totalAutoGradedSubmissions} bài tự chấm (không nộp)
+                          </div>
+                        )}
+                      </div>
+                    )
+                    : "Tỷ lệ nộp bài tập tổng thể"
+                  }
+                </Text>
               </div>
             </div>
           </Card>
         </Col>
-        <Col span={12}>
+        <Col span={8}>
           <Card
             title={
               <Space>
                 <DatabaseOutlined style={{ color: "#1890ff" }} />
-                <span>Storage Usage</span>
+                <span>Sử dụng lưu trữ</span>
               </Space>
             }
             style={{
@@ -924,17 +1087,80 @@ const AdminDashboard = () => {
             <div style={{ textAlign: "center" }}>
               <Progress
                 type="circle"
-                percent={storageUsage * 100}
+                percent={Math.round(storageUsage * 100)}
                 format={(percent) => `${percent}%`}
                 strokeColor={{
-                  "0%": "#ff4d4f",
-                  "100%": "#fa8c16",
+                  "0%": "#52c41a",
+                  "50%": "#faad14", 
+                  "80%": "#ff7875",
+                  "100%": "#ff4d4f",
                 }}
                 size={120}
+                strokeWidth={8}
               />
               <div style={{ marginTop: 16 }}>
                 <Text type="secondary">
-                  {statistics.totalStorage} MB of 3 GB used
+                  {formatStorageSize(statistics.totalStorage || 0)} of 1 GB used
+                </Text>
+                {storageUsage > 0.8 && (
+                  <div style={{ marginTop: 4 }}>
+                    <Text type="warning" style={{ fontSize: 12 }}>
+                      ⚠️ Dung lượng sắp hết
+                    </Text>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card
+            title={
+              <Space>
+                <BarChartOutlined style={{ color: "#722ed1" }} />
+                <span>Hiệu suất hệ thống</span>
+              </Space>
+            }
+            style={{
+              borderRadius: "12px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+              background: "rgba(255, 255, 255, 0.9)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
+              <Progress
+                type="circle"
+                percent={Math.round(
+                  assignmentOverviewData && assignmentOverviewData.totalGradedSubmissions > 0
+                    ? ((assignmentOverviewData.totalGradedSubmissions / assignmentOverviewData.totalPossibleSubmissions) * 100) || 0
+                    : 75
+                )}
+                format={(percent) => `${percent}%`}
+                strokeColor={{
+                  "0%": "#fa8c16",
+                  "100%": "#722ed1",
+                }}
+                size={120}
+                strokeWidth={8}
+              />
+              <div style={{ marginTop: 16 }}>
+                <Text type="secondary">
+                  {assignmentOverviewData && assignmentOverviewData.totalPossibleSubmissions > 0
+                    ? (
+                      <div>
+                        <div>✅ {assignmentOverviewData.totalGradedSubmissions}/{assignmentOverviewData.totalPossibleSubmissions} bài đã chấm</div>
+                        {assignmentOverviewData.totalManuallyGradedSubmissions !== undefined && (
+                          <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+                            👨‍🏫 {assignmentOverviewData.totalManuallyGradedSubmissions} thủ công | 
+                            🤖 {assignmentOverviewData.totalAutoGradedSubmissions} tự động
+                          </div>
+                        )}
+                      </div>
+                    )
+                    : "Tỷ lệ chấm bài tổng thể"
+                  }
                 </Text>
               </div>
             </div>
@@ -1009,7 +1235,7 @@ const AdminDashboard = () => {
         </Row>
       </div>
 
-      {/* Hoạt động trong tuần */}
+      {/* Weekly Activity */}
       <div style={{ marginBottom: 32 }}>
         <SectionTitle
           icon={
@@ -1143,6 +1369,128 @@ const AdminDashboard = () => {
         </Row>
       </div>
 
+      {/* Assignment Overview Statistics */}
+      {assignmentOverviewData && Object.keys(assignmentOverviewData).length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <SectionTitle
+            icon={
+              <FileTextOutlined style={{ fontSize: 22, color: "#722ed1" }} />
+            }
+          >
+            Thống kê tổng quan bài tập
+          </SectionTitle>
+          <Row gutter={[16, 16]}>
+            <Col xs={12} sm={8} md={6}>
+              <Card
+                style={{
+                  borderRadius: 12,
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  border: "none",
+                  textAlign: "center",
+                }}
+              >
+                <Statistic
+                  title={<span style={{ color: "rgba(255,255,255,0.8)" }}>Tổng bài tập</span>}
+                  value={assignmentOverviewData.totalAssignments || 0}
+                  valueStyle={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}
+                />
+              </Card>
+            </Col>
+            <Col xs={12} sm={8} md={6}>
+              <Card
+                style={{
+                  borderRadius: 12,
+                  background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                  border: "none",
+                  textAlign: "center",
+                }}
+              >
+                <Statistic
+                  title={<span style={{ color: "rgba(255,255,255,0.8)" }}>Có thể nộp</span>}
+                  value={assignmentOverviewData.totalPossibleSubmissions || 0}
+                  valueStyle={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}
+                />
+              </Card>
+            </Col>
+            <Col xs={12} sm={8} md={6}>
+              <Card
+                style={{
+                  borderRadius: 12,
+                  background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                  border: "none",
+                  textAlign: "center",
+                }}
+              >
+                <Statistic
+                  title={<span style={{ color: "rgba(255,255,255,0.8)" }}>Đã nộp</span>}
+                  value={assignmentOverviewData.totalActualSubmissions || 0}
+                  valueStyle={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}
+                />
+              </Card>
+            </Col>
+            <Col xs={12} sm={8} md={6}>
+              <Card
+                style={{
+                  borderRadius: 12,
+                  background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+                  border: "none",
+                  textAlign: "center",
+                }}
+              >
+                <Statistic
+                  title={<span style={{ color: "rgba(255,255,255,0.8)" }}>Đã chấm</span>}
+                  value={assignmentOverviewData.totalGradedSubmissions || 0}
+                  valueStyle={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}
+                />
+              </Card>
+            </Col>
+            {assignmentOverviewData.totalAutoGradedSubmissions > 0 && (
+              <Col xs={12} sm={8} md={6}>
+                <Card
+                  style={{
+                    borderRadius: 12,
+                    background: "linear-gradient(135deg, #f6d365 0%, #fda085 100%)",
+                    border: "none",
+                    textAlign: "center",
+                  }}
+                >
+                  <Statistic
+                    title={<span style={{ color: "rgba(255,255,255,0.8)" }}>Tự chấm</span>}
+                    value={assignmentOverviewData.totalAutoGradedSubmissions || 0}
+                    valueStyle={{ color: "#fff", fontSize: 24, fontWeight: "bold" }}
+                  />
+                </Card>
+              </Col>
+            )}
+            <Col xs={12} sm={8} md={6}>
+              <Card
+                style={{
+                  borderRadius: 12,
+                  background: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
+                  border: "none",
+                  textAlign: "center",
+                }}
+              >
+                <Statistic
+                  title={<span style={{ color: "rgba(85,85,85,0.8)" }}>Tỷ lệ nộp</span>}
+                  value={
+                    assignmentOverviewData.totalPossibleSubmissions > 0
+                      ? Math.round(
+                          (assignmentOverviewData.totalActualSubmissions /
+                            assignmentOverviewData.totalPossibleSubmissions) *
+                            100
+                        )
+                      : 0
+                  }
+                  suffix="%"
+                  valueStyle={{ color: "#555", fontSize: 24, fontWeight: "bold" }}
+                />
+              </Card>
+            </Col>
+          </Row>
+        </div>
+      )}
+
       {/* Recent Activities */}
       <div style={{ marginBottom: 32 }}>
         <div style={{
@@ -1189,13 +1537,13 @@ const AdminDashboard = () => {
             padding: '8px 16px',
             backdropFilter: 'blur(10px)',
           }}>
-            <Text style={{ 
+            {/* <Text style={{ 
               color: 'white',
               fontSize: '12px',
               fontWeight: '500',
             }}>
               🔄 Cập nhật realtime
-            </Text>
+            </Text> */}
           </div>
         </div>
         
@@ -1212,7 +1560,7 @@ const AdminDashboard = () => {
         >
           <Table
             columns={activityColumns}
-            dataSource={recentActivities}
+            dataSource={processedActivities}
             pagination={{ 
               pageSize: 6,
               showSizeChanger: false,
