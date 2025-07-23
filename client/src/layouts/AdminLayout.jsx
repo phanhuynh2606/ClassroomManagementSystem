@@ -260,7 +260,7 @@ const AdminLayout = () => {
       return ['6'];
     }
     if (path.startsWith('/admin/chat')) {
-      return ['7'];
+      return ['8'];
     }
     if (path.startsWith('/admin/dashboard')) {
       return ['1'];

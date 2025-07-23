@@ -14,7 +14,9 @@ import {
   TrophyOutlined,
   UserOutlined,
   BarChartOutlined,
-  MessageOutlined
+  MessageOutlined,
+  LineChartOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';

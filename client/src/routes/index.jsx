@@ -53,11 +53,14 @@ const QuizManagement = lazy(() =>
 const QuestionManagement = lazy(() =>
   import("../pages/admin/components/question/QuestionManagement")
 );
-const NotificationManagement = lazy(() =>
-  import("../pages/admin/components/NotificationManagement")
+const AdminNotifications = lazy(() =>
+  import("../pages/admin/AdminNotifications")
 );
 const AdminRequestManagement = lazy(() =>
   import("../pages/admin/components/AdminRequestManagement")
+);
+const AdminChat = lazy(() =>
+  import("../pages/admin/AdminChat")
 );
 
 // Heavy Teacher Pages
@@ -75,6 +78,9 @@ const AssignmentDetail = lazy(() =>
   import("../pages/teacher/AssignmentDetail")
 );
 const AssignmentEdit = lazy(() => import("../pages/teacher/AssignmentEdit"));
+const TeacherChat = lazy(() =>
+  import("../pages/teacher/TeacherChat")
+);
 
 // Heavy Student Pages
 const StudentDashboard = lazy(() =>
@@ -90,6 +96,12 @@ const QuizResults = lazy(() =>
   import("../pages/student/QuizResults")
 );
 const QuizPage = lazy(() => import("../pages/student/QuizPage"));
+const StudentNotifications = lazy(() =>
+  import("../pages/student/StudentNotifications")
+);
+const StudentChat = lazy(() =>
+  import("../pages/student/StudentChat")
+);
 
 // Loading Components
 const PageLoader = () => (
@@ -249,7 +261,7 @@ const AppRouter = () => {
             path="notifications"
             element={
               <Suspense fallback={<ManagementLoader />}>
-                <NotificationManagement />
+                <AdminNotifications />
               </Suspense>
             }
           />
@@ -258,6 +270,14 @@ const AppRouter = () => {
             element={
               <Suspense fallback={<ManagementLoader />}>
                 <AdminRequestManagement />
+              </Suspense>
+            }
+          />
+          <Route
+            path="chat"
+            element={
+              <Suspense fallback={<ManagementLoader />}>
+                <AdminChat />
               </Suspense>
             }
           />
@@ -343,6 +363,14 @@ const AppRouter = () => {
           {/* Settings & Profile */}
           {/* <Route path="settings" element={<TeacherSettings />} /> */}
           <Route path="profile" element={<TeacherProfile />} />
+          <Route
+            path="chat"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <TeacherChat />
+              </Suspense>
+            }
+          />
         </Route>
 
         {/* Student Routes */}
@@ -408,6 +436,22 @@ const AppRouter = () => {
           />
           <Route path="grades" element={<StudentGrades />} />
           <Route path="schedule" element={<ComingSoon title="Lịch học" />} />
+          <Route
+            path="notifications"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <StudentNotifications />
+              </Suspense>
+            }
+          />
+          <Route
+            path="chat"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <StudentChat />
+              </Suspense>
+            }
+          />
         </Route>
 
         {/* Default Route - Redirect based on user role */}

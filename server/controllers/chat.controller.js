@@ -310,9 +310,19 @@ const sendMessage = async (req, res) => {
       messageId: message._id,
       sender: message.sender.fullName,
       content: message.content?.substring(0, 50) + '...',
-      roomName: `chat_${chatId}`
+      roomName: `chat_${chatId}`,
+      chatType: chat.type
     });
+    
+    // Always emit to the main chat room
     io.to(`chat_${chatId}`).emit('new-message', message);
+    
+    // For classroom chats, also emit to the classroom room to ensure all participants receive the message
+    if (chat.type === 'classroom' && chat.classroom) {
+      const classroomRoomId = `classroom_${chat.classroom}`;
+      console.log(`📡 Also emitting to classroom room: ${classroomRoomId}`);
+      io.to(classroomRoomId).emit('new-message', message);
+    }
 
     // Update unread chats count for all other participants
     const chatMembers = await Chat.findById(chatId).populate('members.user', '_id');

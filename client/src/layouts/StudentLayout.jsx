@@ -132,6 +132,28 @@ const StudentLayout = () => {
     },
   ];
 
+  // Determine which menu item should be selected based on current path
+  const getSelectedKeys = () => {
+    const path = location.pathname;
+    
+    if (path.startsWith('/student/classrooms')) {
+      return ['classrooms'];
+    }
+    if (path.startsWith('/student/grades')) {
+      return ['grades'];
+    }
+    if (path.startsWith('/student/notifications')) {
+      return ['notifications'];
+    }
+    if (path.startsWith('/student/chat')) {
+      return ['chat'];
+    }
+    if (path.startsWith('/student/dashboard')) {
+      return ['dashboard'];
+    }
+    return ['dashboard'];
+  };
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider trigger={null} collapsible collapsed={collapsed} width={'250px'}>
@@ -141,7 +163,7 @@ const StudentLayout = () => {
         <Menu
           theme="dark"
           mode="inline"
-          defaultSelectedKeys={['dashboard']}
+          selectedKeys={getSelectedKeys()}
           items={menuItems}
         />
       </Sider>

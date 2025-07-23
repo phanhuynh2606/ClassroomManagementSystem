@@ -138,13 +138,21 @@ io.on('connection', async (socket) => {
         'members.user': socket.userId,
         'members.isActive': true,
         deleted: false
-      }).select('_id');
+      }).select('_id type classroom').populate('classroom', '_id name');
       
       console.log(`🏠 Found ${userChats.length} active chats for user ${socket.userId}`);
       
       userChats.forEach(chat => {
+        // Join main chat room
         socket.join(`chat_${chat._id}`);
         console.log(`✅ User ${socket.userId} auto-joined chat ${chat._id}`);
+        
+        // For classroom chats, also join classroom room
+        if (chat.type === 'classroom' && chat.classroom?._id) {
+          const classroomRoom = `classroom_${chat.classroom._id}`;
+          socket.join(classroomRoom);
+          console.log(`🏫 User ${socket.userId} auto-joined classroom room ${classroomRoom} (${chat.classroom.name})`);
+        }
       });
       
       console.log(`🎉 User ${socket.userId} successfully joined ${userChats.length} chat rooms`);
@@ -182,14 +190,60 @@ io.on('connection', async (socket) => {
   });
 
   // Chat-specific events
-  socket.on('join-chat', (chatId) => {
-    socket.join(`chat_${chatId}`);
-    console.log(`User ${socket.userId} joined chat ${chatId}`);
+  socket.on('join-chat', async (chatId) => {
+    try {
+      // Join main chat room
+      socket.join(`chat_${chatId}`);
+      console.log(`User ${socket.userId} joined chat ${chatId}`);
+      
+      // Check if this is a classroom chat and join classroom room too
+      const Chat = require('./models/chat.model');
+      const chat = await Chat.findById(chatId).select('type classroom').populate('classroom', '_id name');
+      
+      if (chat && chat.type === 'classroom' && chat.classroom?._id) {
+        const classroomRoom = `classroom_${chat.classroom._id}`;
+        socket.join(classroomRoom);
+        console.log(`🏫 User ${socket.userId} also joined classroom room ${classroomRoom} (${chat.classroom.name})`);
+      }
+      
+      // Emit success event
+      socket.emit('joined-chat', { 
+        chatId, 
+        type: chat?.type, 
+        classroomRoom: chat?.type === 'classroom' ? `classroom_${chat.classroom?._id}` : null 
+      });
+    } catch (error) {
+      console.error(`❌ Error joining chat ${chatId}:`, error);
+      socket.emit('room-error', { chatId, error: error.message });
+    }
   });
 
-  socket.on('leave-chat', (chatId) => {
-    socket.leave(`chat_${chatId}`);
-    console.log(`User ${socket.userId} left chat ${chatId}`);
+  socket.on('leave-chat', async (chatId) => {
+    try {
+      // Leave main chat room
+      socket.leave(`chat_${chatId}`);
+      console.log(`User ${socket.userId} left chat ${chatId}`);
+      
+      // Check if this is a classroom chat and leave classroom room too
+      const Chat = require('./models/chat.model');
+      const chat = await Chat.findById(chatId).select('type classroom').populate('classroom', '_id name');
+      
+      if (chat && chat.type === 'classroom' && chat.classroom?._id) {
+        const classroomRoom = `classroom_${chat.classroom._id}`;
+        socket.leave(classroomRoom);
+        console.log(`🏫 User ${socket.userId} also left classroom room ${classroomRoom} (${chat.classroom.name})`);
+      }
+      
+      // Emit success event
+      socket.emit('left-chat', { 
+        chatId, 
+        type: chat?.type, 
+        classroomRoom: chat?.type === 'classroom' ? `classroom_${chat.classroom?._id}` : null 
+      });
+    } catch (error) {
+      console.error(`❌ Error leaving chat ${chatId}:`, error);
+      socket.emit('room-error', { chatId, error: error.message });
+    }
   });
 
   socket.on('typing-in-chat', async ({ chatId, isTyping }) => {

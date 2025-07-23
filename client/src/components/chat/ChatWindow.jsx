@@ -89,6 +89,10 @@ const ChatWindow = () => {
         console.log('✅ Socket connected successfully:', newSocket.id);
       });
 
+      newSocket.on('disconnect', () => {
+        console.log('🔌 Socket disconnected');
+      });
+
       newSocket.on('connect_error', (error) => {
         console.error('❌ Socket connection error:', error.message);
         if (error.message.includes('expired') || error.message.includes('Authentication error')) {
@@ -99,11 +103,25 @@ const ChatWindow = () => {
         }
       });
 
+      // Add debugging for room events
+      newSocket.on('joined-chat', (data) => {
+        console.log('🚪✅ Successfully joined chat room:', data);
+      });
+
+      newSocket.on('left-chat', (data) => {
+        console.log('🚪👋 Successfully left chat room:', data);
+      });
+
+      newSocket.on('room-error', (error) => {
+        console.error('🚪❌ Room error:', error);
+      });
+
       newSocket.on('new-message', async (message) => {
         console.log('📨 Received new message:', {
           messageId: message._id,
           chatId: message.chat,
           sender: message.sender?.fullName,
+          senderRole: message.sender?.role,
           content: message.content?.substring(0, 50) + '...',
           selectedChatId: selectedChat?._id,
           isForCurrentChat: selectedChat && selectedChat._id === message.chat,
@@ -112,18 +130,19 @@ const ChatWindow = () => {
         });
 
         try {
-          // Always update messages for admin regardless of chat type
-          // For others, only update if it's current chat or classroom chat
+          // Check if this message is for the currently selected chat
           const isCurrentChat = selectedChat && selectedChat._id === message.chat;
-          const shouldUpdateMessages = user.role === 'admin' || isCurrentChat || selectedChat?.type === 'classroom';
-
-          if (shouldUpdateMessages) {
-            console.log('✅ Adding new message to chat');
+          
+          // Always update messages if this message is for the current chat
+          // This ensures real-time updates for admin-teacher, teacher-student, etc.
+          if (isCurrentChat) {
+            console.log('✅ Adding new message to current chat');
             
             // Update messages state with new message
             setMessages(prev => {
               // Skip if message already exists
               if (prev.some(m => m._id === message._id)) {
+                console.log('⚠️ Message already exists, skipping');
                 return prev;
               }
 
@@ -139,7 +158,11 @@ const ChatWindow = () => {
             // Auto mark as read for messages from others
             if (message.sender._id !== user._id) {
               console.log('👁️ Auto-marking message as read');
-              await markMessageAsRead(message._id);
+              try {
+                await markMessageAsRead(message._id);
+              } catch (error) {
+                console.error('Error marking message as read:', error);
+              }
             }
 
             // Scroll to bottom after adding new message
@@ -147,6 +170,8 @@ const ChatWindow = () => {
               scrollToBottom();
               console.log('⬇️ Scrolled to bottom after new message');
             }, 100);
+          } else {
+            console.log('📬 Message for different chat, updating chat list only');
           }
 
           // Always update chat list to show latest message
@@ -345,21 +370,33 @@ const ChatWindow = () => {
         if (previousChatIdRef.current) {
           console.log(`👋 Leaving chat room: ${previousChatIdRef.current}`);
           socket.emit('leave-chat', previousChatIdRef.current);
+          
+          // Also leave classroom room if previous chat was a classroom chat
+          const previousChat = chats.find(c => c._id === previousChatIdRef.current);
+          if (previousChat?.type === 'classroom' && previousChat.classroom?._id) {
+            const previousClassroomRoom = `classroom_${previousChat.classroom._id}`;
+            console.log(`👋 Also leaving previous classroom room: ${previousClassroomRoom}`);
+            socket.emit('leave-chat', previousClassroomRoom);
+          }
         }
 
         // Handle new chat selection
         if (selectedChat) {
-          console.log(`🚪 Joining chat room: ${selectedChat._id}, type: ${selectedChat.type}`);
+          console.log(`🚪 Joining chat room: ${selectedChat._id}, type: ${selectedChat.type}, userRole: ${user.role}`);
+          console.log(`📋 Chat participants:`, selectedChat.participants?.map(p => ({ id: p._id, name: p.fullName, role: p.role })));
           
-          // Join the chat room
+          // Join the main chat room - this is crucial for all chat communication
           socket.emit('join-chat', selectedChat._id);
           previousChatIdRef.current = selectedChat._id;
+          
+          console.log(`✅ Successfully joined main chat room: ${selectedChat._id}`);
 
-          // For classroom chats, join additional room for group messages
+          // For classroom chats, join additional classroom room for group messages
           if (selectedChat.type === 'classroom' && selectedChat.classroom?._id) {
             const classroomRoom = `classroom_${selectedChat.classroom._id}`;
-            console.log(`🏫 Joining classroom room: ${classroomRoom}`);
+            console.log(`🏫 Joining classroom room: ${classroomRoom} for classroom: ${selectedChat.classroom.name}`);
             socket.emit('join-chat', classroomRoom);
+            console.log(`✅ Successfully joined classroom room: ${classroomRoom}`);
           }
 
           // Fetch initial messages
@@ -378,7 +415,7 @@ const ChatWindow = () => {
     // Cleanup: leave chat rooms when unmounting or changing chats
     return () => {
       if (previousChatIdRef.current) {
-        console.log(`👋 Cleanup: leaving chat room ${previousChatIdRef.current}`);
+        console.log(`👋 Cleanup: leaving main chat room ${previousChatIdRef.current}`);
         socket.emit('leave-chat', previousChatIdRef.current);
         
         // Leave classroom room if applicable
@@ -676,16 +713,8 @@ const ChatWindow = () => {
         setShowChatList(false);
       }
       
-      // For admin, always join all chat rooms of selected chat
-      if (user.role === 'admin' && socket) {
-        console.log(`👨‍💼 Admin joining chat ${chat._id}`);
-        socket.emit('join-chat', chat._id);
-        if (chat.type === 'classroom' && chat.classroom?._id) {
-          const classroomRoom = `classroom_${chat.classroom._id}`;
-          console.log(`👨‍💼 Admin joining classroom room ${classroomRoom}`);
-          socket.emit('join-chat', classroomRoom);
-        }
-      }
+      // Room joining is handled by handleChatChange useEffect
+      // No need for special admin logic here
     };  const handleBackToList = () => {
     setShowChatList(true);
     if (isMobile) {
