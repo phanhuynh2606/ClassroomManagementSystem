@@ -10,6 +10,7 @@ import {
   message,
   Popconfirm,
   Tag,
+  Tooltip
 } from 'antd';
 import {
   PlusOutlined,
@@ -32,7 +33,7 @@ const ClassroomManagement = () => {
   const [searchText, setSearchText] = useState('');
   const [classrooms, setClassrooms] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+
   const navigate = useNavigate();
   const currentRole = useSelector((state) => state.users.currentRole);
 
@@ -132,6 +133,11 @@ const ClassroomManagement = () => {
       title: 'Class Name',
       dataIndex: 'name',
       key: 'name',
+      render: (text) => (
+        <Tooltip title={text}>
+          {text?.length > 30 ? `${text.slice(0, 30)}...` : text}
+        </Tooltip>
+      ),
     },
     {
       title: 'Category',
