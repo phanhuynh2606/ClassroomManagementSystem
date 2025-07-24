@@ -67,12 +67,12 @@ const PeopleTab = ({ studentsData, teachersData, studentsLoading, searchText, se
   };
 
   const studentActions = (student) => [
-    {
-      key: 'email',
-      label: 'Send email',
-      icon: <MailOutlined />,
-      onClick: () => handleEmailStudent(student)
-    },
+    // {
+    //   key: 'email',
+    //   label: 'Send email',
+    //   icon: <MailOutlined />,
+    //   onClick: () => handleEmailStudent(student)
+    // },
     {
       key: 'remove',
       label: 'Remove from class',

@@ -269,7 +269,7 @@ const TeacherLayout = () => {
             }}
           />
           <div style={{ marginRight: 16, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <NotificationBell />
+            {/* <NotificationBell /> */}
             <span 
               style={{ 
                 cursor: 'pointer',

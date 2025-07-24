@@ -266,14 +266,16 @@ const StudentProfile = () => {
   ];
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 0' }}>
+    <div style={{ width: "100%", margin: '0 auto', padding: '24px 100px' }}>
       <Card
         style={{
           borderRadius: 18,
           boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
           marginBottom: 16,
+          width: '100%',
           padding: 0,
           border: 'none',
+          margin: '0 auto',
         }}
         bodyStyle={{ padding: 0 }}
       >
@@ -359,7 +361,7 @@ const StudentProfile = () => {
                 <Badge status={user?.isActive ? 'success' : 'error'} text={user?.isActive ? 'Active' : 'Inactive'} />
               </Space>
 
-              <Row gutter={24} style={{ marginTop: 24 }}>
+              {/* <Row gutter={24} style={{ marginTop: 24 }}>
                 <Col span={8}>
                   <Statistic
                     title="Courses Enrolled"
@@ -385,7 +387,7 @@ const StudentProfile = () => {
                     valueStyle={{ color: '#faad14' }}
                   />
                 </Col>
-              </Row>
+              </Row> */}
             </div>
           </Col>
         </Row>
@@ -413,7 +415,7 @@ const StudentProfile = () => {
             boxShadow: '0 2px 8px rgba(24,144,255,0.07)',
           }}
         >
-          <Row gutter={32}>
+          <Row gutter={12}>
             <Col span={12}>
               <Card
                 title={<span style={{ fontWeight: 600, fontSize: 16 }}>Personal Information</span>}

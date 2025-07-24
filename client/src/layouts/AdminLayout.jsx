@@ -306,7 +306,7 @@ const AdminLayout = () => {
             }}
           />
           <Space align="center" style={{ marginRight: 16 }}>
-            <NotificationBell />
+            {/* <NotificationBell /> */}
             <Avatar
               src={user?.image}
               style={{ cursor: 'pointer' }}

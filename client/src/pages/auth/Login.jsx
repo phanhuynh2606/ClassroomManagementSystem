@@ -128,7 +128,7 @@ const Login = () => {
               color: '#1a365d',
               marginBottom: '0.5rem'
             }}>
-              Learning Management System
+              Classroom Management System
             </h2>
             <p style={{ color: '#718096', fontSize: '1rem' }}>
               Sign in to your account

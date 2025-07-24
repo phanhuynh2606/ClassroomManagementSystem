@@ -194,13 +194,13 @@ function QuizDetail() {
           </div>
           
           <Space>
-            <Button 
+            {/* <Button 
               type="primary" 
               icon={<EditOutlined />}
               onClick={() => navigate(`/teacher/class/${classId}/quiz/${quizId}/edit`)}
             >
               Chỉnh sửa
-            </Button>
+            </Button> */}
             {/* <Button 
               icon={<PlayCircleOutlined />}
               onClick={() => navigate(`/teacher/class/${classId}/quiz/${quizId}/preview`)}
@@ -619,14 +619,14 @@ function QuizDetail() {
                   </div>
                 </div>
 
-                <Button 
+                {/* <Button 
                   type="primary" 
                   block 
                   icon={<BarChartOutlined />}
                   onClick={() => navigate(`/teacher/class/${classId}/quiz/${quizId}/analytics`)}
                 >
                   Xem báo cáo chi tiết
-                </Button>
+                </Button> */}
               </div>
             </Card>
           )}

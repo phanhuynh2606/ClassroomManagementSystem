@@ -380,14 +380,14 @@ const QuizManagement = ({ classId }) => {
                           />
                         </Tooltip>
 
-                        <Tooltip title="Chỉnh Sửa Quiz">
+                        {/* <Tooltip title="Chỉnh Sửa Quiz">
                           <Button
                             type="text"
                             icon={<EditOutlined />}
                             size="small"
                             onClick={() => handleEditQuiz(quiz)}
                           />
-                        </Tooltip>
+                        </Tooltip> */}
 
                         {quiz.visibility === 'draft' && (
                           <Tooltip title="Xuất Bản Quiz">

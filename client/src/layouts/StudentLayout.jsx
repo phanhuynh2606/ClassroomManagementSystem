@@ -188,7 +188,7 @@ const StudentLayout = () => {
             }}
           />
           <div style={{ marginRight: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <NotificationBell />
+            {/* <NotificationBell /> */}
             <span 
               style={{ 
                 marginRight: 16,
@@ -211,14 +211,13 @@ const StudentLayout = () => {
         </Header>
         <Content
           style={{
-            margin: '24px 16px',
+            margin: '24px auto',
             padding: location.pathname.includes('/chat') ? 0 : 24,
             background: colorBgContainer,
             borderRadius: borderRadiusLG,
-            minHeight: 280,
+            // minHeight: 280,
+            width: '100%',
             height: location.pathname.includes('/chat') ? 'calc(100vh - 112px)' : 'auto',
-            display: 'flex',
-            flexDirection: 'column'
           }}
         >
           <Outlet />
