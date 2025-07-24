@@ -61,6 +61,30 @@ const StudentGrades = () => {
     return all.filter(item => item.submission).length;
   };
 
+  const renderStatusTag = (status, type) => {
+    let color = 'red';
+    let text = status;
+
+    if (type === 'assignment') {
+      if (status === 'graded') {
+        color = 'green';
+      } else if (status === 'submitted') {
+        color = 'blue';
+      } else {
+        text = 'No Submission';
+      }
+    } else if (type === 'quiz') {
+      if (status === 'completed') {
+        color = 'green';
+      } else if (status === 'in-progress') {
+        color = 'blue';
+      } else {
+        text = 'No Attempt';
+      }
+    }
+
+    return <Tag color={color}>{text}</Tag>;
+  };
   const getTotalCount = () => assignmentList.length + quizList.length;
 
   const getColumns = (type) => [
@@ -101,6 +125,10 @@ const StudentGrades = () => {
         const score = submission.grade ?? submission.score;
         const total = record.totalPoints ?? record.totalQuestions ?? 100;
 
+        if (score === undefined || score === null) {
+          return <span style={{ color: 'gray', fontStyle: 'italic' }}>N/A</span>;
+        }
+
         return (
           <span style={{ color: 'green', fontWeight: 600 }}>
             {score} / {total}
@@ -109,32 +137,11 @@ const StudentGrades = () => {
       },
     },
     {
-      title: type === 'quiz' ? 'End Time' : 'Graded At',
-      key: 'endTimeOrGradedAt',
-      width: 200,
-      render: (_, record) => {
-        if (type === 'quiz') {
-          return record.endTime
-            ? dayjs(record.endTime).format('DD/MM/YYYY HH:mm')
-            : 'N/A';
-        }
-
-        return record.submission?.gradedAt
-          ? dayjs(record.submission.gradedAt).format('DD/MM/YYYY HH:mm')
-          : 'N/A';
-      },
-    },
-    {
       title: 'Status',
       dataIndex: ['submission', 'status'],
       key: 'status',
       width: 150,
-      render: (status) =>
-        status ? (
-          <Tag color="blue">{status}</Tag>
-        ) : (
-          <Tag color="red">No Submission</Tag>
-        ),
+      render: (status) => renderStatusTag(status, type),
     },
   ];
 
