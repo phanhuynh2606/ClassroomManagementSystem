@@ -6,6 +6,44 @@ const Comment = require('../models/comment.model');
 const { CloudinaryAPI } = require('../config/cloudinary.config');
 
 const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
+
+// Helper function to process attachments and secure file URLs
+const processAttachments = (attachments, streamId) => {
+  if (!attachments || attachments.length === 0) {
+    return attachments;
+  }
+  
+  return attachments.map((attachment, index) => {
+    // Check if it's a file attachment (not video or link)
+    const isFileAttachment = attachment.type === 'file' || 
+                            attachment.type?.startsWith('image/') || 
+                            attachment.type?.startsWith('application/') || 
+                            attachment.type?.startsWith('text/') ||
+                            (!attachment.type && attachment.url && !attachment.videoId);
+                            
+    if (isFileAttachment) {
+      return {
+        name: attachment.name,
+        fileType: attachment.fileType,
+        fileSize: attachment.fileSize,
+        size: attachment.size,
+        type: attachment.type || 'file',
+        // Secure download endpoints (authentication via header)
+        downloadUrl: `${serverUrl}/api/files/stream/${streamId}/attachment/${index}`,
+        previewUrl: `${serverUrl}/api/files/stream/${streamId}/attachment/${index}?preview=true`,
+        index: index,
+        // Remove the original URL for security
+        metadata: attachment.metadata
+      };
+    } else {
+      // Keep video and link attachments unchanged
+      return {
+        ...attachment,
+        index: index
+      };
+    }
+  });
+};
 // Create announcement
 const createAnnouncement = async (req, res) => {
   try {
@@ -96,7 +134,10 @@ const createAnnouncement = async (req, res) => {
         metadata: attachment.metadata,
         description: attachment.description,
         title: attachment.title,
-        type: attachment.type
+        // Set type based on fileType/mimetype if not provided
+        type: attachment.type || 
+              (attachment.fileType && attachment.fileType.startsWith('image/') ? attachment.fileType : 'file') ||
+              (attachment.videoId ? 'video/youtube' : 'file')
       }));
     }
 
@@ -124,35 +165,8 @@ const createAnnouncement = async (req, res) => {
     await post.populate('author', 'fullName email image role');
 
     // Process attachments to secure file attachment URLs before sending response
-    
     const postObj = post.toObject();
-    
-    if (postObj.attachments && postObj.attachments.length > 0) {
-      postObj.attachments = postObj.attachments.map((attachment, index) => {
-        // Only replace URLs for file attachments, keep videos and links as they are
-        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
-          return {
-            name: attachment.name,
-            fileType: attachment.fileType,
-            fileSize: attachment.fileSize,
-            size: attachment.size,
-            type: attachment.type || 'file',
-            // Secure download endpoints (authentication via header)
-            downloadUrl: `${serverUrl}/api/files/stream/${postObj._id}/attachment/${index}`,
-            previewUrl: `${serverUrl}/api/files/stream/${postObj._id}/attachment/${index}?preview=true`,
-            index: index,
-            // Remove the original URL for security
-            metadata: attachment.metadata
-          };
-        } else {
-          // Keep video and link attachments unchanged
-          return {
-            ...attachment,
-            index: index
-          };
-        }
-      });
-    }
+    postObj.attachments = processAttachments(postObj.attachments, postObj._id);
 
     res.status(201).json({
       success: true,
@@ -222,38 +236,9 @@ const getClassroomStream = async (req, res) => {
     });
 
     // Process stream items to secure file attachment URLs
-    
     const processedStreamItems = streamItems.map(item => {
       const itemObj = item.toObject();
-      
-      // Process attachments to replace file URLs with secure download links
-      if (itemObj.attachments && itemObj.attachments.length > 0) {
-        itemObj.attachments = itemObj.attachments.map((attachment, index) => {
-          // Only replace URLs for file attachments, keep videos and links as they are
-          if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
-            return {
-              name: attachment.name,
-              fileType: attachment.fileType,
-              fileSize: attachment.fileSize,
-              size: attachment.size,
-              type: attachment.type || 'file',
-              // Secure download endpoints (authentication via header)
-              downloadUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}`,
-              previewUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}?preview=true`,
-              index: index,
-              // Remove the original URL for security
-              metadata: attachment.metadata
-            };
-          } else {
-            // Keep video and link attachments unchanged
-            return {
-              ...attachment,
-              index: index
-            };
-          }
-        });
-      }
-      
+      itemObj.attachments = processAttachments(itemObj.attachments, itemObj._id);
       return itemObj;
     });
 
@@ -322,7 +307,10 @@ const updateAnnouncement = async (req, res) => {
         metadata: attachment.metadata,
         description: attachment.description,
         title: attachment.title,
-        type: attachment.type
+        // Set type based on fileType/mimetype if not provided
+        type: attachment.type || 
+              (attachment.fileType && attachment.fileType.startsWith('image/') ? attachment.fileType : 'file') ||
+              (attachment.videoId ? 'video/youtube' : 'file')
       }));
     }
 
@@ -330,35 +318,8 @@ const updateAnnouncement = async (req, res) => {
     await announcement.populate('author', 'fullName email image role');
 
     // Process attachments to secure file attachment URLs before sending response
-    
     const announcementObj = announcement.toObject();
-    
-    if (announcementObj.attachments && announcementObj.attachments.length > 0) {
-      announcementObj.attachments = announcementObj.attachments.map((attachment, index) => {
-        // Only replace URLs for file attachments, keep videos and links as they are
-        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
-          return {
-            name: attachment.name,
-            fileType: attachment.fileType,
-            fileSize: attachment.fileSize,
-            size: attachment.size,
-            type: attachment.type || 'file',
-            // Secure download endpoints (authentication via header)
-            downloadUrl: `${serverUrl}/api/files/stream/${announcementObj._id}/attachment/${index}`,
-            previewUrl: `${serverUrl}/api/files/stream/${announcementObj._id}/attachment/${index}?preview=true`,
-            index: index,
-            // Remove the original URL for security
-            metadata: attachment.metadata
-          };
-        } else {
-          // Keep video and link attachments unchanged
-          return {
-            ...attachment,
-            index: index
-          };
-        }
-      });
-    }
+    announcementObj.attachments = processAttachments(announcementObj.attachments, announcementObj._id);
 
     res.status(200).json({
       success: true,
@@ -457,35 +418,8 @@ const togglePinAnnouncement = async (req, res) => {
     await announcement.populate('author', 'fullName email image role');
 
     // Process attachments to secure file attachment URLs before sending response
-    
     const announcementObj = announcement.toObject();
-    
-    if (announcementObj.attachments && announcementObj.attachments.length > 0) {
-      announcementObj.attachments = announcementObj.attachments.map((attachment, index) => {
-        // Only replace URLs for file attachments, keep videos and links as they are
-        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
-          return {
-            name: attachment.name,
-            fileType: attachment.fileType,
-            fileSize: attachment.fileSize,
-            size: attachment.size,
-            type: attachment.type || 'file',
-            // Secure download endpoints (authentication via header)
-            downloadUrl: `${serverUrl}/api/files/stream/${announcementObj._id}/attachment/${index}`,
-            previewUrl: `${serverUrl}/api/files/stream/${announcementObj._id}/attachment/${index}?preview=true`,
-            index: index,
-            // Remove the original URL for security
-            metadata: attachment.metadata
-          };
-        } else {
-          // Keep video and link attachments unchanged
-          return {
-            ...attachment,
-            index: index
-          };
-        }
-      });
-    }
+    announcementObj.attachments = processAttachments(announcementObj.attachments, announcementObj._id);
 
     res.status(200).json({
       success: true,
@@ -524,7 +458,8 @@ const uploadAttachment = async (req, res) => {
         filename: filename,
         originalName: originalname,
         size: size,
-        mimetype: mimetype
+        mimetype: mimetype,
+        type: mimetype // Include mimetype as type for proper handling
       }
     });
 
@@ -803,35 +738,8 @@ const updateStreamItem = async (req, res) => {
     ).populate('author', 'fullName email image role');
 
     // Process attachments to secure file attachment URLs before sending response
-    
     const itemObj = updatedItem.toObject();
-    
-    if (itemObj.attachments && itemObj.attachments.length > 0) {
-      itemObj.attachments = itemObj.attachments.map((attachment, index) => {
-        // Only replace URLs for file attachments, keep videos and links as they are
-        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
-          return {
-            name: attachment.name,
-            fileType: attachment.fileType,
-            fileSize: attachment.fileSize,
-            size: attachment.size,
-            type: attachment.type || 'file',
-            // Secure download endpoints (authentication via header)
-            downloadUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}`,
-            previewUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}?preview=true`,
-            index: index,
-            // Remove the original URL for security
-            metadata: attachment.metadata
-          };
-        } else {
-          // Keep video and link attachments unchanged
-          return {
-            ...attachment,
-            index: index
-          };
-        }
-      });
-    }
+    itemObj.attachments = processAttachments(itemObj.attachments, itemObj._id);
 
     res.status(200).json({
       success: true,
@@ -931,35 +839,8 @@ const togglePinStreamItem = async (req, res) => {
     ).populate('author', 'fullName email image role');
 
     // Process attachments to secure file attachment URLs before sending response
-    
     const itemObj = updatedItem.toObject();
-    
-    if (itemObj.attachments && itemObj.attachments.length > 0) {
-      itemObj.attachments = itemObj.attachments.map((attachment, index) => {
-        // Only replace URLs for file attachments, keep videos and links as they are
-        if (attachment.type === 'file' || (!attachment.type && attachment.url && !attachment.videoId)) {
-          return {
-            name: attachment.name,
-            fileType: attachment.fileType,
-            fileSize: attachment.fileSize,
-            size: attachment.size,
-            type: attachment.type || 'file',
-            // Secure download endpoints (authentication via header)
-            downloadUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}`,
-            previewUrl: `${serverUrl}/api/files/stream/${itemObj._id}/attachment/${index}?preview=true`,
-            index: index,
-            // Remove the original URL for security
-            metadata: attachment.metadata
-          };
-        } else {
-          // Keep video and link attachments unchanged
-          return {
-            ...attachment,
-            index: index
-          };
-        }
-      });
-    }
+    itemObj.attachments = processAttachments(itemObj.attachments, itemObj._id);
 
     res.status(200).json({
       success: true,

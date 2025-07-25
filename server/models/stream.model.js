@@ -57,7 +57,35 @@ const streamSchema = new mongoose.Schema(
       },
       type: {
         type: String,
-        enum: ['file', 'link', "video",'video/youtube'],
+        enum: [
+          'file', 
+          'link', 
+          'video',
+          'video/youtube',
+          // Image types
+          'image/png',
+          'image/jpeg', 
+          'image/jpg',
+          'image/gif',
+          'image/webp',
+          'image/svg+xml',
+          'image/bmp',
+          'image/tiff',
+          // Document types
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'text/plain',
+          'text/csv',
+          // Archive types
+          'application/zip',
+          'application/x-rar-compressed',
+          'application/x-7z-compressed'
+        ],
         default: 'file'
       },
       fileType: String,

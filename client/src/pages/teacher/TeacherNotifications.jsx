@@ -327,7 +327,7 @@ const TeacherNotifications = () => {
 
   const columns = [
     {
-      title: 'Title',
+      title: 'Tiêu đề',
       dataIndex: 'title',
       key: 'title',
       sorter: (a, b) => (a.title || '').localeCompare(b.title || ''),
@@ -349,7 +349,7 @@ const TeacherNotifications = () => {
       ),
     },
     {
-      title: 'From',
+      title: 'Từ Email',
       dataIndex: 'sender',
       key: 'sender',
       render: (sender) => (
@@ -364,7 +364,7 @@ const TeacherNotifications = () => {
       ),
     },
     {
-      title: 'Content',
+      title: 'Nội dung',
       dataIndex: 'content',
       key: 'content',
       render: (content) => (
@@ -374,7 +374,7 @@ const TeacherNotifications = () => {
       ),
     },
     {
-      title: 'Received',
+      title: 'Đã nhận',
       dataIndex: 'createdAt',
       key: 'createdAt',
       sorter: (a, b) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
@@ -425,13 +425,13 @@ const TeacherNotifications = () => {
             
           </Title>
           <Button
-            style={{marginTop: 16}}
+            style={{marginTop: 16, marginRight: 16}}
             type="primary"
             size="large"
             icon={<PlusOutlined />}
             onClick={() => setCreateModalVisible(true)}
           >
-            Create Notification
+            Gửi thông báo
           </Button>
         </div>
       </div>
@@ -441,7 +441,7 @@ const TeacherNotifications = () => {
         <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Total Received"
+              title="Tổng thông báo đã nhận"
               value={stats.totalReceived}
               prefix={<MailOutlined style={{ color: '#1890ff' }} />}
               valueStyle={{ color: '#1890ff' }}
@@ -451,7 +451,7 @@ const TeacherNotifications = () => {
         <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Class Notifications"
+              title="Tổng thông báo lớp học"
               value={stats.classNotifications}
               prefix={<BookOutlined style={{ color: '#722ed1' }} />}
               valueStyle={{ color: '#722ed1' }}
@@ -461,7 +461,7 @@ const TeacherNotifications = () => {
         <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Personal Messages"
+              title="Thông báo cá nhân"
               value={stats.personalNotifications}
               prefix={<UserOutlined style={{ color: '#52c41a' }} />}
               valueStyle={{ color: '#52c41a' }}
@@ -471,7 +471,7 @@ const TeacherNotifications = () => {
         <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Today"
+              title="Hôm nay"
               value={stats.todayReceived}
               prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
               valueStyle={{ color: '#faad14' }}
@@ -484,7 +484,7 @@ const TeacherNotifications = () => {
       <Card 
         title={
           <Space>
-            My Notifications
+            Thông báo của tôi
             {(filters.search || filters.priority || filters.dateRange) && (
               <Badge 
                 count={
@@ -502,17 +502,17 @@ const TeacherNotifications = () => {
         <Space>
           <Text type="secondary" style={{ fontSize: '12px' }}>
             {displayFilteredNotifications.length !== displayNotifications.length 
-              ? `Showing ${displayFilteredNotifications.length} of ${displayNotifications.length} notifications`
-              : `${displayNotifications.length} notifications (sorted by newest first)`
+              ? ` ${displayFilteredNotifications.length} / ${displayNotifications.length} thông báo`
+              : `${displayNotifications.length} thông báo đã nhận`
             }
           </Text>
           {isConnected ? (
-            <Tag color="green" size="small">Real-time Active</Tag>
+            <Tag color="green" size="small">Đang hoạt động</Tag>
           ) : (
-            <Tag color="orange" size="small">Real-time Connecting...</Tag>
+            <Tag color="orange" size="small">Đang kết nối...</Tag>
           )}
           <Button onClick={fetchNotifications} loading={loading} icon={<BellOutlined />}>
-            Refresh
+            Làm mới
           </Button>
         </Space>
       }>
@@ -521,7 +521,7 @@ const TeacherNotifications = () => {
           <Row gutter={16} align="middle">
             <Col xs={24} sm={8}>
               <Input
-                placeholder="Search notifications by title or content..."
+                placeholder="Tìm kiếm thông báo theo tiêu đề hoặc nội dung..."
                 value={filters.search}
                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                 allowClear
@@ -530,16 +530,16 @@ const TeacherNotifications = () => {
             </Col>
             <Col xs={12} sm={6}>
               <Select
-                placeholder="Priority"
+                placeholder="Ưu tiên"
                 allowClear
                 style={{ width: '100%' }}
                 value={filters.priority}
                 onChange={(value) => setFilters({ ...filters, priority: value })}
               >
-                <Option value="urgent">Urgent</Option>
-                <Option value="high">High</Option>
-                <Option value="normal">Normal</Option>
-                <Option value="low">Low</Option>
+                <Option value="urgent">Khẩn cấp</Option>
+                <Option value="high">Cao</Option>
+                <Option value="normal">Bình thường</Option>
+                <Option value="low">Thấp</Option>
               </Select>
             </Col>
             <Col xs={24} sm={6}>
@@ -581,15 +581,15 @@ const TeacherNotifications = () => {
           }}
           locale={{
             emptyText: filters.search || filters.priority || filters.dateRange 
-              ? 'No notifications match your search criteria' 
-              : 'No notifications received yet'
+              ? 'Không có thông báo nào phù hợp với tiêu chí tìm kiếm của bạn' 
+              : 'Chưa nhận được thông báo nào'
           }}
         />
       </Card>
 
       {/* Create Notification Modal */}
       <Modal
-        title={<><SendOutlined /> Send Notification to Class</>}
+        title={<><SendOutlined /> Gửi thông báo đến lớp</>}
         visible={createModalVisible}
         onCancel={() => {
           setCreateModalVisible(false);

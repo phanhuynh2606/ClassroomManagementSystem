@@ -77,7 +77,7 @@ const TeacherLayout = () => {
     {
       key: 'classrooms',
       icon: <TeamOutlined />,
-      label: 'Classroom Management',
+      label: 'Lớp học',
       onClick: () => navigate('/teacher/classroom'),
     },
     {
@@ -133,13 +133,13 @@ const TeacherLayout = () => {
     {
       key: 'requests',
       icon: <CheckSquareOutlined />,
-      label: 'Request Management',
+      label: 'Yêu cầu',
       onClick: () => navigate('/teacher/requests'),
     },
     {
       key: 'notifications',
       icon: <BellOutlined />,
-      label: 'Notifications',
+      label: 'Thông báo',
       onClick: () => navigate('/teacher/notifications'),
     },
     {

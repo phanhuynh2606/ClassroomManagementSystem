@@ -62,14 +62,14 @@ const CreateClassForm = ({ onSuccess }) => {
         onClick={handleCancel}
         className="mb-4"
       >
-        Back to List
+        Quay lại
       </Button>
 
       <Card>
         <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Create New Classroom</h2>
+          <h2 className="text-xl font-semibold mb-2">Tạo lớp học mới</h2>
           <p className="text-gray-600">
-            Fill in the information to create a new classroom. The classroom will need admin approval.
+            Vui lòng điền thông tin để tạo lớp học mới. Lớp học sẽ cần sự chấp thuận của quản trị viên.
           </p>
         </div>
 
@@ -80,25 +80,25 @@ const CreateClassForm = ({ onSuccess }) => {
           className="space-y-4"
         >
           <Form.Item
-            label="Classroom Name"
+            label="Tên lớp học"
             name="name"
             rules={[
-              { required: true, message: 'Please enter classroom name' },
-              { min: 3, message: 'Classroom name must be at least 3 characters' }
+              { required: true, message: 'Vui lòng nhập tên lớp học' },
+              { min: 3, message: 'Tên lớp học phải có ít nhất 3 ký tự' }
             ]}
           >
-            <Input 
-              placeholder="Enter classroom name"
+            <Input
+              placeholder="Nhập tên lớp học"
               className="h-10"
             />
           </Form.Item>
 
           <Form.Item
-            label="Description"
+            label="Mô tả"
             name="description"
           >
             <TextArea
-              placeholder="Enter classroom description (optional)"
+              placeholder="Nhập mô tả lớp học (tùy chọn)"
               rows={4}
               showCount
               maxLength={500}
@@ -107,44 +107,44 @@ const CreateClassForm = ({ onSuccess }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <Form.Item
-              label="Category"
+              label="Danh mục"
               name="category"
               rules={[
-                { required: true, message: 'Please select category' }
+                { required: true, message: 'Vui lòng chọn danh mục' }
               ]}
             >
-              <Select placeholder="Select category">
-                <Option value="academic">Academic</Option>
-                <Option value="professional">Professional</Option>
-                <Option value="other">Other</Option>
+              <Select placeholder="Chọn danh mục">
+                <Option value="academic">Học thuật</Option>
+                <Option value="professional">Chuyên nghiệp</Option>
+                <Option value="other">Khác</Option>
               </Select>
             </Form.Item>
 
             <Form.Item
-              label="Level"
+              label="Cấp độ"
               name="level"
               rules={[
-                { required: true, message: 'Please select level' }
+                { required: true, message: 'Vui lòng chọn cấp độ' }
               ]}
             >
-              <Select placeholder="Select level">
-                <Option value="beginner">Beginner</Option>
-                <Option value="intermediate">Intermediate</Option>
-                <Option value="advanced">Advanced</Option>
+              <Select placeholder="Chọn cấp độ">
+                <Option value="beginner">Người mới bắt đầu</Option>
+                <Option value="intermediate">Trung cấp</Option>
+                <Option value="advanced">Nâng cao</Option>
               </Select>
             </Form.Item>
           </div>
 
           <Form.Item
-            label="Maximum Students"
+            label="Số lượng học sinh tối đa"
             name="maxStudents"
             rules={[
-              { required: true, message: 'Please enter maximum number of students' },
-              { type: 'number', min: 1, message: 'Must be at least 1 student' }
+              { required: true, message: 'Vui lòng nhập số lượng học sinh tối đa' },
+              { type: 'number', min: 1, message: 'Phải có ít nhất 1 học sinh' }
             ]}
           >
             <InputNumber
-              placeholder="Enter max students"
+              placeholder="Nhập số lượng học sinh tối đa"
               className="w-full h-10"
               min={1}
               max={200}
@@ -152,7 +152,7 @@ const CreateClassForm = ({ onSuccess }) => {
           </Form.Item>
 
           <Alert
-            message="The new classroom will need admin approval before it becomes active."
+            message="Lớp học mới sẽ cần sự chấp thuận của quản trị viên trước khi nó trở thành hoạt động."
             type="info"
             icon={<InfoCircleOutlined />}
             className="mb-6"
@@ -164,7 +164,7 @@ const CreateClassForm = ({ onSuccess }) => {
                 onClick={handleCancel}
                 className="h-10 px-6"
               >
-                Cancel
+                Hủy
               </Button>
               <Button 
                 type="primary" 
@@ -172,7 +172,7 @@ const CreateClassForm = ({ onSuccess }) => {
                 loading={loading}
                 className="h-10 px-7"
               >
-                Create Classroom
+                Tạo lớp học
               </Button>
             </Space>
           </Form.Item>

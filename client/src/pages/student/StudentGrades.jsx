@@ -67,19 +67,23 @@ const StudentGrades = () => {
 
     if (type === 'assignment') {
       if (status === 'graded') {
+        text = 'Đã chấm điểm';
         color = 'green';
       } else if (status === 'submitted') {
+        text = 'Đã nộp';
         color = 'blue';
       } else {
-        text = 'No Submission';
+        text = 'Chưa nộp';
       }
     } else if (type === 'quiz') {
       if (status === 'completed') {
+        text = 'Đã hoàn thành';
         color = 'green';
       } else if (status === 'in-progress') {
+        text = 'Đang làm';
         color = 'blue';
       } else {
-        text = 'No Attempt';
+        text = 'Chưa làm';
       }
     }
 
@@ -89,7 +93,7 @@ const StudentGrades = () => {
 
   const getColumns = (type) => [
     {
-      title: 'Title',
+      title: 'Tiêu đề',
       dataIndex: 'title',
       key: 'title',
       width: 250,
@@ -98,7 +102,7 @@ const StudentGrades = () => {
       render: (text) => <Tooltip title={text}>{text}</Tooltip>,
     },
     {
-      title: 'Classroom',
+      title: 'Lớp học',
       dataIndex: ['classroom', 'name'],
       key: 'classroom',
       width: 200,
@@ -107,20 +111,20 @@ const StudentGrades = () => {
       render: (text) => <Tooltip title={text}>{text}</Tooltip>,
     },
     {
-      title: type === 'quiz' ? 'Start Time' : 'Due Date',
+      title: type === 'quiz' ? 'Thời gian bắt đầu' : 'Hạn nộp',
       dataIndex: type === 'quiz' ? 'startTime' : 'dueDate',
       key: type === 'quiz' ? 'startTime' : 'dueDate',
       width: 180,
       render: (date) =>
-        date ? dayjs(date).format('DD/MM/YYYY HH:mm') : 'No Date',
+        date ? dayjs(date).format('DD/MM/YYYY HH:mm') : 'Không có ngày',
     },
     {
-      title: type === 'quiz' ? 'Score' : 'Grade',
+      title: type === 'quiz' ? 'Điểm số' : 'Điểm',
       dataIndex: 'submission',
       key: 'grade',
       width: 150,
       render: (submission, record) => {
-        if (!submission) return <Tag color="red">Not Submitted</Tag>;
+        if (!submission) return <Tag color="red">Chưa nộp</Tag>;
 
         const score = submission.grade ?? submission.score;
         const total = record.totalPoints ?? record.totalQuestions ?? 100;
@@ -137,7 +141,7 @@ const StudentGrades = () => {
       },
     },
     {
-      title: 'Status',
+      title: 'Trạng thái',
       dataIndex: ['submission', 'status'],
       key: 'status',
       width: 150,
@@ -147,13 +151,13 @@ const StudentGrades = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Title level={3}>Student Grades</Title>
+      <Title level={3}>Điểm số học sinh</Title>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={8}>
           <Card bordered style={{ textAlign: 'center', borderRadius: 10 }}>
             <TrophyOutlined style={{ fontSize: 32, color: '#52c41a' }} />
-            <div style={{ color: 'gray', marginTop: 8 }}>Graded Items</div>
+            <div style={{ color: 'gray', marginTop: 8 }}>Mục đã chấm điểm</div>
             <div style={{ fontSize: 20, fontWeight: 'bold', marginTop: 4 }}>
               {getGradedCount()} / {getTotalCount()}
             </div>
@@ -162,7 +166,7 @@ const StudentGrades = () => {
         <Col span={8}>
           <Card bordered style={{ textAlign: 'center', borderRadius: 10 }}>
             <FileTextOutlined style={{ fontSize: 32, color: '#9254de' }} />
-            <div style={{ color: 'gray', marginTop: 8 }}>Assignments</div>
+            <div style={{ color: 'gray', marginTop: 8 }}>Bài tập</div>
             <div style={{ fontSize: 20, fontWeight: 'bold', marginTop: 4 }}>
               {assignmentList.length}
             </div>
@@ -171,7 +175,7 @@ const StudentGrades = () => {
         <Col span={8}>
           <Card bordered style={{ textAlign: 'center', borderRadius: 10 }}>
             <CheckSquareOutlined style={{ fontSize: 32, color: '#fa8c16' }} />
-            <div style={{ color: 'gray', marginTop: 8 }}>Quizzes</div>
+            <div style={{ color: 'gray', marginTop: 8 }}>Bài kiểm tra</div>
             <div style={{ fontSize: 20, fontWeight: 'bold', marginTop: 4 }}>
               {quizList.length}
             </div>
@@ -182,9 +186,9 @@ const StudentGrades = () => {
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={8}>
           <Card bordered>
-            <Title level={5}><FilterOutlined /> Filter by Classroom</Title>
+            <Title level={5}><FilterOutlined /> Lọc theo lớp học</Title>
             <Select
-              placeholder="Select Classroom"
+              placeholder="Chọn lớp học"
               style={{ width: '100%' }}
               allowClear
               value={selectedClassroom}
@@ -199,7 +203,7 @@ const StudentGrades = () => {
         <Spin size="large" />
       ) : (
         <Tabs defaultActiveKey="assignments">
-          <TabPane tab="Assignments" key="assignments">
+          <TabPane tab="Bài tập" key="assignments">
             <Table
               dataSource={filterByClassroom(assignmentList)}
               columns={getColumns('assignment')}
@@ -209,7 +213,7 @@ const StudentGrades = () => {
               sticky
             />
           </TabPane>
-          <TabPane tab="Quizzes" key="quizzes">
+          <TabPane tab="Bài kiểm tra" key="quizzes">
             <Table
               dataSource={filterByClassroom(quizList)}
               columns={getColumns('quiz')}

@@ -71,7 +71,7 @@ const StudentNotifications = () => {
         <Col xs={24} sm={8} md={8}>
           <Card>
             <Statistic
-              title="Total Notifications"
+              title="Tổng số thông báo"
               value={stats.totalNotifications}
               prefix={<BellOutlined style={{ color: '#1890ff' }} />}
               valueStyle={{ color: '#1890ff' }}
@@ -82,7 +82,7 @@ const StudentNotifications = () => {
         <Col xs={24} sm={8} md={8}>
           <Card>
             <Statistic
-              title="Today"
+              title="Hôm nay"
               value={stats.todayNotifications}
               prefix={<ClockCircleOutlined style={{ color: '#52c41a' }} />}
               valueStyle={{ color: '#52c41a' }}
@@ -93,7 +93,7 @@ const StudentNotifications = () => {
         <Col xs={24} sm={8} md={8}>
           <Card>
             <Statistic
-              title="Class Notifications"
+              title="Thông báo lớp học"
               value={stats.classNotifications}
               prefix={<BookOutlined style={{ color: '#faad14' }} />}
               valueStyle={{ color: '#faad14' }}

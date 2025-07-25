@@ -24,6 +24,7 @@ import { useSelector } from 'react-redux';
 import CommentInput from './CommentInput';
 import VideoPlayerModal from './VideoPlayerModal';
 import VideoRefreshButton from './VideoRefreshButton';
+import FileViewer from '../common/FileViewer';
 import dayjs from 'dayjs';
 import { formatFileSize, downloadStreamAttachment, getBrowserInfo } from '../../../utils/fileUtils';
 import { MdAttachFile } from 'react-icons/md';
@@ -127,7 +128,20 @@ const StreamItem = ({
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [updatedAttachments, setUpdatedAttachments] = useState(null);
   const [downloadingFiles, setDownloadingFiles] = useState(new Set());
+  const [fileViewerVisible, setFileViewerVisible] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const { user, token } = useSelector((state) => state.auth);
+
+    // const isSecureFile = useCallback(() => {
+    //   if (!file) return false;
+    //   const fileUrl = file.url || file.previewUrl || file.downloadUrl;
+    //   return token && (
+    //     fileUrl?.includes('/api/files/') || 
+    //     file.downloadUrl || 
+    //     fileUrl?.includes('downloadUrl')
+    //   );
+    // }, [file, token]);
+
   // Check if current user can edit/delete this post
   const canEditDelete = useCallback(() => {
     return user?.role === 'admin' || 
@@ -152,6 +166,9 @@ const StreamItem = ({
       return 'Material';
     } else if (item.type === 'activity') {
       return 'Activity';
+    }
+    else if (item.type === 'quiz') {
+      return 'Quiz';
     }
     return 'Post';
   }, [item]);
@@ -232,6 +249,18 @@ const StreamItem = ({
     } else if (attachment.type === "link") {
       // Handle link attachments
       window.open(attachment.url, '_blank', 'noopener,noreferrer');
+    } else if (attachment.type?.startsWith('image/')) {
+      // Handle image attachments - use FileViewer
+      const fileData = {
+        name: attachment.name || 'Image',
+        url: attachment.url || `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/files/stream/${item._id}/attachment/${index}?preview=true&token=${token}`,
+        previewUrl: `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/files/stream/${item._id}/attachment/${index}?preview=true&token=${token}`,
+        downloadUrl: `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/files/stream/${item._id}/attachment/${index}?token=${token}`,
+        fileSize: attachment.fileSize,
+        type: attachment.type
+      };
+      setSelectedFile(fileData);
+      setFileViewerVisible(true);
     } else {
       // Handle file attachments with secure download using utility function
       const fileId = `${item._id}-${index}`;
@@ -274,6 +303,12 @@ const StreamItem = ({
   const handleVideoModalClose = useCallback(() => {
     setVideoModalVisible(false);
     setSelectedVideo(null);
+  }, []);
+
+  // File viewer modal handlers
+  const handleFileViewerClose = useCallback(() => {
+    setFileViewerVisible(false);
+    setSelectedFile(null);
   }, []);
 
   // Handle duration update from refresh
@@ -327,6 +362,8 @@ const StreamItem = ({
         return <ClockCircleOutlined className="text-gray-500" />;
       case 'student_post':
         return <MessageOutlined className="text-green-600" />;
+      case 'quiz':
+        return <TrophyOutlined className="text-yellow-500" />;
       default:
         return <MessageOutlined className="text-blue-500" />;
     }
@@ -344,6 +381,8 @@ const StreamItem = ({
         return 'default';
       case 'student_post':
         return 'green';
+      case 'quiz':
+        return '#52c41a';
       default:
         return 'blue';
     }
@@ -472,6 +511,39 @@ const StreamItem = ({
                 </div>
               </div>
             )}
+            {item.type === 'quiz' && (
+              <div className="mt-3 p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-4">
+                    {item.dueDate && (
+                      <Text className="text-red-700">
+                        <CalendarOutlined className="mr-2" />
+                        Due: {new Date(item.dueDate).toLocaleString()}
+                      </Text>
+                    )}
+                                         {item.totalPoints && (
+                       <Text className="text-red-700">
+                         <TrophyOutlined className="mr-2" />
+                         {item.totalPoints} points
+                       </Text>
+                     )}
+                  </div>
+                  <Button 
+                    type="primary"
+                    size="small"
+                    onClick={() => {
+                      if (userRole === 'student') {
+                        window.open(`/student/classrooms/${classroomId}/assignments/${item.resourceId}`, '_blank');
+                      } else {
+                        window.open(`/teacher/classroom/${classroomId}/assignment/${item.resourceId}`, '_blank');
+                      }
+                    }}
+                  >
+                    {userRole === 'student' ? 'View Assignment' : 'Manage'}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Attachments - Google Classroom Style with Secure Download */}
@@ -487,7 +559,14 @@ const StreamItem = ({
                   return (
                   <Tooltip
                     key={index}
-                    title={attachmentData.type === 'file' ? getDownloadTooltip(attachmentData, index) : undefined}
+                    title={
+                      attachmentData.type === 'file' ? getDownloadTooltip(attachmentData, index) :
+                      attachmentData.type?.startsWith('image/') ? 'Click to view image with zoom, rotation, and download options' :
+                      attachmentData.type === "video/youtube" ? 'Click to play YouTube video' :
+                      attachmentData.type === "video" ? 'Click to play video' :
+                      attachmentData.type === "link" ? 'Click to open link' :
+                      'Click to open'
+                    }
                     placement="top"
                   >
                     <div 
@@ -577,6 +656,53 @@ const StreamItem = ({
                             </Text>
                           </div>
                         </>
+                      ) : attachmentData.type?.startsWith('image/') ? (
+                        <>
+                          {/* Image Card */}
+                          <div className="h-20 bg-gray-100 flex items-center justify-center border-b">
+                            <div className="w-full h-full bg-white rounded-lg flex items-center justify-center overflow-hidden">
+                              <img 
+                                src={attachmentData.previewUrl || `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/files/stream/${item._id}/attachment/${index}?preview=true&token=${token}`}
+                                alt={attachmentData.name || 'Image'} 
+                                className="w-full h-full object-cover" 
+                                style={{ 
+                                  objectFit: 'cover',
+                                  objectPosition: 'center',
+                                  width: '100%',
+                                  height: '100%'
+                                }}
+                                onError={(e) => {
+                                  // First fallback to API endpoint with /api prefix
+                                  const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/files/stream/${item._id}/attachment/${index}?preview=true&token=${token}`;
+                                  if (e.target.src !== apiUrl) {
+                                    e.target.src = apiUrl;
+                                    return;
+                                  }
+                                  
+                                  // Second fallback to placeholder or show error
+                                  e.target.style.display = 'none';
+                                  e.target.parentElement.innerHTML = `
+                                    <div class="flex flex-col items-center justify-center text-gray-400 p-2">
+                                      <svg class="w-8 h-8 mb-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                                      </svg>
+                                      <span class="text-xs">Image</span>
+                                    </div>
+                                  `;
+                                }}
+                                onLoad={(e) => {
+                                  // Ensure image is visible when loaded successfully
+                                  e.target.style.display = 'block';
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <div className="p-2">
+                            <Text className="text-xs font-medium text-gray-900 line-clamp-1 leading-tight">
+                              {attachmentData.title || attachmentData.name || "Image"}
+                            </Text>
+                          </div>
+                        </>
                       ) : (
                         <>
                           {/* File Card with Secure Download */}
@@ -662,24 +788,24 @@ const StreamItem = ({
                       
                       {/* Comment actions - show on hover */}
                       <div className="flex items-center gap-4 mt-0 mb-0 comment-actions">
-                        <Button 
+                        {/* <Button 
                           type="text" 
                           size="small"
                           className="text-xs font-medium text-gray-500 hover:text-blue-600 p-0 h-auto border-0 shadow-none"
                           onClick={() => handleReplyComment(comment.id || comment._id)}
                         >
                           Reply
-                        </Button>
+                        </Button> */}
                         {(user?._id === comment.author?._id || user?.role === 'admin') && (
                           <>
-                            <Button 
+                            {/* <Button 
                               type="text" 
                               size="small"
                               className="text-xs font-medium text-gray-500 hover:text-blue-600 p-0 h-auto border-0 shadow-none"
                               onClick={() => handleEditComment(comment.id || comment._id, comment.content)}
                             >
                               Edit
-                            </Button>
+                            </Button> */}
                             <Button 
                               type="text" 
                               size="small"
@@ -752,6 +878,14 @@ const StreamItem = ({
         videoData={selectedVideo}
         classroomId={classroomId}
         streamItemId={streamItemId || item._id}
+      />
+      
+      {/* File Viewer Modal */}
+      <FileViewer
+        visible={fileViewerVisible}
+        onCancel={handleFileViewerClose}
+        file={selectedFile}
+        title="Image Preview"
       />
     </Card>
   );

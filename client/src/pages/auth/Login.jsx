@@ -41,7 +41,7 @@ const Login = () => {
   const onFinish = async (values) => {
     try {
       await dispatch(login(values)).unwrap();
-      message.success('Login successful!');
+      message.success('Đăng nhập thành công!');
     } catch (error) {
       console.error('Login error:', error);
     }
@@ -50,25 +50,25 @@ const Login = () => {
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
       await dispatch(googleLogin(credentialResponse.credential)).unwrap();
-      message.success('Google login successful!');
+      message.success('Đăng nhập Google thành công!');
     } catch (error) {
       console.error('Google login error:', error);
-      message.error('Google login failed. Please try again.');
+      message.error('Đăng nhập Google thất bại. Vui lòng thử lại.');
     }
   };
 
   const handleGoogleError = () => {
-    message.error('Google login failed. Please try again.');
+    message.error('Đăng nhập Google thất bại. Vui lòng thử lại.');
   };
 
   const handleFacebookSuccess = async (accessToken) => {
     setFacebookLoading(true);
     try {
       await dispatch(facebookLogin(accessToken)).unwrap();
-      message.success('Facebook login successful!');
+      message.success('Đăng nhập Facebook thành công!');
     } catch (error) {
       console.error('Facebook login error:', error);
-      message.error('Facebook login failed. Please try again.');
+      message.error('Đăng nhập Facebook thất bại. Vui lòng thử lại.');
     } finally {
       setFacebookLoading(false);
     }
@@ -76,7 +76,7 @@ const Login = () => {
 
   const handleFacebookFailure = (error) => {
     console.error('Facebook login error:', error);
-    message.error('Facebook login failed. Please try again.');
+    message.error('Đăng nhập Facebook thất bại. Vui lòng thử lại.');
     setFacebookLoading(false);
   };
 
@@ -98,10 +98,10 @@ const Login = () => {
       }}>
         <div style={{ textAlign: 'center', color: '#1a365d' }}>
           <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold' }}>
-            Welcome Back!
+            Chào mừng trở lại!
           </h1>
           <p style={{ fontSize: '1.2rem', opacity: 0.8 }}>
-            Sign in to continue your learning journey
+            Đăng nhập để tiếp tục hành trình học tập của bạn
           </p>
         </div>
       </div>
@@ -131,7 +131,7 @@ const Login = () => {
               Classroom Management System
             </h2>
             <p style={{ color: '#718096', fontSize: '1rem' }}>
-              Sign in to your account
+              Đăng nhập vào tài khoản của bạn
             </p>
           </div>
 
@@ -157,7 +157,7 @@ const Login = () => {
           </div>
 
           <Divider style={{ margin: '1.5rem 0' }}>
-            <span style={{ color: '#718096', fontSize: '0.9rem' }}>or continue with email</span>
+            <span style={{ color: '#718096', fontSize: '0.9rem' }}>hoặc tiếp tục với email</span>
           </Divider>
 
           <Form
@@ -169,7 +169,7 @@ const Login = () => {
           >
             <Form.Item
               name="email"
-              rules={[{ required: true, message: 'Please input your email!' }]}
+              rules={[{ required: true, message: 'Vui lòng nhập email của bạn!' }]}
             >
               <Input 
                 prefix={<MailOutlined style={{ color: '#718096' }} />} 
@@ -180,11 +180,11 @@ const Login = () => {
 
             <Form.Item
               name="password"
-              rules={[{ required: true, message: 'Please input your password!' }]}
+              rules={[{ required: true, message: 'Vui lòng nhập mật khẩu của bạn!' }]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#718096' }} />}
-                placeholder="Password"
+                placeholder="Mật khẩu"
                 style={{ borderRadius: '8px' }}
               />
             </Form.Item>
@@ -204,7 +204,7 @@ const Login = () => {
                   fontWeight: '500'
                 }}
               >
-                Sign In
+                Đăng nhập
               </Button>
             </Form.Item>
 
@@ -223,9 +223,9 @@ const Login = () => {
                   marginBottom: '0.5rem'
                 }}
               >
-                Forgot your password?
+                Quên mật khẩu?
               </Link>
-              Don't have an account?{' '}
+              Chưa có tài khoản?{' '}
               <Link 
                 to="/register" 
                 style={{ 
@@ -234,7 +234,7 @@ const Login = () => {
                   textDecoration: 'none'
                 }}
               >
-                Register here
+                Đăng ký tại đây
               </Link>
             </div>
           </Form>

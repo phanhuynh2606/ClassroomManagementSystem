@@ -111,7 +111,7 @@ const ChatList = ({
               backgroundColor: '#fafafa'
             }}>
               <Text strong style={{ fontSize: '12px', color: '#666' }}>
-                CONVERSATIONS ({chats.length})
+                Hội Thoại ({chats.length})
               </Text>
             </div>
             <List
@@ -243,9 +243,9 @@ const ChatList = ({
           <Empty 
             description={
               <div style={{ textAlign: 'center' }}>
-                <div>No conversations yet</div>
+                <div>Chưa có hội thoại nào</div>
                 <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
-                  You'll see conversations here when you have new messages
+                  Bạn sẽ thấy các hội thoại ở đây khi có tin nhắn mới
                 </div>
               </div>
             }

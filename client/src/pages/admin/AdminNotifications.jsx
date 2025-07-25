@@ -459,7 +459,7 @@ const AdminNotifications = () => {
           <Col xs={24} sm={6}>
             <Card>
               <Statistic
-              title="Total Received"
+              title="Tổng thông báo đã nhận"
               value={stats.totalReceived}
               prefix={<MailOutlined style={{ color: '#1890ff' }} />}
                 valueStyle={{ color: '#1890ff' }}

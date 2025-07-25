@@ -290,7 +290,7 @@ const NotificationList = ({ showFilters = true, pageSize = 10 }) => {
             renderItem={renderNotificationItem}
             loading={localLoading}
           />
-          
+{/*           
           {hasMore && (
             <div style={{ textAlign: 'center', marginTop: 16 }}>
               <Button 
@@ -301,7 +301,7 @@ const NotificationList = ({ showFilters = true, pageSize = 10 }) => {
                 Load More
               </Button>
             </div>
-          )}
+          )} */}
           
           <div style={{ marginTop: 16, textAlign: 'center' }}>
             <Text type="secondary">

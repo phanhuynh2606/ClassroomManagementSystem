@@ -126,7 +126,7 @@ const StudentDashboard = () => {
                 <Text type="secondary">{classroom.subject}</Text>
                 <br />
                 <Text type="secondary">
-                  Teacher: {classroom.teacher?.fullName || 'Unknown'}
+                  Giáo Viên: {classroom.teacher?.fullName || 'Unknown'}
                 </Text>
                 <br />
                 <Tag color="green" style={{ marginTop: 4 }}>
@@ -149,7 +149,7 @@ const StudentDashboard = () => {
         block
         onClick={() => setJoinModalVisible(true)}
       >
-        Join New Classroom
+        Tham gia lớp học mới
       </Button>
       <Button
         size="large"
@@ -157,7 +157,7 @@ const StudentDashboard = () => {
         block
         onClick={() => navigate('/student/classrooms')}
       >
-        View All Classrooms
+        Xem tất cả lớp học
       </Button>
       <Button
         size="large"
@@ -165,7 +165,7 @@ const StudentDashboard = () => {
         block
         onClick={() => navigate('/student/profile')}
       >
-        Edit Profile
+        Chỉnh sửa hồ sơ
       </Button>
     </div>
   );
@@ -175,14 +175,14 @@ const StudentDashboard = () => {
       <div className="flex items-center">
         <div className="flex-1">
           <Title level={3} className="mb-2">
-            Welcome Back! 👋
+            Chào mừng bạn trở lại! 👋
           </Title>
           <Paragraph className="text-gray-600 mb-4">
-            You have {classrooms.length} active classroom
-            {classrooms.length !== 1 ? 's' : ''}. Keep up the great work!
+            Bạn có {classrooms.length} lớp học đang hoạt động
+            {classrooms.length !== 1 ? '' : ''}. Hãy tiếp tục phát huy!
           </Paragraph>
           <Button type="primary" size="large" onClick={() => navigate('/student/classrooms')}>
-            Go to Classrooms
+            Đến Lớp học
           </Button>
         </div>
         <div className="text-6xl opacity-20">📚</div>
@@ -212,9 +212,9 @@ const StudentDashboard = () => {
     <div className="p-6">
       <div className="mb-6">
         <Title level={2} className="mb-2">
-          Student Dashboard
+          Bảng điều khiển học sinh
         </Title>
-        <Text type="secondary">Overview of your learning progress and activities</Text>
+        <Text type="secondary">Tổng quan về tiến độ học tập và hoạt động của bạn</Text>
       </div>
 
       <WelcomeCard />
@@ -222,7 +222,7 @@ const StudentDashboard = () => {
       <Row gutter={[24, 24]} className="mb-6">
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="Enrolled Classrooms"
+            title="Lớp học đã tham gia"
             value={stats.totalClassrooms}
             icon={<BookOutlined />}
             color="text-blue-500"
@@ -230,7 +230,7 @@ const StudentDashboard = () => {
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="Submitted Assignments"
+            title="Bài tập đã nộp"
             value={assignmentStats.submittedCount}
             icon={<ClockCircleOutlined />}
             color="text-orange-500"
@@ -238,7 +238,7 @@ const StudentDashboard = () => {
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="Graded Quizzes"
+            title="Bài kiểm tra đã chấm"
             value={quizStats.gradedCount}
             icon={<TrophyOutlined />}
             color="text-green-500"
@@ -248,16 +248,16 @@ const StudentDashboard = () => {
 
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={16}>
-          <Card title="My Classrooms" className="h-full">
+          <Card title="Lớp học của tôi" className="h-full">
             {classrooms.length > 0 ? (
               <RecentClassrooms />
             ) : (
               <Empty
-                description="No classrooms joined yet"
+                description="Chưa tham gia lớp học nào"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               >
                 <Button type="primary" onClick={() => setJoinModalVisible(true)}>
-                  Join Your First Classroom
+                  Tham gia lớp học đầu tiên
                 </Button>
               </Empty>
             )}
@@ -265,15 +265,15 @@ const StudentDashboard = () => {
         </Col>
 
         <Col xs={24} lg={8}>
-          <Card title="Quick Actions" className="mb-4">
+          <Card title="Thao tác nhanh" className="mb-4">
             <QuickActions />
           </Card>
 
-          <Card title="Learning Progress" className="mb-4">
+          <Card title="Tiến độ học tập" className="mb-4">
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between mb-2">
-                  <Text>Assignments</Text>
+                  <Text>Bài tập</Text>
                   <Text>
                     {assignmentStats.submittedCount}/{assignmentStats.total} 
                   </Text>
@@ -283,7 +283,7 @@ const StudentDashboard = () => {
 
               <div>
                 <div className="flex justify-between mb-2">
-                  <Text>Quizzes</Text>
+                  <Text>Bài kiểm tra</Text>
                   <Text>
                     {quizStats.gradedCount}/{quizStats.total} 
                   </Text>

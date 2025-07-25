@@ -18,19 +18,21 @@ const notificationRoutes = require('./notification.route.js');
 const initRoutes = (app) => {
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
-  app.use('/api/admin', adminRoutes);
-  app.use("/api/questions/ai/", genderAIRoute);
-  app.use('/api/classrooms', classroomRoutes);
-  app.use('/api/assignments', assignmentRoutes);
-  app.use('/api/assignments/analytics', assignmentAnalyticsRoutes);
-  app.use('/api/requests', requestRoutes);
   app.use('/api/stream', streamRoutes);
   app.use('/api/video-watch', videoWatchRoutes);
-  app.use('/api/files', fileRoutes);
-  app.use('/api/materials', materialRoutes);
-  app.use('/api/teacher-todo', teacherTodoRoutes);
+  
+  app.use('/api/assignments', assignmentRoutes);
+  app.use('/api/assignments/analytics', assignmentAnalyticsRoutes);
   app.use('/api/teacher-dashboard', teacherDashboardRoutes);
+  
+  app.use('/api/files', fileRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/materials', materialRoutes);
+  
+  app.use('/api/teacher-todo', teacherTodoRoutes);
+  app.use("/api/questions/ai/", genderAIRoute);
   app.use('/api/quizzes', quizRoutes);
+
   app.use('/api/classrooms',classroomRoutes);
   app.use('/api/requests', requestRoutes);
   app.use('/api/chats', chatRoutes);

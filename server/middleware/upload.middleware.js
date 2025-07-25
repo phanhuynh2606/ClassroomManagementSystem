@@ -14,7 +14,14 @@ const createUploadMiddleware = (folderPath = 'messages', maxCount = 5) => {
         const customFolder = req.body.customFolder || 'classmanagement';
         return `${customFolder}/${folderPath}`;
       },
-      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+      allowed_formats: [
+        // Image formats
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff',
+        // Document formats
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv',
+        // Archive formats
+        'zip', 'rar', '7z'
+      ],
       transformation: [
         { width: 1200, crop: 'limit' },
         { quality: 'auto', fetch_format: 'auto' }
@@ -31,10 +38,27 @@ const createUploadMiddleware = (folderPath = 'messages', maxCount = 5) => {
   });
 
   const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    // Define allowed MIME types
+    const allowedMimeTypes = [
+      // Image types
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 
+      'image/svg+xml', 'image/bmp', 'image/tiff',
+      // Document types
+      'application/pdf', 'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel', 
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint', 
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain', 'text/csv',
+      // Archive types
+      'application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed'
+    ];
+
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'), false);
+      cb(new Error(`File type ${file.mimetype} is not allowed! Supported types: ${allowedMimeTypes.join(', ')}`), false);
     }
   };
 
@@ -221,7 +245,7 @@ const createAttachmentUploadMiddleware = () => {
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
           const fileNameWithoutExt = file.originalname.split('.')[0]
             .replace(/[^a-zA-Z0-9]/g, '_');
-          return `attachment_${fileNameWithoutExt}_${uniqueSuffix}`;
+          return `attachment_${uniqueSuffix}`;
         }
       };
 
@@ -411,7 +435,7 @@ const createUploadAssignmentMiddleware = (folderPath = 'assignments', maxCount =
 const profileUpload = createUploadMiddleware('profiles', 1);
 const questionImageUpload = createUploadMiddleware('questions', 1);
 const backgroundImageUpload = createBackgroundUploadMiddleware();
-const attachmentUpload = createAttachmentUploadMiddleware();
+const attachmentUpload = createUploadAssignmentMiddleware('attachments', 3);
 const materialUpload = createMaterialUploadMiddleware('materials', 1);
 
 // Assignment-related uploads - separated by purpose

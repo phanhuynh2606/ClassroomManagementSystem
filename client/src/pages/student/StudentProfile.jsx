@@ -69,9 +69,9 @@ const StudentProfile = () => {
       };
       
       await userAPI.updateProfile(updatedData);
-      message.success('Profile updated successfully');
+      message.success('Cập nhật hồ sơ thành công');
     } catch (error) {
-      message.error('Failed to update profile');
+      message.error('Không thể cập nhật hồ sơ');
       console.error('Error updating profile:', error);
     } finally {
       setLoading(false);
@@ -106,7 +106,7 @@ const StudentProfile = () => {
 
   const handleImageUpload = async () => {
     if (!selectedFile) {
-      message.warning('Please select an image first');
+      message.warning('Vui lòng chọn hình ảnh trước');
       return;
     }
     
@@ -128,7 +128,7 @@ const StudentProfile = () => {
       setPreviewImage('');
       setSelectedFile(null);
       
-      message.success('Avatar uploaded successfully');
+      message.success('Tải lên ảnh đại diện thành công');
       
       // Refresh profile to get updated image
       const updatedProfile = await dispatch(fetchProfile());
@@ -136,7 +136,7 @@ const StudentProfile = () => {
       
     } catch (error) {
       console.error('Upload error:', error);
-      message.error(error.response?.data?.message || 'Failed to upload avatar');
+      message.error(error.response?.data?.message || 'Không thể tải lên ảnh đại diện');
     } finally {
       setLoading(false);
     }
@@ -148,7 +148,7 @@ const StudentProfile = () => {
       const response = await authAPI.getUserDevices();
       setDevices(response.data); // Không cần filter vì server đã xóa hoàn toàn
     } catch (error) {
-      message.error('Failed to fetch devices');
+      message.error('Không thể tải danh sách thiết bị');
     } finally {
       setDevicesLoading(false);
     }
@@ -157,7 +157,7 @@ const StudentProfile = () => {
   const handleLogoutDevice = async (token, isCurrentDevice) => {
     try {
       await authAPI.logoutDevice(token);
-      message.success(isCurrentDevice ? 'Logged out from current device' : 'Device logged out successfully');
+      message.success(isCurrentDevice ? 'Đã đăng xuất khỏi thiết bị hiện tại' : 'Đã đăng xuất thiết bị thành công');
       
       if (isCurrentDevice) {
         // If current device, redirect to login
@@ -169,21 +169,21 @@ const StudentProfile = () => {
         fetchDevices();
       }
     } catch (error) {
-      message.error('Failed to logout device');
+      message.error('Không thể đăng xuất thiết bị');
     }
   };
 
   const handleLogoutAllDevices = async () => {
     try {
       await authAPI.logoutAllDevices();
-      message.success('Logged out from all devices');
+      message.success('Đã đăng xuất khỏi tất cả thiết bị');
       
       // Redirect to login since current device is also logged out
       localStorage.removeItem('token');
       localStorage.removeItem('persist:root');
       window.location.href = '/login';
     } catch (error) {
-      message.error('Failed to logout all devices');
+      message.error('Không thể đăng xuất khỏi tất cả thiết bị');
     }
   };
 
@@ -199,17 +199,17 @@ const StudentProfile = () => {
 
   const deviceColumns = [
     {
-      title: 'Device',
+      title: 'Thiết bị',
       dataIndex: 'device',
       key: 'device',
       render: (device, record) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {getDeviceIcon(device)}
           <span>
-            {device || 'Unknown Device'}
+            {device || 'Thiết bị không xác định'}
             {record.isCurrentDevice && (
               <Tag color="blue" style={{ marginLeft: 8 }}>
-                Current Device
+                Thiết bị hiện tại
               </Tag>
             )}
           </span>
@@ -217,17 +217,17 @@ const StudentProfile = () => {
       ),
     },
     {
-      title: 'Browser',
+      title: 'Trình duyệt',
       dataIndex: 'userAgent',
       key: 'userAgent',
-      render: (userAgent) => userAgent || 'Unknown Browser',
+      render: (userAgent) => userAgent || 'Trình duyệt không xác định',
     },
     {
-      title: 'IP Address',
+      title: 'Địa chỉ IP',
       dataIndex: 'ipAddress',
       key: 'ipAddress',
       render: (ip) => (
-        <Tooltip title="IP Address">
+        <Tooltip title="Địa chỉ IP">
           <span>
             <GlobalOutlined style={{ marginRight: 8 }} />
             {ip}
@@ -236,21 +236,21 @@ const StudentProfile = () => {
       ),
     },
     {
-      title: 'Login Time',
+      title: 'Thời gian đăng nhập',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (date) => dayjs(date).format('YYYY-MM-DD HH:mm'),
     },
     {
-      title: 'Action',
+      title: 'Hành động',
       key: 'action',
       render: (_, record) => (
         <Popconfirm
-          title={`Logout from ${record.isCurrentDevice ? 'current device' : 'this device'}?`}
-          description={record.isCurrentDevice ? 'You will be redirected to login page.' : 'This will end the session on this device.'}
+          title={`Đăng xuất khỏi ${record.isCurrentDevice ? 'thiết bị hiện tại' : 'thiết bị này'}?`}
+          description={record.isCurrentDevice ? 'Bạn sẽ được chuyển hướng đến trang đăng nhập.' : 'Điều này sẽ kết thúc phiên trên thiết bị này.'}
           onConfirm={() => handleLogoutDevice(record.token, record.isCurrentDevice)}
-          okText="Yes"
-          cancelText="No"
+          okText="Có"
+          cancelText="Không"
         >
           <Button 
             type="link" 
@@ -258,7 +258,7 @@ const StudentProfile = () => {
             icon={<LogoutOutlined />}
             size="small"
           >
-            Logout
+            Đăng xuất
           </Button>
         </Popconfirm>
       ),
@@ -280,7 +280,7 @@ const StudentProfile = () => {
         bodyStyle={{ padding: 0 }}
       >
         <Row align="middle" style={{ padding: '24px 32px 24px 32px' }}>
-          <Col span={6} style={{ textAlign: 'center' }}>
+          <Col span={4} style={{ textAlign: 'center' }}>
             <div style={{ position: 'relative', display: 'inline-block' }}>
               <Upload
                 showUploadList={false}
@@ -345,7 +345,7 @@ const StudentProfile = () => {
                 opacity: selectedFile ? 1 : 0.7,
               }}
             >
-              {selectedFile ? 'Upload Avatar' : 'Change Avatar'}
+              {selectedFile ? 'Tải lên ảnh đại diện' : 'Thay đổi ảnh đại diện'}
             </Button>
           </Col>
           <Col span={18}>
@@ -358,13 +358,13 @@ const StudentProfile = () => {
                 <CrownOutlined style={{ marginRight: 8 }} />{user?.role?.toUpperCase()}
               </div>
               <Space size={16}>
-                <Badge status={user?.isActive ? 'success' : 'error'} text={user?.isActive ? 'Active' : 'Inactive'} />
+                <Badge status={user?.isActive ? 'success' : 'error'} text={user?.isActive ? 'Hoạt động' : 'Không hoạt động'} />
               </Space>
 
               {/* <Row gutter={24} style={{ marginTop: 24 }}>
                 <Col span={8}>
                   <Statistic
-                    title="Courses Enrolled"
+                    title="Khóa học đã đăng ký"
                     value={5}
                     prefix={<BookOutlined />}
                     valueStyle={{ color: '#1890ff' }}
@@ -372,7 +372,7 @@ const StudentProfile = () => {
                 </Col>
                 <Col span={8}>
                   <Statistic
-                    title="Completed Quizzes"
+                    title="Bài kiểm tra đã hoàn thành"
                     value={12}
                     prefix={<CheckCircleOutlined />}
                     valueStyle={{ color: '#52c41a' }}
@@ -380,7 +380,7 @@ const StudentProfile = () => {
                 </Col>
                 <Col span={8}>
                   <Statistic
-                    title="Average Score"
+                    title="Điểm trung bình"
                     value={85}
                     suffix="%"
                     prefix={<TrophyOutlined />}
@@ -404,7 +404,7 @@ const StudentProfile = () => {
           header={
             <span style={{ fontSize: 18, fontWeight: 600 }}>
               <UserOutlined style={{ marginRight: 8 }} />
-              Profile Information
+              Thông tin hồ sơ
             </span>
           } 
           key="1"
@@ -418,7 +418,7 @@ const StudentProfile = () => {
           <Row gutter={12}>
             <Col span={12}>
               <Card
-                title={<span style={{ fontWeight: 600, fontSize: 16 }}>Personal Information</span>}
+                title={<span style={{ fontWeight: 600, fontSize: 16 }}>Thông tin cá nhân</span>}
                 style={{ borderRadius: 12, border: '1px solid #f0f0f0' }}
                 bodyStyle={{ padding: '24px' }}
               >
@@ -430,8 +430,8 @@ const StudentProfile = () => {
                 >
                   <Form.Item
                     name="fullName"
-                    label={<span style={{ fontWeight: 500 }}>Full Name</span>}
-                    rules={[{ required: true, message: 'Please input your full name!' }]}
+                    label={<span style={{ fontWeight: 500 }}>Họ và tên</span>}
+                    rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
                   >
                     <Input prefix={<UserOutlined />} size="large" />
                   </Form.Item>
@@ -440,8 +440,8 @@ const StudentProfile = () => {
                     name="email"
                     label={<span style={{ fontWeight: 500 }}>Email</span>}
                     rules={[
-                      { required: true, message: 'Please input your email!' },
-                      { type: 'email', message: 'Email is not valid!' }
+                      { required: true, message: 'Vui lòng nhập email!' },
+                      { type: 'email', message: 'Email không hợp lệ!' }
                     ]}
                   >
                     <Input prefix={<MailOutlined />} size="large" disabled />
@@ -449,10 +449,10 @@ const StudentProfile = () => {
 
                   <Form.Item
                     name="phone"
-                    label={<span style={{ fontWeight: 500 }}>Phone Number</span>}
+                    label={<span style={{ fontWeight: 500 }}>Số điện thoại</span>}
                     rules={[
-                      { required: true, message: 'Please input your phone number!' },
-                      { pattern: /^(0|84|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-5]|9[0-9])[0-9]{7}$|^(0|84|\+84)[1-9][0-9]{8,9}$/, message: 'Phone number must be a valid Vietnamese number!' }
+                      { required: true, message: 'Vui lòng nhập số điện thoại!' },
+                      { pattern: /^(0|84|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-5]|9[0-9])[0-9]{7}$|^(0|84|\+84)[1-9][0-9]{8,9}$/, message: 'Số điện thoại phải là số điện thoại Việt Nam hợp lệ!' }
                     ]}
                   >
                     <Input prefix={<PhoneOutlined />} size="large" />
@@ -460,9 +460,9 @@ const StudentProfile = () => {
 
                   <Form.Item
                     name="dateOfBirth"
-                    label={<span style={{ fontWeight: 500 }}>Date of Birth</span>}
+                    label={<span style={{ fontWeight: 500 }}>Ngày sinh</span>}
                     rules={[
-                      { required: true, message: 'Please select your date of birth!' },
+                      { required: true, message: 'Vui lòng chọn ngày sinh!' },
                       ({ getFieldValue }) => ({
                         validator(_, value) {
                           if (!value) return Promise.resolve();
@@ -470,7 +470,7 @@ const StudentProfile = () => {
                           const dob = value.toDate ? value.toDate() : value;
                           const age = today.getFullYear() - dob.getFullYear() - (today < new Date(dob.setFullYear(today.getFullYear())) ? 1 : 0);
                           if (age >= 12) return Promise.resolve();
-                          return Promise.reject(new Error('You must be at least 12 years old!'));
+                          return Promise.reject(new Error('Bạn phải ít nhất 12 tuổi!'));
                         }
                       })
                     ]}
@@ -480,13 +480,13 @@ const StudentProfile = () => {
 
                   <Form.Item
                     name="gender"
-                    label={<span style={{ fontWeight: 500 }}>Gender</span>}
-                    rules={[{ required: true, message: 'Please select your gender!' }]}
+                    label={<span style={{ fontWeight: 500 }}>Giới tính</span>}
+                    rules={[{ required: true, message: 'Vui lòng chọn giới tính!' }]}
                   >
                     <Select size="large">
-                      <Option value="male">Male</Option>
-                      <Option value="female">Female</Option>
-                      <Option value="other">Other</Option>
+                      <Option value="male">Nam</Option>
+                      <Option value="female">Nữ</Option>
+                      <Option value="other">Khác</Option>
                     </Select>
                   </Form.Item>
 
@@ -504,7 +504,7 @@ const StudentProfile = () => {
                         border: 'none',
                       }}
                     >
-                      Update Profile
+                      Cập nhật hồ sơ
                     </Button>
                   </Form.Item>
                 </Form>
@@ -513,19 +513,19 @@ const StudentProfile = () => {
 
             <Col span={12}>
               <Card
-                title={<span style={{ fontWeight: 600, fontSize: 16 }}>Account Information</span>}
+                title={<span style={{ fontWeight: 600, fontSize: 16 }}>Thông tin tài khoản</span>}
                 style={{ borderRadius: 12, border: '1px solid #f0f0f0' }}
                 bodyStyle={{ padding: '24px' }}
               >
                 <Descriptions column={1} bordered size="small">
                   <Descriptions.Item label="Email">{user?.email}</Descriptions.Item>
-                  <Descriptions.Item label="Role">{user?.role?.toUpperCase()}</Descriptions.Item>
-                  <Descriptions.Item label="Account Status">
-                    <Badge status={user?.isActive ? 'success' : 'error'} text={user?.isActive ? 'Active' : 'Inactive'} />
+                  <Descriptions.Item label="Vai trò">{user?.role?.toUpperCase()}</Descriptions.Item>
+                  <Descriptions.Item label="Trạng thái tài khoản">
+                    <Badge status={user?.isActive ? 'success' : 'error'} text={user?.isActive ? 'Hoạt động' : 'Không hoạt động'} />
                   </Descriptions.Item>
-                  <Descriptions.Item label="Last Login">{user?.lastLogin ? dayjs(user.lastLogin).format('YYYY-MM-DD HH:mm') : 'Never'}</Descriptions.Item>
-                  <Descriptions.Item label="Created At">{user?.createdAt ? dayjs(user.createdAt).format('YYYY-MM-DD HH:mm') : ''}</Descriptions.Item>
-                  <Descriptions.Item label="Updated At">{user?.updatedAt ? dayjs(user.updatedAt).format('YYYY-MM-DD HH:mm') : ''}</Descriptions.Item>
+                  <Descriptions.Item label="Đăng nhập lần cuối">{user?.lastLogin ? dayjs(user.lastLogin).format('YYYY-MM-DD HH:mm') : 'Chưa bao giờ'}</Descriptions.Item>
+                  <Descriptions.Item label="Ngày tham gia">{user?.createdAt ? dayjs(user.createdAt).format('YYYY-MM-DD HH:mm') : ''}</Descriptions.Item>
+                  <Descriptions.Item label="Cập nhật lần cuối">{user?.updatedAt ? dayjs(user.updatedAt).format('YYYY-MM-DD HH:mm') : ''}</Descriptions.Item>
                 </Descriptions>
               </Card>
             </Col>
@@ -536,7 +536,7 @@ const StudentProfile = () => {
           header={
             <span style={{ fontSize: 18, fontWeight: 600 }}>
               <LockOutlined style={{ marginRight: 8 }} />
-              Security Settings
+              Cài đặt bảo mật
             </span>
           } 
           key="2"
@@ -548,7 +548,7 @@ const StudentProfile = () => {
           }}
         >
           <Card
-            title={<span style={{ fontWeight: 600, fontSize: 16 }}>Change Password</span>}
+            title={<span style={{ fontWeight: 600, fontSize: 16 }}>Đổi mật khẩu</span>}
             style={{ borderRadius: 12, border: '1px solid #f0f0f0' }}
             bodyStyle={{ padding: '24px' }}
           >
@@ -558,10 +558,10 @@ const StudentProfile = () => {
               onFinish={async (values) => {
                 try {
                   await dispatch(updatePassword(values)).unwrap();
-                  message.success('Password updated successfully');
+                  message.success('Cập nhật mật khẩu thành công');
                   passwordForm.resetFields();
                 } catch (error) {
-                  message.error(error.message || 'Failed to update password');
+                  message.error(error.message || 'Không thể cập nhật mật khẩu');
                 }
               }}
             >
@@ -569,8 +569,8 @@ const StudentProfile = () => {
                 <Col span={8}>
                   <Form.Item
                     name="currentPassword"
-                    label={<span style={{ fontWeight: 500 }}>Current Password</span>}
-                    rules={[{ required: true, message: 'Please input your current password!' }]}
+                    label={<span style={{ fontWeight: 500 }}>Mật khẩu hiện tại</span>}
+                    rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại!' }]}
                   >
                     <Input.Password prefix={<LockOutlined />} size="large" />
                   </Form.Item>
@@ -578,10 +578,10 @@ const StudentProfile = () => {
                 <Col span={8}>
                   <Form.Item
                     name="newPassword"
-                    label={<span style={{ fontWeight: 500 }}>New Password</span>}
+                    label={<span style={{ fontWeight: 500 }}>Mật khẩu mới</span>}
                     rules={[
-                      { required: true, message: 'Please input your new password!' },
-                      { min: 6, message: 'Password must be at least 6 characters!' }
+                      { required: true, message: 'Vui lòng nhập mật khẩu mới!' },
+                      { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự!' }
                     ]}
                   >
                     <Input.Password prefix={<LockOutlined />} size="large" />
@@ -590,16 +590,16 @@ const StudentProfile = () => {
                 <Col span={8}>
                   <Form.Item
                     name="confirmPassword"
-                    label={<span style={{ fontWeight: 500 }}>Confirm New Password</span>}
+                    label={<span style={{ fontWeight: 500 }}>Xác nhận mật khẩu mới</span>}
                     dependencies={['newPassword']}
                     rules={[
-                      { required: true, message: 'Please confirm your new password!' },
+                      { required: true, message: 'Vui lòng xác nhận mật khẩu mới!' },
                       ({ getFieldValue }) => ({
                         validator(_, value) {
                           if (!value || getFieldValue('newPassword') === value) {
                             return Promise.resolve();
                           }
-                          return Promise.reject(new Error('The two passwords do not match!'));
+                          return Promise.reject(new Error('Hai mật khẩu không khớp!'));
                         },
                       }),
                     ]}
@@ -622,7 +622,7 @@ const StudentProfile = () => {
                     paddingRight: 32,
                   }}
                 >
-                  Change Password
+                  Đổi mật khẩu
                 </Button>
               </Form.Item>
             </Form>
@@ -633,7 +633,7 @@ const StudentProfile = () => {
           header={
             <span style={{ fontSize: 18, fontWeight: 600 }}>
               <SafetyOutlined style={{ marginRight: 8 }} />
-              Device Management ({devices.length})
+              Quản lý thiết bị ({devices.length})
             </span>
           } 
           key="3"
@@ -654,21 +654,21 @@ const StudentProfile = () => {
                   loading={devicesLoading}
                   size="small"
                 >
-                  Refresh
+                  Làm mới
                 </Button>
                 <Popconfirm
-                  title="Logout from all devices?"
-                  description="This will end all sessions including current device. You will be redirected to login page."
+                  title="Đăng xuất khỏi tất cả thiết bị?"
+                  description="Điều này sẽ kết thúc tất cả phiên bao gồm thiết bị hiện tại. Bạn sẽ được chuyển hướng đến trang đăng nhập."
                   onConfirm={handleLogoutAllDevices}
-                  okText="Yes"
-                  cancelText="No"
+                  okText="Có"
+                  cancelText="Không"
                 >
                   <Button
                     danger
                     icon={<DeleteOutlined />}
                     size="small"
                   >
-                    Logout All
+                    Đăng xuất tất cả
                   </Button>
                 </Popconfirm>
               </Space>
@@ -676,7 +676,7 @@ const StudentProfile = () => {
           >
             <div style={{ marginBottom: 16 }}>
               <Text type="secondary">
-                Manage your active login sessions. You can logout from specific devices or all devices at once.
+                Quản lý các phiên đăng nhập đang hoạt động. Bạn có thể đăng xuất khỏi thiết bị cụ thể hoặc tất cả thiết bị cùng một lúc.
               </Text>
             </div>
             

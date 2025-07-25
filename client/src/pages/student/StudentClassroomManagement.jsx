@@ -69,8 +69,8 @@ const StudentClassroomManagement = () => {
   useEffect(() => {
     if (searchValue) {
       const filtered = classes.filter(classroom => 
-        classroom.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-        classroom.subject.toLowerCase().includes(searchValue.toLowerCase()) ||
+        classroom.name?.toLowerCase().includes(searchValue?.toLowerCase()) ||
+        classroom.subject?.toLowerCase().includes(searchValue?.toLowerCase()) ||
         classroom.teacher?.fullName?.toLowerCase().includes(searchValue.toLowerCase())
       );
       setFilteredClasses(filtered);
@@ -113,7 +113,7 @@ const StudentClassroomManagement = () => {
       {/* Search and Filter */}
       <div className="mb-6 flex justify-between items-center">
         <Search
-          placeholder="Search classrooms, subjects, or teachers..."
+          placeholder="Tìm kiếm lớp học, môn học hoặc giáo viên..."
           allowClear
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
@@ -125,7 +125,7 @@ const StudentClassroomManagement = () => {
           onClick={fetchEnrolledClassrooms}
           loading={loading}
         >
-          Refresh
+          Làm mới
         </Button>
       </div>
 
@@ -146,8 +146,8 @@ const StudentClassroomManagement = () => {
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
                   searchValue ? 
-                    `No classrooms found for "${searchValue}"` :
-                    "You haven't joined any classrooms yet"
+                    `Không tìm thấy lớp học nào cho "${searchValue}"` :
+                    "Bạn chưa tham gia lớp học nào"
                 }
               >
                 {!searchValue && (
@@ -156,7 +156,7 @@ const StudentClassroomManagement = () => {
                     icon={<PlusOutlined />}
                     onClick={() => setActiveTab('join')}
                   >
-                    Join Your First Classroom
+                    Tham gia lớp học đầu tiên
                   </Button>
                 )}
               </Empty>
@@ -172,9 +172,9 @@ const StudentClassroomManagement = () => {
       <Card>
         <div className="mb-6 text-center">
           <div className="text-4xl mb-4">🎓</div>
-          <Title level={3} className="mb-2">Join a Classroom</Title>
+          <Title level={3} className="mb-2">Tham gia lớp học</Title>
           <Text type="secondary">
-            Enter the class code provided by your teacher to join a classroom.
+            Nhập mã lớp do giáo viên cung cấp để tham gia lớp học.
           </Text>
         </div>
 
@@ -184,15 +184,15 @@ const StudentClassroomManagement = () => {
           onFinish={handleJoinClass}
         >
           <Form.Item
-            label="Class Code"
+            label="Mã lớp học"
             name="code"
             rules={[
-              { required: true, message: 'Please enter the class code' },
-              { min: 3, message: 'Class code must be at least 3 characters' }
+              { required: true, message: 'Vui lòng nhập mã lớp học' },
+              { min: 3, message: 'Mã lớp học phải có ít nhất 3 ký tự' }
             ]}
           >
             <Input 
-              placeholder="Enter class code (e.g., ABC123)"
+              placeholder="Nhập mã lớp học (ví dụ: ABC123)"
               className="h-12 text-center text-lg font-mono tracking-wider"
               style={{ textTransform: 'uppercase' }}
               onChange={(e) => {
@@ -208,17 +208,17 @@ const StudentClassroomManagement = () => {
               className="w-full h-12 text-lg"
               icon={<PlusOutlined />}
             >
-              Join Classroom
+              Tham gia lớp học
             </Button>
           </Form.Item>
         </Form>
 
         <div className="mt-6 p-4 bg-blue-50 rounded-lg">
           <Title level={5} className="text-blue-600 mb-2">
-            💡 Tip
+            💡 Mẹo
           </Title>
           <Text className="text-blue-600 text-sm">
-            Ask your teacher for the class code. It's usually a short combination of letters and numbers.
+            Hỏi giáo viên để lấy mã lớp học. Thường là một tổ hợp ngắn các chữ cái và số.
           </Text>
         </div>
       </Card>
@@ -231,7 +231,7 @@ const StudentClassroomManagement = () => {
       label: (
         <Space>
           <BookOutlined />
-          My Classrooms
+          Lớp học của tôi
           <Badge count={classes.length} showZero color="#1890ff" />
         </Space>
       ),
@@ -242,7 +242,7 @@ const StudentClassroomManagement = () => {
       label: (
         <Space>
           <PlusOutlined />
-          Join Class
+          Tham gia lớp
         </Space>
       ),
       children: <JoinClassForm />
@@ -253,10 +253,10 @@ const StudentClassroomManagement = () => {
     <div className="p-6">
       <div className="mb-6">
         <Title level={2} className="mb-2">
-          Classroom Management
+          Quản lý lớp học
         </Title>
         <Text type="secondary">
-          Manage your enrolled classrooms and join new ones
+          Quản lý các lớp học đã tham gia và tham gia lớp mới
         </Text>
       </div>
 

@@ -88,25 +88,25 @@ const AdminLayout = () => {
       key: '1',
       icon: <DashboardOutlined />,
       label: collapsed ? (
-        <Tooltip title="Dashboard" placement="right">
-          <span>Dashboard</span>
+        <Tooltip title="Bảng điều khiển" placement="right">
+          <span>Bảng điều khiển</span>
         </Tooltip>
-      ) : 'Dashboard',
+      ) : 'Bảng điều khiển',
     },
     {
       key: '2',
       icon: <TeamOutlined />,
       label: collapsed ? (
-        <Tooltip title="User Management" placement="right">
-          <span>User Management</span>
+        <Tooltip title="Quản lý người dùng" placement="right">
+          <span>Quản lý người dùng</span>
         </Tooltip>
-      ) : 'User Management',
+      ) : 'Quản lý người dùng',
       children: [
         { 
           key: '2-1', 
           label:  (
-            <Tooltip title="Admin Management" placement="right">
-              <span>Admin Management</span>
+            <Tooltip title="Quản lý Admin" placement="right">
+              <span>Quản lý Admin</span>
             </Tooltip>
           ) ,
           icon: <FaUserGroup /> 
@@ -114,8 +114,8 @@ const AdminLayout = () => {
         { 
           key: '2-2', 
           label: (
-            <Tooltip title="Teacher Management" placement="right">
-              <span>Teacher Management</span>
+            <Tooltip title="Quản lý Giáo viên" placement="right">
+              <span>Quản lý Giáo viên</span>
             </Tooltip>
           ),
           icon: <GiTeacher /> 
@@ -123,8 +123,8 @@ const AdminLayout = () => {
         { 
           key: '2-3', 
           label:  (
-            <Tooltip title="Student Management" placement="right">
-              <span>Student Management</span>
+            <Tooltip title="Quản lý Học sinh" placement="right">
+              <span>Quản lý Học sinh</span>
             </Tooltip>
           ) ,
           icon: <FaUsersGear /> 
@@ -135,51 +135,51 @@ const AdminLayout = () => {
       key: '3',
       icon: <BookOutlined />,
       label: collapsed ? (
-        <Tooltip title="Classroom Management" placement="right">
-          <span>Classroom Management</span>
+        <Tooltip title="Quản lý Lớp học" placement="right">
+          <span>Quản lý Lớp học</span>
         </Tooltip>
-      ) : 'Classroom Management',
+      ) : 'Quản lý Lớp học',
     },
     {
       key: '4',
       icon: <QuestionCircleOutlined />,
       label: collapsed ? (
-        <Tooltip title="Quiz Management" placement="right">
-          <span>Quiz Management</span>
+        <Tooltip title="Quản lý Bài kiểm tra" placement="right">
+          <span>Quản lý Bài kiểm tra</span>
         </Tooltip>
-      ) : 'Quiz Management',
+      ) : 'Quản lý Bài kiểm tra',
     },
      {
       key: '7',
       icon: <QuestionCircleOutlined />,
-      label: 'Question Management',
+      label: 'Quản lý Câu hỏi',
       onClick: () => navigate('/admin/questions'),
     },
     {
       key: '5',
       icon: <BellOutlined />,
       label: collapsed ? (
-        <Tooltip title="Notifications" placement="right">
-          <span>Notifications</span>
+        <Tooltip title="Thông báo" placement="right">
+          <span>Thông báo</span>
         </Tooltip>
-      ) : 'Notifications',
+      ) : 'Thông báo',
     },
     {
       key: '6',
       icon: <FileTextOutlined />,
       label: collapsed ? (
-        <Tooltip title="Request Management" placement="right">
-          <span>Request Management</span>
+        <Tooltip title="Quản lý Yêu cầu" placement="right">
+          <span>Quản lý Yêu cầu</span>
         </Tooltip>
-      ) : 'Request Management',
+      ) : 'Quản lý Yêu cầu',
     },
     {
       key: '8',
       icon: <MessageOutlined />,
       label: collapsed ? (
         <div style={{ position: 'relative' }}>
-          <Tooltip title="Chat" placement="right">
-            <span>Chat</span>
+          <Tooltip title="Trò chuyện" placement="right">
+            <span>Trò chuyện</span>
           </Tooltip>
           {unreadChatsCount > 0 && (
             <span className="chat-badge-collapsed chat-badge-pulse" style={{ 
@@ -211,7 +211,7 @@ const AdminLayout = () => {
           alignItems: 'center',
           width: '100%'
         }}>
-          <span>Chat</span>
+          <span>Trò chuyện</span>
           {unreadChatsCount > 0 && (
             <span className="chat-badge chat-badge-pulse" style={{ 
               backgroundColor: '#ff4d4f', 
@@ -323,7 +323,7 @@ const AdminLayout = () => {
                 fontSize: '16px',
               }}
             >
-              Logout
+              Đăng xuất
             </Button>
           </Space>
         </Header>

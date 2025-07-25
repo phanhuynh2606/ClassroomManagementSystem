@@ -487,21 +487,13 @@ const StudentClassroomDetail = () => {
         visibility: "classroom", // Add visibility
       };
 
-      console.log("Creating student post:", {
-        ...postData,
-        titleLength: title.length,
-        contentLength: richTextContent.length,
-        plainContentLength: plainContent.length,
-        hasAttachments: attachments.length > 0,
-      });
+
 
       // Use createAnnouncement for now (backend will differentiate by type)
       const response = await streamAPI.createAnnouncement(
         classroomId,
         postData
       );
-
-      console.log("API Response:", response);
 
       // Handle different response structures
       if (
@@ -547,13 +539,17 @@ const StudentClassroomDetail = () => {
 
         message.success("Your post has been shared successfully!");
       } else {
+        message.error(
+          response.data?.message || response.message || "Failed to create post"
+        );
         throw new Error(
           response.data?.message || response.message || "Failed to create post"
         );
       }
     } catch (error) {
+
       console.error("Error creating student post:", error);
-      message.error("Failed to share your post. Please try again.");
+      message.error(error.response?.data?.message || error.message || "Failed to create post");
     } finally {
       setPostingAnnouncement(false);
     }

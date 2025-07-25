@@ -36,34 +36,13 @@ const EditorToolbar = ({
       }
 
       try {
-        // Show loading message
-        const hide = message.loading("Uploading file...", 0);
-
-        // Import streamAPI here to avoid circular dependency
-        const { streamAPI } = await import("../../../services/api");
-
-        // Upload file to server
-        const response = await streamAPI.uploadAttachment(file);
-
-        hide();
-
-        if (response.success) {
-          const newAttachment = {
-            id: Date.now().toString(),
-            name: response.data.originalName || file.name,
-            size: (response.data.size / 1024).toFixed(1) + " KB",
-            type: file.type,
-            url: response.data.url, // Cloudinary URL
-            file: file, // Keep original file for fallback
-          };
+  
 
           if (onFileUpload) {
-            onFileUpload(newAttachment);
+            onFileUpload(file);
+          } else {
+            message.error("Failed to upload file");
           }
-          message.success("File uploaded successfully");
-        } else {
-          message.error("Failed to upload file");
-        }
       } catch (error) {
         console.error("Error uploading file:", error);
         message.error("Failed to upload file");
@@ -124,7 +103,7 @@ const EditorToolbar = ({
       >
         Add Link
       </Button>
-      {userRole === 'teacher' && (
+      {/* {userRole === 'teacher' && (
         <Button
           type="text"
           icon={<CalendarOutlined />}
@@ -132,7 +111,7 @@ const EditorToolbar = ({
         >
           Schedule
         </Button>
-      )}
+      )} */}
     </div>
   );
 };

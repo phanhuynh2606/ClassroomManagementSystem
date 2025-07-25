@@ -200,7 +200,7 @@ const AnnouncementEditor = ({
           const newAttachment = {
             id: Date.now().toString(),
             name: response.data.originalName || file.name,
-            size: (response.data.size / 1024).toFixed(1) + " KB",
+            size: (response.data.size / 1024).toFixed(1),
             type: file.type,
             url: response.data.url, // Cloudinary URL
             file: file, // Keep original file for fallback

@@ -42,31 +42,31 @@ const StudentLayout = () => {
     {
       key: 'dashboard',
       icon: <DashboardOutlined />,
-      label: 'Dashboard',
+      label: 'Tổng quan',
       onClick: () => navigate('/student'),
     },
     {
       key: 'classrooms',
       icon: <BookOutlined />,
-      label: 'My Classrooms',
+      label: 'Lớp học của tôi',
       onClick: () => navigate('/student/classrooms'),
     },
     // {
     //   key: 'assignments',
     //   icon: <FileTextOutlined />,
-    //   label: 'Assignments',
+    //   label: 'Bài tập',
     //   onClick: () => navigate('/student/assignments'),
     // },
     {
       key: 'grades',
       icon: <CheckSquareOutlined />,
-      label: 'My Grades',
+      label: 'Điểm số',
       onClick: () => navigate('/student/grades'),
     },
     {
       key: 'notifications',
       icon: <BellOutlined />,
-      label: 'Notifications',
+      label: 'Thông báo',
       onClick: () => navigate('/student/notifications'),
     },
     {
@@ -74,7 +74,7 @@ const StudentLayout = () => {
       icon: <MessageOutlined />,
       label: collapsed ? (
         <div style={{ position: 'relative' }}>
-          <span>Chat</span>
+          <span>Trò chuyện</span>
           {unreadChatsCount > 0 && (
             <span className="chat-badge-collapsed chat-badge-pulse" style={{ 
               position: 'absolute',
@@ -105,7 +105,7 @@ const StudentLayout = () => {
           alignItems: 'center',
           width: '100%'
         }}>
-          <span>Chat</span>
+          <span>Trò chuyện</span>
           {unreadChatsCount > 0 && (
             <span className="chat-badge chat-badge-pulse" style={{ 
               backgroundColor: '#ff4d4f', 
@@ -155,7 +155,7 @@ const StudentLayout = () => {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh'}}>
       <Sider trigger={null} collapsible collapsed={collapsed} width={'250px'}>
       <div className="demo-logo-vertical" >
           <img src={logo} alt="logo" style={{ width: '100%', height: 'auto' }} />
@@ -205,19 +205,21 @@ const StudentLayout = () => {
               icon={<LogoutOutlined />}
               onClick={handleLogout}
             >
-              Logout
+              Đăng xuất
             </Button>
           </div>
         </Header>
         <Content
           style={{
-            margin: '24px auto',
+            margin: '24px',
             padding: location.pathname.includes('/chat') ? 0 : 24,
             background: colorBgContainer,
             borderRadius: borderRadiusLG,
-            // minHeight: 280,
-            width: '100%',
+            minHeight: 280,
+            // width: '100%',
             height: location.pathname.includes('/chat') ? 'calc(100vh - 112px)' : 'auto',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <Outlet />

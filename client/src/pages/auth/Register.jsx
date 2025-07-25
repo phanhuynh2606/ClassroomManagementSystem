@@ -42,10 +42,10 @@ const Register = () => {
     try {
       const res = await dispatch(register(values)).unwrap();
       if (res.verified === false) {
-        message.warning('Register successfully, please contact admin to verify your account');
+        message.warning('Đăng ký thành công, vui lòng liên hệ admin để xác thực tài khoản');
         navigate('/login');
       } else {
-        message.success('Registration successful!');
+        message.success('Đăng ký thành công!');
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -55,15 +55,15 @@ const Register = () => {
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
       await dispatch(googleLogin(credentialResponse.credential)).unwrap();
-      message.success('Google registration successful!');
+      message.success('Đăng ký Google thành công!');
     } catch (error) {
       console.error('Google registration error:', error);
-      message.error('Google registration failed. Please try again.');
+      message.error('Đăng ký Google thất bại. Vui lòng thử lại.');
     }
   };
 
   const handleGoogleError = () => {
-    message.error('Google registration failed. Please try again.');
+    message.error('Đăng ký Google thất bại. Vui lòng thử lại.');
   };
 
   return (
@@ -84,10 +84,10 @@ const Register = () => {
       }}>
         <div style={{ textAlign: 'center', color: '#1a365d' }}>
           <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: 'bold' }}>
-            Join Our Community!
+            Tham gia cộng đồng của chúng tôi!
           </h1>
           <p style={{ fontSize: '1.2rem', opacity: 0.8 }}>
-            Start your learning journey today
+            Bắt đầu hành trình học tập của bạn ngay hôm nay
           </p>
         </div>
       </div>
@@ -114,10 +114,10 @@ const Register = () => {
               color: '#1a365d',
               marginBottom: '0.5rem'
             }}>
-              Create Account
+              Tạo tài khoản
             </h2>
             <p style={{ color: '#718096', fontSize: '1rem' }}>
-              Fill in your details to get started
+              Điền thông tin của bạn để bắt đầu
             </p>
           </div>
 
@@ -135,7 +135,7 @@ const Register = () => {
           </div>
 
           <Divider style={{ margin: '1.5rem 0' }}>
-            <span style={{ color: '#718096', fontSize: '0.9rem' }}>or register with email</span>
+            <span style={{ color: '#718096', fontSize: '0.9rem' }}>hoặc đăng ký với email</span>
           </Divider>
 
           <Form
@@ -147,11 +147,11 @@ const Register = () => {
           >
             <Form.Item
               name="fullName"
-              rules={[{ required: true, message: 'Please input your full name!' }]}
+              rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
             >
               <Input 
                 prefix={<UserOutlined style={{ color: '#718096' }} />} 
-                placeholder="Full Name"
+                placeholder="Họ và tên"
                 style={{ borderRadius: '8px' }}
               />
             </Form.Item>
@@ -159,8 +159,8 @@ const Register = () => {
             <Form.Item
               name="email"
               rules={[
-                { required: true, message: 'Please input your email!' },
-                { type: 'email', message: 'Please enter a valid email!' }
+                { required: true, message: 'Vui lòng nhập email!' },
+                { type: 'email', message: 'Vui lòng nhập email hợp lệ!' }
               ]}
             >
               <Input 
@@ -173,28 +173,28 @@ const Register = () => {
             <Form.Item
               name="password"
               rules={[
-                { required: true, message: 'Please input your password!' },
-                { min: 6, message: 'Password must be at least 6 characters!' }
+                { required: true, message: 'Vui lòng nhập mật khẩu!' },
+                { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự!' }
               ]}
             >
               <Input.Password
                 prefix={<LockOutlined style={{ color: '#718096' }} />}
-                placeholder="Password"
+                placeholder="Mật khẩu"
                 style={{ borderRadius: '8px' }}
               />
             </Form.Item>
 
             <Form.Item
               name="role"
-              rules={[{ required: true, message: 'Please select your role!' }]}
+              rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}
               initialValue={'student'}
             >
               <Select 
-                placeholder="Select your role"
+                placeholder="Chọn vai trò của bạn"
                 style={{ borderRadius: '8px' }}
               >
-                <Option value="student">Student</Option>
-                <Option value="teacher">Teacher</Option>
+                <Option value="student">Học sinh</Option>
+                <Option value="teacher">Giáo viên</Option>
               </Select>
             </Form.Item>
 
@@ -213,7 +213,7 @@ const Register = () => {
                   fontWeight: '500'
                 }}
               >
-                Create Account
+                Tạo tài khoản
               </Button>
             </Form.Item>
 
@@ -222,7 +222,7 @@ const Register = () => {
               marginTop: '1rem',
               color: '#4a5568'
             }}>
-              Already have an account?{' '}
+              Đã có tài khoản?{' '}
               <Link 
                 to="/login" 
                 style={{ 
@@ -231,7 +231,7 @@ const Register = () => {
                   textDecoration: 'none'
                 }}
               >
-                Sign in here
+                Đăng nhập tại đây
               </Link>
             </div>
           </Form>
