@@ -13,7 +13,7 @@ const getTeacherDashboard = async (req, res) => {
       isActive: true,
     }).lean();
     const classroomIds = classrooms.map((c) => c._id);
-
+    console.log("Classrooms :", classrooms);
     // 2. Tổng số học sinh (nếu chỉ 1 lớp, lấy đúng số học sinh của lớp đó)
     let totalStudents = 0;
     if (classrooms.length === 1) {
@@ -24,9 +24,13 @@ const getTeacherDashboard = async (req, res) => {
       const studentsSet = new Set();
       classrooms.forEach(
         (c) =>
-          c.students && c.students.forEach((s) => studentsSet.add(s.toString()))
+        {
+          c.students && c.students.forEach((s) => studentsSet.add(s.toString()));
+          totalStudents += c.students ? c.students.length : 0;
+        }
+
       );
-      totalStudents = studentsSet.size;
+      // totalStudents = studentsSet.size;
     }
 
     // 3. Assignment

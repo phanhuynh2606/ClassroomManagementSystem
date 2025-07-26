@@ -519,9 +519,9 @@ const QuizManagement = ({ classId }) => {
                         {quiz.showResults && (
                           <Tag color="blue" size="small">Hiển Thị Kết Quả</Tag>
                         )}
-                        {!quiz.copyAllowed && (
+                        {/* {!quiz.copyAllowed && (
                           <Tag color="orange" size="small">Không Cho Phép Sao Chép</Tag>
-                        )}
+                        )} */}
                         {quiz.checkTab && (
                           <Tag color="red" size="small">Theo Dõi Tab</Tag>
                         )}

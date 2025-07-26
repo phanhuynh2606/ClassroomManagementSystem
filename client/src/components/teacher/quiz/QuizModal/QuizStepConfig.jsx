@@ -117,7 +117,7 @@ const QuizStepConfig = () => (
       </Col>
     </Row>
     
-    <Card title="🛡️ Chống gian lận" size="small">
+    <Card title="🛡️ Chống gian lận" size="small" className="d-none" style={{display: "none"}}>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item name="lockdownBrowser" valuePropName="checked">

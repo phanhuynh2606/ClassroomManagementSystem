@@ -58,9 +58,9 @@ const StudentQuizList = ({ classroomId, onNavigateTab }) => {
 
   const columns = [
     {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
+      title: "Title",
+      dataIndex: "title",
+      key: "title",
       render: (text, record) => {
         const isExpired = dayjs().isAfter(dayjs(record.endTime));
 
@@ -73,90 +73,87 @@ const StudentQuizList = ({ classroomId, onNavigateTab }) => {
         }
 
         return (
-          <Text
-            type="success"
-            style={{ cursor: 'pointer' }}
-            onClick={() => handleQuizStart(record)}
-          >
+          <Text type="success" style={{ cursor: "pointer" }} onClick={() => handleQuizStart(record)}>
             {text}
           </Text>
         );
       },
     },
     {
-      title: 'Category',
-      dataIndex: 'category',
-      key: 'category',
-      render: (text) => <Text>{text || '-'}</Text>,
+      title: "Category",
+      dataIndex: "category",
+      key: "category",
+      render: (text) => <Text>{text || "-"}</Text>,
     },
     {
-      title: 'Description',
-      dataIndex: 'description',
-      key: 'description',
-      render: (text) => <Text>{text || '-'}</Text>,
+      title: "Description",
+      dataIndex: "description",
+      key: "description",
+      render: (text) => <Text>{text || "-"}</Text>,
     },
     {
-title: 'Duration',
-      dataIndex: 'duration',
-      key: 'duration',
+      title: "Duration",
+      dataIndex: "duration",
+      key: "duration",
       render: (text) => {
         if (!text) return <Text>-</Text>;
-        return (
-          <Text>
-            {text} min
-          </Text>
-        );
-      }
-    },
-     {
-      title: 'Start Time',
-      dataIndex: 'startTime',
-      key: 'startTime',
-      render: (text) => {
-        if (!text) return <Text>-</Text>;
-        return (
-          <Text type="success">
-            {dayjs(text).format('YYYY-MM-DD HH:mm')}
-          </Text>
-        );
+        return <Text>{text} min</Text>;
       },
     },
     {
-      title: 'Deadline',
-      dataIndex: 'endTime',
-      key: 'endTime',
+      title: "Start Time",
+      dataIndex: "startTime",
+      key: "startTime",
+      render: (text) => {
+        if (!text) return <Text>-</Text>;
+        return <Text type="success">{dayjs(text).format("YYYY-MM-DD HH:mm")}</Text>;
+      },
+    },
+    {
+      title: "Deadline",
+      dataIndex: "endTime",
+      key: "endTime",
       render: (text) => {
         if (!text) return <Text>-</Text>;
         const isExpired = dayjs().isAfter(dayjs(text));
         return (
-          <Text type={isExpired ? 'danger' : 'success'}>
-            {dayjs(text).format('YYYY-MM-DD HH:mm')} ({isExpired ? 'Expired' : 'Available'})
+          <Text type={isExpired ? "danger" : "success"}>
+            {dayjs(text).format("YYYY-MM-DD HH:mm")} ({isExpired ? "Expired" : "Available"})
           </Text>
         );
       },
     },
     {
-      title: 'Status',
-      dataIndex: 'visibility',
-      key: 'visibility',
+      title: "Status",
+      dataIndex: "visibility",
+      key: "visibility",
       render: (visibility) => {
         const { type, text } = getVisibilityProps(visibility);
         return <Text type={type}>{text}</Text>;
-      }
+      },
     },
     {
-      title: 'Actions',
-      key: 'actions',
+      title: "Actions",
+      key: "actions",
       render: (_, record) => (
-        <Text
-          type="primary"
-          style={{ cursor: 'pointer' }}
-          onClick={() => navigate(`/student/classrooms/${classroomId}/quizzes/${record._id}/results`)}
-        >
-         View Result
-        </Text>
-      )
-    }
+        <>
+          {record.allowReview ? (
+            <Text
+              type="primary"
+              style={{ cursor: "pointer" }}
+              onClick={() => navigate(`/student/classrooms/${classroomId}/quizzes/${record._id}/results`)}
+            >
+              View Result
+            </Text>
+          ) : (
+            <Text type="primary" style={{ cursor: "pointer" }}
+              onClick={() => message.warning('Giáo viên chưa bật tính năng xem lại đáp án')}>
+              View Result
+            </Text>
+          )}
+        </>
+      ),
+    },
   ];
 
   return (

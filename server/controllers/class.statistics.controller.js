@@ -17,7 +17,7 @@ const getGradesStatistics = async (req, res) => {
     // 3. Chuẩn hóa danh sách bài
     const allItems = [
       ...assignments.map(a => ({ id: a._id.toString(), title: a.title, maxPoints: a.totalPoints || 100, type: 'assignment' })),
-      ...quizzes.map(q => ({ id: q._id.toString(), title: q.title, maxPoints: q.totalPoints || 10, type: 'quiz' }))
+      ...quizzes.map(q => ({ id: q._id.toString(), title: q.title, maxPoints: q.questions.length || 10, type: 'quiz' }))
     ];
     // 4. Tổng hợp điểm từng học sinh
     const studentsData = students.map(student => {
@@ -37,7 +37,7 @@ const getGradesStatistics = async (req, res) => {
         const sub = (q.submissions || []).find(s => s.student?.toString() === student._id.toString());
         grades[q._id.toString()] = sub ? {
           score: typeof sub.score === 'number' ? sub.score : null,
-          maxPoints: q.totalPoints || 10,
+          maxPoints: q.questions.length,
           submittedAt: sub.submittedAt || null,
           status: sub.status || (sub.score != null ? 'graded' : 'missing')
         } : { score: null, maxPoints: q.totalPoints || 10, submittedAt: null, status: 'missing' };
